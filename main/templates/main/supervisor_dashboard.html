@@ -1,0 +1,521 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Supervisor Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: black !important;
+        color: white !important;
+    }
+    
+    .card {
+        background-color: #111111 !important; 
+        border: 2px solid #ffffff !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2) !important;
+        margin-bottom: 1rem; /* Reduced spacing */
+    }
+    
+    .card-header {
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
+        padding: 0.5rem 1rem; /* Reduced padding */
+    }
+    
+    .card-body {
+        padding: 0.75rem 1rem; /* Reduced padding */
+    }
+    
+    /* Single line layouts */
+    .single-line-stats {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 0.5rem 0;
+    }
+    
+    .stat-item {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0.25rem 0;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    /* Department overview compact styling */
+    .overview-stats {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .overview-stat {
+        background-color: rgba(0,0,0,0.3);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        text-align: center;
+        flex: 1;
+    }
+    
+    .overview-stat h6 {
+        margin: 0 0 0.25rem 0;
+        font-size: 0.875rem;
+        color: #CC0000;
+    }
+    
+    .overview-stat .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    /* Phinia theme colors */
+    .bg-phinia-red {
+        background-color: #CC0000 !important;
+        color: white !important;
+    }
+    
+    .bg-phinia-dark {
+        background-color: #2C3E50 !important;
+        color: #ECF0F1 !important;
+    }
+    
+    .bg-phinia-accent {
+        background-color: #1ABC9C !important;
+        color: white !important;
+    }
+    
+    .badge.bg-success {
+        background-color: #27AE60 !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: #E74C3C !important;
+    }
+    
+    .badge.bg-warning {
+        background-color: #F39C12 !important;
+    }
+    
+    .btn-teal {
+        background-color: #CC0000 !important;
+        color: white !important;
+        border: 1px solid white !important;
+    }
+    
+    .btn-teal:hover {
+        background-color: #990000 !important;
+        transform: translateY(-2px);
+    }
+    
+    .table {
+        color: white !important;
+    }
+    
+    .table thead th {
+        background-color: #222 !important;
+        border-color: #444 !important;
+        color: white;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 0, 0, 0.1) !important;
+    }
+    
+    .table td {
+        border-color: #444 !important;
+    }
+    
+    .text-muted {
+        color: #aaa !important;
+    }
+    
+    /* Info block styling */
+    .info-card {
+        transition: all 0.3s;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    /* Measurement badge styling */
+    .measurement-badge {
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
+        padding: 5px 10px;
+        border-radius: 4px;
+        color: white;
+        font-weight: 500;
+        margin: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Shift Information -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-phinia-red">
+                    <h5 class="mb-0">Current Shift Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="single-line-stats">
+                        <div class="stat-item">
+                            <p class="stat-label">Current Time</p>
+                            <p class="stat-value" id="currentTime">{{ current_time|time:"H:i" }}</p>
+                        </div>
+                        <div class="stat-item">
+                            <p class="stat-label">Date</p>
+                            <p class="stat-value">{{ current_date|date:"d M Y" }}</p>
+                        </div>
+                        <div class="stat-item">
+                            <p class="stat-label">Supervisor</p>
+                            <p class="stat-value">{{ request.user.username }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Overview Stats -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-phinia-red">
+                    <h5 class="mb-0">Department Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="overview-stats">
+                        <div class="overview-stat">
+                            <h6>Active Operators</h6>
+                            <p class="stat-number">{{ verification_summary.pending_count }}</p>
+                        </div>
+                        <div class="overview-stat">
+                            <h6>Today's Verifications</h6>
+                            <p class="stat-number">{{ verification_summary.verified_today }}</p>
+                        </div>
+                        <div class="overview-stat">
+                            <h6>Overall FTQ</h6>
+                            <p class="stat-number">
+                                {% if ftq_percentage %}{{ ftq_percentage|floatformat:1 }}%{% else %}N/A{% endif %}
+                            </p>
+                        </div>
+                        <div class="overview-stat">
+                            <h6>EPVS Issues</h6>
+                            <p class="stat-number">
+                                {% if ep_check_stats.ng_count %}{{ ep_check_stats.ng_count }}{% else %}0{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pending Verifications -->
+    <div class="row mb-3">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-phinia-red d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Pending Verifications</h5>
+                    <span class="badge bg-light text-dark">{{ verification_summary.pending_count }} Pending</span>
+                </div>
+                <div class="card-body">
+                    {% if pending_verifications %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Model</th>
+                                    <th>Subgroup</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subgroup in pending_verifications %}
+                                <tr>
+                                    <td>{{ subgroup.timestamp|time:"H:i" }}</td>
+                                    <td>{{ subgroup.checklist.selected_model }}</td>
+                                    <td>#{{ subgroup.subgroup_number }}</td>
+                                    <td>
+                                        <a href="{% url 'checklist_detail' subgroup.checklist.id %}" 
+                                           class="btn btn-outline-light btn-sm">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-2">
+                        <p class="text-muted mb-0">No pending verifications for current shift.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Verifications -->
+    <div class="row mb-3">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-phinia-red d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Verifications</h5>
+                    <span class="badge bg-light text-dark">{{ verification_summary.verified_today }} Today</span>
+                </div>
+                <div class="card-body">
+                    {% if verified_entries %}
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Verified By</th>
+                                    <th>Subgroup</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for verification in verified_entries %}
+                                <tr>
+                                    <td>{{ verification.verified_at|date:"d M" }} {{ verification.verified_at|time:"H:i" }}</td>
+                                    <td>{{ verification.verified_by.username }}</td>
+                                    <td>#{{ verification.subgroup.subgroup_number }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if 'rejected' in verification.status %}
+                                                bg-danger
+                                            {% elif verification.verifier_type == 'supervisor' %}
+                                                bg-success
+                                            {% elif verification.verifier_type == 'quality' %}
+                                                bg-success
+                                            {% else %}
+                                                bg-warning
+                                            {% endif %}">
+                                            
+                                            {% if verification.verifier_type == 'supervisor' %}
+                                                {% if 'rejected' in verification.status %}
+                                                   Production Supervisor Rejected
+                                                {% else %}
+                                                  Production  Supervisor Approved
+                                                {% endif %}
+                                            {% elif verification.verifier_type == 'quality' %}
+                                                {% if 'rejected' in verification.status %}
+                                                  Production  Quality Rejected
+                                                {% else %}
+                                                 Production   Quality Approved
+                                                {% endif %}
+                                            {% else %}
+                                                {{ verification.get_status_display }}
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'checklist_detail' verification.subgroup.checklist.id %}" 
+                                           class="btn btn-sm btn-outline-light">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-2">
+                        <p class="text-muted mb-0">No verifications completed yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FTQ Information Card (Single Line) -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h5 class="mb-0">First Time Quality (FTQ) Status</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_ftq %}
+                        <div class="single-line-stats">
+                            <div class="stat-item">
+                                <p class="stat-label text-white">Production</p>
+                                <p class="stat-value text-white">{{ today_ftq.total_inspected }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">Defects</p>
+                                <p class="stat-value text-white">{{ today_ftq.total_defects }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">FTQ %</p>
+                                <p class="stat-value {% if ftq_percentage >= 98 %}text-success{% elif ftq_percentage >= 95 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ ftq_percentage|floatformat:2 }}%
+                                </p>
+                            </div>
+                            <div class="stat-item">
+                                <a href="{% url 'ftq_record_detail' pk=today_ftq.id %}" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-2">
+                            <p class="text-danger mb-0">No FTQ record for today's shift</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EPVS Checksheet Card (Single Line) -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h5 class="mb-0">EPVS Checksheet</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_ep_check %}
+                        <div class="single-line-stats">
+                            <div class="stat-item">
+                                <p class="stat-label text-white">OK Mechanisms</p>
+                                <p class="stat-value text-success">{{ ep_check_stats.ok_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">NG Mechanisms</p>
+                                <p class="stat-value text-danger">{{ ep_check_stats.ng_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">N/A</p>
+                                <p class="stat-value text-warning">{{ ep_check_stats.na_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white-50">Model</p>
+                                <p class="stat-value">{{ today_ep_check.current_model }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white-50">Status</p>
+                                        <span class="badge {% if today_ep_check.status == 'supervisor_approved' or today_ep_check.status == 'quality_approved' %}bg-success{% elif today_ep_check.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                            {% if today_ep_check.status == 'supervisor_approved' %}
+                                                Production Supervisor Approved
+                                            {% elif today_ep_check.status == 'quality_approved' %}
+                                                Quality Approved
+                                            {% elif today_ep_check.status == 'rejected' %}
+                                                Rejected
+                                            {% elif today_ep_check.status == 'pending' %}
+                                                Pending
+                                            {% else %}
+                                                {{ today_ep_check.get_status_display }}
+                                            {% endif %}
+                                        </span>
+                            </div>
+                            <div class="stat-item">
+                                <a href="{% url 'ep_check_detail' pk=today_ep_check.pk %}" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-2">
+                            <p class="text-danger mb-0">No EPVS Checksheet for today's shift</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+  
+    <!-- DTPM Checklist Card (Single Line) -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h5 class="mb-0">Daily TPM sheet</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_dtpm_checklist %}
+                        <div class="single-line-stats">
+                            <div class="stat-item">
+                                <p class="stat-label text-white">OK Checkpoints</p>
+                                <p class="stat-value text-success">{{ dtpm_checklist_stats.ok_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">NG Checkpoints</p>
+                                <p class="stat-value text-danger">{{ dtpm_checklist_stats.ng_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">Total</p>
+                                <p class="stat-value text-white">{{ dtpm_checklist_stats.total_checkpoints }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white-50">Status</p>
+<span class="badge {% if today_dtpm_checklist.status == 'quality_certified' or today_dtpm_checklist.status == 'supervisor_approved' %}bg-success{% elif today_dtpm_checklist.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+    {% if today_dtpm_checklist.status == 'supervisor_approved' %}
+        Production Supervisor Approved
+    {% elif today_dtpm_checklist.status == 'quality_certified' %}
+        Quality Approved
+    {% elif today_dtpm_checklist.status == 'rejected' %}
+        Rejected
+    {% elif today_dtpm_checklist.status == 'pending' %}
+        Pending
+    {% else %}
+        {{ today_dtpm_checklist.get_status_display }}
+    {% endif %}
+</span>
+                            </div>
+                            <div class="stat-item">
+                                <a href="{% url 'dtpm_new_detail' pk=today_dtpm_checklist.pk %}" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-2">
+                            <p class="text-danger mb-0">No DTPM Checklist for today's shift</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function updateTime() {
+        document.getElementById('currentTime').textContent = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+    setInterval(updateTime, 1000);
+    
+    // Refresh the page every 5 minutes to show new verifications
+    setTimeout(function() { location.reload(); }, 300000);
+    
+    // Initialize any tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

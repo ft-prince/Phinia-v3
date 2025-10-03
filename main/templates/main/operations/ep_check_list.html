@@ -1,0 +1,223 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Error Prevention Checks{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-weight: 500;
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
+    }
+    .status-pending {
+        background-color: #ff9800;
+        color: #000;
+    }
+    .status-supervisor-approved {
+        background-color: #2196F3;
+        color: #fff;
+    }
+    .status-quality-approved {
+        background-color: #4CAF50;
+        color: #fff;
+    }
+    .status-rejected {
+        background-color: #f44336;
+        color: #fff;
+    }
+    .filter-card {
+        background-color: #222;
+        border: 1px solid #444;
+        margin-bottom: 20px;
+    }
+    .stats-card {
+        background-color: #333;
+        border-left: 4px solid #ff0000;
+        transition: transform 0.3s;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .ep-table th {
+        background-color: #222;
+        color: #ff0000;
+        border-color: #444;
+    }
+    .ep-table td {
+        border-color: #444;
+        color:black !important;
+    }
+    .ep-table tr:hover {
+        
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3"><i class="fas fa-shield-alt me-2"></i>Error Prevention Checks</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>New EP Check
+        </a>
+        <a href="{% url 'ep_check_dashboard' %}" class="btn btn-outline-light ms-2">
+            <i class="fas fa-chart-line me-2"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-clipboard-list me-2"></i>Total Checks</h5>
+                <h2 class="text-white">{{ stats.total }}</h2>
+                <p class="text-muted mb-0">All EP checks</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-check-circle me-2"></i>Approved</h5>
+                <h2 class="text-white">{{ stats.approved }}</h2>
+                <p class="text-muted mb-0">{{ stats.approved_percentage|floatformat:1 }}% of total</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-times-circle me-2"></i>Rejected</h5>
+                <h2 class="text-white">{{ stats.rejected }}</h2>
+                <p class="text-muted mb-0">{{ stats.rejected_percentage|floatformat:1 }}% of total</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-hourglass-half me-2"></i>Pending</h5>
+                <h2 class="text-white">{{ stats.pending }}</h2>
+                <p class="text-muted mb-0">Awaiting verification</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Section -->
+<div class="card filter-card">
+    <div class="card-header bg-dark">
+        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter EP Checks</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="date_from" class="form-label">Date From</label>
+                <input type="date" class="form-control" id="date_from" name="date_from" 
+                       value="{{ filter_form.date_from.value|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="date_to" class="form-label">Date To</label>
+                <input type="date" class="form-control" id="date_to" name="date_to" 
+                       value="{{ filter_form.date_to.value|default:'' }}">
+            </div>
+            <div class="col-md-2">
+                <label for="model" class="form-label">Model</label>
+                <select class="form-select" id="model" name="model">
+                    <option value="">All Models</option>
+                    <option value="P703" {% if filter_form.model.value == 'P703' %}selected{% endif %}>P703</option>
+                    <option value="U704" {% if filter_form.model.value == 'U704' %}selected{% endif %}>U704</option>
+                    <option value="FD" {% if filter_form.model.value == 'FD' %}selected{% endif %}>FD</option>
+                    <option value="SA" {% if filter_form.model.value == 'SA' %}selected{% endif %}>SA</option>
+                    <option value="Gnome" {% if filter_form.model.value == 'Gnome' %}selected{% endif %}>Gnome</option>
+                </select>            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Statuses</option>
+                    <option value="pending" {% if filter_form.status.value == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="supervisor_approved" {% if filter_form.status.value == 'supervisor_approved' %}selected{% endif %}>Supervisor Approved</option>
+                    <option value="quality_approved" {% if filter_form.status.value == 'quality_approved' %}selected{% endif %}>Quality Approved</option>
+                    <option value="rejected" {% if filter_form.status.value == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-2"></i>Apply Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EP Checks Table -->
+<div class="card mt-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover ep-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Shift</th>
+                        <th>Model</th>
+                        <th>Operator</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in ep_checks %}
+                    <tr>
+                        <td>{{ check.date }}</td>
+                        <td>{{ check.shift }}</td>
+                        <td>{{ check.current_model }}</td>
+                        <td>{{ check.operator.username }}</td>
+                        <td>
+                            {% if check.status == 'pending' %}
+                            <span class="status-badge status-pending">Pending</span>
+                            {% elif check.status == 'supervisor_approved' %}
+                            <span class="status-badge status-supervisor-approved">Supervisor Approved</span>
+                            {% elif check.status == 'quality_approved' %}
+                            <span class="status-badge status-quality-approved">Quality Approved</span>
+                            {% elif check.status == 'rejected' %}
+                            <span class="status-badge status-rejected">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'ep_check_detail' pk=check.id %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if check.status == 'pending' and user == check.operator %}
+                            <a href="{% url 'ep_check_edit_statuses' pk=check.id %}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                            {% if user.is_superuser %}
+                            <a href="{% url 'ep_check_delete' pk=check.id %}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <i class="fas fa-exclamation-circle me-2 text-warning"></i>
+                            No error prevention checks found matching your criteria.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

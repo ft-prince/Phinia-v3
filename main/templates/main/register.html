@@ -1,0 +1,126 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Register New User</h4>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+                            
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Username</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                            <div class="alert alert-danger">
+                                {{ form.username.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+
+                    <div class="mb-3">
+                        <label for="{{ form.user_type.id_for_label }}" class="form-label">User Type</label>
+                        {{ form.user_type }}
+                        {% if form.user_type.errors %}
+                            <div class="alert alert-danger">
+                                {{ form.user_type.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.user_type.id_for_label }}" class="form-label">User Id</label>
+                        {{ form.company_id }}
+                        {% if form.company_id.errors %}
+                            <div class="alert alert-danger">
+                                {{ form.company_id.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.password1.id_for_label }}" class="form-label">Password</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <div class="alert alert-danger">
+                                {{ form.password1.errors }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text text-muted">
+                            <ul>
+                                <li>Your password must contain at least 8 characters.</li>
+                                <li>Your password can't be entirely numeric.</li>
+                                <li>Your password can't be a commonly used password.</li>
+                                <li>Your password can't be too similar to your other personal information.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.password2.id_for_label }}" class="form-label">Confirm Password</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <div class="alert alert-danger">
+                                {{ form.password2.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary">Register</button>
+                        <a href="{% url 'login' %}" class="btn btn-outline-secondary">Already have an account? Login</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add custom validation for password matching
+    const password1 = document.getElementById('{{ form.password1.id_for_label }}');
+    const password2 = document.getElementById('{{ form.password2.id_for_label }}');
+    const form = document.querySelector('form');
+
+    form.addEventListener('submit', function(e) {
+        if (password1.value !== password2.value) {
+            e.preventDefault();
+            alert('Passwords do not match!');
+        }
+    });
+
+    // Add dynamic validation feedback
+    password2.addEventListener('input', function() {
+        if (password1.value !== password2.value) {
+            password2.setCustomValidity('Passwords do not match');
+        } else {
+            password2.setCustomValidity('');
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends 'main/base.html' %}
+
+{% block title %}{{ verification_type }} Verification{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ verification_type }} Verification - Checklist #{{ checklist.id }}</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Checklist Details -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Checklist Information</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <p><strong>Date:</strong> {{ checklist.shift.date }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p><strong>Shift:</strong> {{ checklist.shift.get_shift_type_display }}</p>
+                            </div>
+                            <div class="col-md-4">
+                                <p><strong>Operator:</strong> {{ checklist.shift.operator.username }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Measurements Summary -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Key Measurements</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Model</th>
+                                    <td>{{ checklist.selected_model }}</td>
+                                    <th>Line Pressure</th>
+                                    <td>{{ checklist.line_pressure }} bar</td>
+                                </tr>
+                                <tr>
+                                    <th>UV Flow Test</th>
+                                    <td>{{ checklist.uv_flow_input_pressure }} kPa</td>
+                                    <th>Vacuum Test</th>
+                                    <td>{{ checklist.uv_vacuum_test }} kPa</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Measurement Validation</h6>
+                        {% if not measurements_ok or measurement_issues %}
+                            <div class="alert alert-warning">
+                                <h6 class="alert-heading">Warning: Out of Range Measurements</h6>
+                                {% if not measurements_ok %}
+                                <p class="mb-0">Initial measurements are out of range:</p>
+                                <ul class="mb-2">
+                                    {% if not 4.5 <= checklist.line_pressure <= 5.5 %}
+                                        <li>Line pressure: {{ checklist.line_pressure }} bar (should be 4.5-5.5)</li>
+                                    {% endif %}
+                                    {% if not 11 <= checklist.uv_flow_input_pressure <= 15 %}
+                                        <li>UV flow input pressure: {{ checklist.uv_flow_input_pressure }} kPa (should be 11-15)</li>
+                                    {% endif %}
+                                    {% if not 0.25 <= checklist.test_pressure_vacuum <= 0.3 %}
+                                        <li>Test pressure vacuum: {{ checklist.test_pressure_vacuum }} MPa (should be 0.25-0.3)</li>
+                                    {% endif %}
+                                </ul>
+                                {% endif %}
+                                {% if measurement_issues %}
+                                <p class="mb-0">Subgroup measurements out of range:</p>
+                                <ul class="mb-0">
+                                    {% for issue in measurement_issues %}
+                                        <li>{{ issue }}</li>
+                                    {% endfor %}
+                                </ul>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> All measurements are within acceptable ranges.
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Subgroups Summary -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Subgroups</h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Subgroup</th>
+                                        <th>Time</th>
+                                        <th>UV Flow</th>
+                                        <th>Assembly Check</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in checklist.subgroup_entries.all %}
+                                    <tr>
+                                        <td>{{ entry.subgroup_number }}</td>
+                                        <td>{{ entry.timestamp|time:"H:i" }}</td>
+                                        <td>{{ entry.uv_flow_value }} LPM</td>
+                                        <td>{{ entry.umbrella_valve_assembly }}</td>
+                                        <td>
+                                            <span class="badge {% if entry.umbrella_valve_assembly == 'OK' %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ entry.umbrella_valve_assembly }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Verification Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ form.comments.id_for_label }}" class="form-label">Verification Comments</label>
+                            {{ form.comments }}
+                            {% if form.comments.errors %}
+                            <div class="alert alert-danger">
+                                {{ form.comments.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+<!-- Update the verification form buttons -->
+<div class="d-grid gap-2">
+    {% if measurements_ok and not measurement_issues %}
+        <button type="submit" class="btn btn-success" name="action" value="approve">
+            <i class="fas fa-check"></i> Approve Checklist
+        </button>
+    {% else %}
+        <button type="submit" class="btn btn-success" name="action" value="approve" 
+                onclick="return confirm('Some measurements are out of range. Are you sure you want to approve?')">
+            <i class="fas fa-check"></i> Approve Checklist (With Warnings)
+        </button>
+    {% endif %}
+    <button type="submit" class="btn btn-danger" name="action" value="reject">
+        <i class="fas fa-times"></i> Reject Checklist
+    </button>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Cancel
+    </a>
+</div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

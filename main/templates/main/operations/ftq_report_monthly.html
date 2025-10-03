@@ -1,0 +1,588 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}Monthly FTQ Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .report-card .card-title {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 10px;
+    }
+    
+    .month-selector {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .month-nav-btn {
+        background-color: transparent;
+        border: 2px solid #ffffff;
+        border-radius: 8px;
+        padding: 8px 15px;
+        color: #ffffff;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    
+    .month-nav-btn:hover {
+        background-color: rgba(255, 0, 0, 0.5);
+        color: #ffffff;
+        transform: translateY(-2px);
+    }
+    
+    .month-label {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+    
+    .form-select {
+        background-color: #111111;
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+    }
+    
+    .form-select:focus {
+        background-color: #111111;
+        color: #ffffff;
+        border-color: #ff0000;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+    
+    .summary-label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .ftq-badge {
+        font-size: 2.5rem;
+        font-weight: 700;
+        padding: 10px 20px;
+        border-radius: 25px;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    
+    .ftq-high {
+        background-color: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+    }
+    
+    .ftq-medium {
+        background-color: rgba(255, 165, 0, 0.2);
+        color: #ffa500;
+    }
+    
+    .ftq-low {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ff0000;
+    }
+    
+    .canvas-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    
+    .model-stat {
+        background-color: rgba(255, 0, 0, 0.1);
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+    }
+    
+    .model-stat:hover {
+        background-color: rgba(255, 0, 0, 0.2);
+        transform: translateX(5px);
+    }
+    
+    .model-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    
+    .model-name {
+        font-weight: 600;
+        color: #ffffff;
+        font-size: 1.1rem;
+    }
+    
+    .model-ftq {
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 20px;
+    }
+    
+    .ftq-pill-high {
+        background-color: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+    }
+    
+    .ftq-pill-medium {
+        background-color: rgba(255, 165, 0, 0.2);
+        color: #ffa500;
+    }
+    
+    .ftq-pill-low {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ff0000;
+    }
+    
+    .model-stats {
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 8px;
+        border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    
+    .stat-value {
+        font-weight: 700;
+        color: #ffffff;
+        font-size: 1.2rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .weekly-trend-item {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .weekly-trend-item:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .week-date {
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .week-ftq {
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 20px;
+    }
+    
+    .defect-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .defect-name {
+        color: #ffffff;
+        font-weight: 500;
+    }
+    
+    .defect-count {
+        background-color: #ff0000;
+        color: #ffffff;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="fas fa-calendar-alt me-2"></i>Monthly FTQ Report</h2>
+        <div>
+            <a href="{% url 'ftq_dashboard' %}" class="btn btn-outline-light">
+                <i class="fas fa-chart-line me-1"></i> Dashboard
+            </a>
+            <div class="btn-group ms-2">
+                <a href="{% url 'ftq_report_daily' %}" class="btn btn-outline-light">Daily</a>
+                <a href="{% url 'ftq_report_weekly' %}" class="btn btn-outline-light">Weekly</a>
+                <a href="{% url 'ftq_report_monthly' %}" class="btn btn-primary">Monthly</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Month Selector -->
+    <div class="month-selector">
+        <button type="button" class="month-nav-btn" id="prevMonth">
+            <i class="fas fa-chevron-left me-2"></i> Previous Month
+        </button>
+        
+        <form method="get" action="" id="monthForm" class="d-flex align-items-center">
+            <div class="row g-3">
+                <div class="col-auto">
+                    <select name="month" id="month" class="form-select">
+                        <option value="1" {% if month == 1 %}selected{% endif %}>January</option>
+                        <option value="2" {% if month == 2 %}selected{% endif %}>February</option>
+                        <option value="3" {% if month == 3 %}selected{% endif %}>March</option>
+                        <option value="4" {% if month == 4 %}selected{% endif %}>April</option>
+                        <option value="5" {% if month == 5 %}selected{% endif %}>May</option>
+                        <option value="6" {% if month == 6 %}selected{% endif %}>June</option>
+                        <option value="7" {% if month == 7 %}selected{% endif %}>July</option>
+                        <option value="8" {% if month == 8 %}selected{% endif %}>August</option>
+                        <option value="9" {% if month == 9 %}selected{% endif %}>September</option>
+                        <option value="10" {% if month == 10 %}selected{% endif %}>October</option>
+                        <option value="11" {% if month == 11 %}selected{% endif %}>November</option>
+                        <option value="12" {% if month == 12 %}selected{% endif %}>December</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select name="year" id="year" class="form-select">
+                        {% for year_option in year|add:"-5"|rjust:"0"|make_list|slice:":10" %}
+                            <option value="{{ forloop.counter|add:year|add:"-6" }}" {% if year == forloop.counter|add:year|add:"-6" %}selected{% endif %}>
+                                {{ forloop.counter|add:year|add:"-6" }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Go</button>
+                </div>
+            </div>
+        </form>
+        
+        <div class="month-label">
+            {{ month_name }} {{ year }}
+        </div>
+        
+        <button type="button" class="month-nav-btn" id="nextMonth">
+            Next Month <i class="fas fa-chevron-right ms-2"></i>
+        </button>
+    </div>
+    
+    <!-- Summary Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="report-card">
+                <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Monthly Summary</h5>
+                
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="ftq-badge 
+                            {% if monthly_ftq >= 99 %}ftq-high{% elif monthly_ftq >= 95 %}ftq-medium{% else %}ftq-low{% endif %}">
+                            {{ monthly_ftq|floatformat:2 }}%
+                        </div>
+                        <div class="summary-label">Overall FTQ</div>
+                    </div>
+                    
+                    <div class="col-md-3 text-center">
+                        <div class="summary-value">{{ monthly_total_inspected }}</div>
+                        <div class="summary-label">Total Production</div>
+                    </div>
+                    
+                    <div class="col-md-3 text-center">
+                        <div class="summary-value">{{ monthly_total_defects }}</div>
+                        <div class="summary-label">Total Defects</div>
+                    </div>
+                    
+                    <div class="col-md-3 text-center">
+                        <div class="summary-value">{{ models|length }}</div>
+                        <div class="summary-label">Models Produced</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts and Stats -->
+    <div class="row">
+        <!-- Model Breakdown -->
+        <div class="col-md-6 mb-4">
+            <div class="report-card">
+                <h5 class="card-title"><i class="fas fa-cubes me-2"></i>Model Performance</h5>
+                
+                <!-- Model Chart -->
+                <div class="canvas-container mb-4">
+                    <canvas id="modelChart"></canvas>
+                </div>
+                
+                <!-- Model Stats -->
+                {% for model_key, model in models.items %}
+                <div class="model-stat">
+                    <div class="model-header">
+                        <span class="model-name">{{ model.model_name }}</span>
+                        <span class="model-ftq {% if model.ftq_percentage >= 99 %}ftq-pill-high{% elif model.ftq_percentage >= 95 %}ftq-pill-medium{% else %}ftq-pill-low{% endif %}">
+                            {{ model.ftq_percentage|floatformat:2 }}%
+                        </span>
+                    </div>
+                    <div class="model-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">{{ model.total_inspected }}</div>
+                            <div class="stat-label">Production</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ model.total_defects }}</div>
+                            <div class="stat-label">Defects</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">{{ model.total_inspected|subtract:model.total_defects }}</div>
+                            <div class="stat-label">Good Units</div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No model data available for this month
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Weekly Trend and Defects -->
+        <div class="col-md-6">
+            <!-- Weekly Trend -->
+            <div class="report-card mb-4">
+                <h5 class="card-title"><i class="fas fa-chart-line me-2"></i>Weekly Trend</h5>
+                
+                <!-- Weekly Chart -->
+                <div class="canvas-container mb-4">
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+                
+                <!-- Weekly Stats -->
+                {% for week in weekly_trend %}
+                <div class="weekly-trend-item">
+                    <span class="week-date">Week {{ forloop.counter }}: {{ week.start_date|date:"M d" }} - {{ week.end_date|date:"M d" }}</span>
+                    <span class="week-ftq {% if week.ftq_percentage >= 99 %}ftq-pill-high{% elif week.ftq_percentage >= 95 %}ftq-pill-medium{% else %}ftq-pill-low{% endif %}">
+                        {{ week.ftq_percentage|floatformat:2 }}%
+                    </span>
+                </div>
+                {% empty %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No weekly data available
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Top Defects -->
+            <div class="report-card">
+                <h5 class="card-title"><i class="fas fa-exclamation-circle me-2"></i>Top Defects</h5>
+                
+                {% if top_defects %}
+                    {% for defect in top_defects %}
+                    <div class="defect-item">
+                        <span class="defect-name">{{ defect.defect_type__name }}</span>
+                        <span class="defect-count">{{ defect.total_count }}</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No defect data available
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse the chart data from JSON
+    const chartData = JSON.parse('{{ chart_data|escapejs }}');
+    
+    // Set up Chart.js defaults for dark theme
+    Chart.defaults.color = '#ffffff';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+    
+    // Model Chart
+    const modelCtx = document.getElementById('modelChart').getContext('2d');
+    new Chart(modelCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.models,
+            datasets: [{
+                label: 'FTQ Percentage',
+                data: chartData.model_ftq,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `FTQ: ${context.parsed.y.toFixed(2)}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Weekly Chart
+    const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+    new Chart(weeklyCtx, {
+        type: 'line',
+        data: {
+            labels: chartData.week_labels,
+            datasets: [{
+                label: 'Weekly FTQ',
+                data: chartData.week_ftq,
+                backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                borderColor: '#ff0000',
+                borderWidth: 2,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#ff0000',
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            return `FTQ: ${context.parsed.y.toFixed(2)}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Month navigation handlers
+    const monthSelect = document.getElementById('month');
+    const yearSelect = document.getElementById('year');
+    
+    document.getElementById('prevMonth').addEventListener('click', function() {
+        let currentMonth = parseInt(monthSelect.value);
+        let currentYear = parseInt(yearSelect.value);
+        
+        currentMonth--;
+        if (currentMonth < 1) {
+            currentMonth = 12;
+            currentYear--;
+        }
+        
+        monthSelect.value = currentMonth;
+        yearSelect.value = currentYear;
+        document.getElementById('monthForm').submit();
+    });
+    
+    document.getElementById('nextMonth').addEventListener('click', function() {
+        let currentMonth = parseInt(monthSelect.value);
+        let currentYear = parseInt(yearSelect.value);
+        
+        currentMonth++;
+        if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+        }
+        
+        // Don't allow navigation to future months
+        const today = new Date();
+        if (currentYear < today.getFullYear() || 
+            (currentYear === today.getFullYear() && currentMonth <= today.getMonth() + 1)) {
+            monthSelect.value = currentMonth;
+            yearSelect.value = currentYear;
+            document.getElementById('monthForm').submit();
+        }
+    });
+});
+</script>
+{% endblock %}

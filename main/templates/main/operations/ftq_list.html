@@ -1,0 +1,387 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}FTQ Records{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-container {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .table-responsive {
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+        border: 2px solid #ffffff;
+    }
+    
+    .table {
+        margin-bottom: 0;
+        color: #ffffff;
+    }
+    
+    .table thead th {
+        background-color: #111111;
+        color: #ff0000;
+        border-bottom: 2px solid #ffffff;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.9em;
+        padding: 12px 15px;
+    }
+    
+    .table tbody tr:nth-child(odd) {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .table tbody tr:nth-child(even) {
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(255, 0, 0, 0.3);
+    }
+    
+    .table tbody td {
+        border-color: rgba(255, 255, 255, 0.2);
+        padding: 12px 15px;
+        vertical-align: middle;
+    }
+    
+    .table a {
+        color: #ffffff;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .table a:hover {
+        color: #ff0000;
+    }
+    
+    .stats-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 15px;
+        height: 100%;
+        transition: all 0.3s;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(255, 0, 0, 0.6);
+    }
+    
+    .stats-card .card-title {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 8px;
+    }
+    
+    .stats-card .stats-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #ffffff;
+    }
+    
+    .stats-card .stats-label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .btn-outline-light {
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .btn-outline-light:hover {
+        background-color: rgba(255, 0, 0, 0.7);
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .pagination .page-item .page-link {
+        background-color: #111111;
+        border-color: #ff0000;
+        color: #ffffff;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #ff0000;
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .pagination .page-item .page-link:hover {
+        background-color: #ff0000;
+        color: #ffffff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="fas fa-clipboard-check me-2"></i>First Time Quality Records</h2>
+        <div>
+            <a href="{% url 'ftq_record_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> New FTQ Record
+            </a>
+            <a href="{% url 'ftq_dashboard' %}" class="btn btn-outline-light ms-2">
+                <i class="fas fa-chart-line me-1"></i> Dashboard
+            </a>
+            <a href="{% url 'export_ftq_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-light ms-2">
+                <i class="fas fa-file-excel me-1"></i> Export Excel
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <h5 class="card-title"><i class="fas fa-file-alt me-2"></i>Total Records</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.record_count }}</div>
+                        <div class="stats-label">Records</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-clipboard-list"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <h5 class="card-title"><i class="fas fa-box me-2"></i>Total Production</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.total_inspected }}</div>
+                        <div class="stats-label">Units</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <h5 class="card-title"><i class="fas fa-bug me-2"></i>Total Defects</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.total_defects }}</div>
+                        <div class="stats-label">Units</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <h5 class="card-title"><i class="fas fa-check-circle me-2"></i>FTQ Rate</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.ftq_percentage|floatformat:2 }}%</div>
+                        <div class="stats-label">Quality Rate</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="filter-container">
+        <form method="get" action="" class="row g-3">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" 
+                       value="{{ filters.start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date"
+                       value="{{ filters.end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-2">
+                <label for="model_name" class="form-label">Model</label>
+                <select class="form-select" id="model_name" name="model_name">
+                    <option value="">All Models</option>
+                    {% for choice_value, choice_label in model_choices %}
+                    <option value="{{ choice_value }}" {% if filters.model_name == choice_value %}selected{% endif %}>
+                        {{ choice_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="shift_type" class="form-label">Shift</label>
+                <select class="form-select" id="shift_type" name="shift_type">
+                    <option value="">All Shifts</option>
+                    {% for choice_value, choice_label in shift_choices %}
+                    <option value="{{ choice_value }}" {% if filters.shift_type == choice_value %}selected{% endif %}>
+                        {{ choice_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Records Table -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Shift</th>
+                    <th>Model</th>
+                    <th>Production</th>
+                    <th>Defects</th>
+                    <th>FTQ %</th>
+                    <th>Created By</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in page_obj %}
+                <tr>
+                    <td>{{ record.date|date:"Y-m-d" }}</td>
+                    <td>{{ record.get_shift_type_display }}</td>
+                    <td>{{ record.get_model_name_display }}</td>
+                    <td>{{ record.total_inspected }}</td>
+                    <td>{{ record.total_defects }}</td>
+                    <td>
+                        {% if record.total_inspected > 0 %}
+                            {% with ftq_pct=record.ftq_percentage %}
+                                <span class="badge {% if ftq_pct >= 99 %}bg-success{% elif ftq_pct >= 95 %}bg-warning{% else %}bg-danger{% endif %} rounded-pill px-3 py-2">
+                                    {{ ftq_pct|floatformat:2 }}%
+                                </span>
+                            {% endwith %}
+                        {% else %}
+                            <span class="badge bg-secondary rounded-pill px-3 py-2">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ record.created_by.username }}</td>
+                    <td>
+                        {% if record.verified_by %}
+                            <span class="badge bg-success rounded-pill px-3 py-2">Verified</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark rounded-pill px-3 py-2">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{% url 'ftq_record_detail' pk=record.id %}" class="btn btn-sm btn-outline-light" 
+                               data-bs-toggle="tooltip" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'ftq_record_edit' pk=record.id %}" class="btn btn-sm btn-outline-light"
+                               data-bs-toggle="tooltip" title="Edit Record">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if user.user_type in 'shift_supervisor,quality_supervisor' and not record.verified_by %}
+                            <a href="{% url 'ftq_record_verify' pk=record.id %}" class="btn btn-sm btn-outline-light"
+                               data-bs-toggle="tooltip" title="Verify Record">
+                                <i class="fas fa-check-circle"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="fas fa-search me-2"></i> No FTQ records found with the current filters
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav>
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+    });
+</script>
+{% endblock %}

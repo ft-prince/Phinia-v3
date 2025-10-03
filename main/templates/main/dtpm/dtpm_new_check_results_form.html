@@ -1,0 +1,346 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}
+Edit DTPM Checklist
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkpoint-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    .checkpoint-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(255, 0, 0, 0.3);
+    }
+    .checkpoint-header {
+        background-color: #222;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+        border-bottom: 1px solid #444;
+    }
+    .checkpoint-number {
+        background-color: #CC0000;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 50%;
+        margin-right: 10px;
+        font-weight: bold;
+    }
+    .hindi-text {
+        color: #CCC;
+        font-style: italic;
+        margin-top: 5px;
+        font-size: 0.9rem;
+    }
+    .status-select {
+        border: 2px solid #555;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #333;
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    .status-select:focus {
+        border-color: #CC0000;
+        box-shadow: 0 0 0 0.25rem rgba(204, 0, 0, 0.25);
+    }
+    .status-ok {
+        background-color: #28a745;
+        color: white;
+    }
+    .status-ng {
+        background-color: #dc3545;
+        color: white;
+    }
+    .reference-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        border: 2px solid #555;
+        transition: transform 0.3s;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+    .reference-image:hover {
+        transform: scale(1.02);
+    }
+    .reference-image-container {
+        text-align: center;
+        margin: 15px 0;
+    }
+    .status-container {
+        background-color: #333;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    .status-label {
+        font-weight: bold;
+        color: #CCC;
+        margin-bottom: 10px;
+        font-size: 1.1rem;
+    }
+    .page-title {
+        color: #CC0000;
+        border-bottom: 2px solid #CC0000;
+        padding-bottom: 10px;
+        margin-bottom: 30px;
+    }
+    .comments-textarea {
+        background-color: #333;
+        border: 1px solid #555;
+        color: white;
+        border-radius: 5px;
+        padding: 10px;
+        resize: vertical;
+        min-height: 80px;
+    }
+    .comments-textarea:focus {
+        border-color: #CC0000;
+        box-shadow: 0 0 0 0.25rem rgba(204, 0, 0, 0.25);
+    }
+    .edit-info-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .edit-info-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+    }
+    .changed-indicator {
+        background-color: #ffc107;
+        color: #000;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.8rem;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2 class="page-title">
+            <i class="fas fa-edit me-2"></i> 
+            Edit DTPM Checklist - {{ checklist.date }}
+        </h2>
+    </div>
+</div>
+
+<!-- Checklist Info Card -->
+<div class="edit-info-card">
+    <div class="edit-info-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Checklist Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><span class="text-muted">Date:</span> <span class="text-white">{{ checklist.date }}</span></p>
+            </div>
+            <div class="col-md-3">
+                <p><span class="text-muted">Shift:</span> <span class="text-white">{{ checklist.get_checklist_shift_display }}</span></p>
+            </div>
+            <div class="col-md-3">
+                <p><span class="text-muted">Operator:</span> <span class="text-white">{{ checklist.operator.username }}</span></p>
+            </div>
+            <div class="col-md-3">
+                <p><span class="text-muted">Model:</span> <span class="text-white">{{ checklist.current_model }}</span></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    {% for check_result in checkpoint_results %}
+    <!-- Checkpoint {{ check_result.checkpoint_number }} -->
+    <div class="checkpoint-card">
+        <div class="checkpoint-header">
+            <h5>
+                <span class="checkpoint-number">{{ check_result.checkpoint_number }}</span>
+                {% if check_result.checkpoint_number == 1 %}
+                    EMERGENCY push button is Working Properly
+                {% elif check_result.checkpoint_number == 2 %}
+                    There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage
+                {% elif check_result.checkpoint_number == 3 %}
+                    All nuts and bolts should not be loose or free
+                {% elif check_result.checkpoint_number == 4 %}
+                    Check all sensors for damage or looseness
+                {% elif check_result.checkpoint_number == 5 %}
+                    Tower lamp & Tube light should be working properly
+                {% elif check_result.checkpoint_number == 6 %}
+                    All indicators & push buttons should be working properly
+                {% elif check_result.checkpoint_number == 7 %}
+                    Check Safety curtain working properly
+                {% endif %}
+            </h5>
+            <div class="hindi-text">
+                {% if check_result.checkpoint_number == 1 %}
+                    आपातकालीन पुश बटन ठीक से काम कर रहा है
+                {% elif check_result.checkpoint_number == 2 %}
+                    कोई हवा का रिसाव नहीं होना चाहिए और लुब्रिकेशन यूनिट माउंटिंग ढीली नहीं होनी चाहिए और तेल का रिसाव नहीं होना चाहिए
+                {% elif check_result.checkpoint_number == 3 %}
+                    सभी नट और बोल्ट ढीले या स्वतंत्र नहीं होने चाहिए
+                {% elif check_result.checkpoint_number == 4 %}
+                    सभी सेंसरों को क्षति या ढीलेपन के लिए जांचें
+                {% elif check_result.checkpoint_number == 5 %}
+                    टॉवर लैंप और ट्यूब लाइट ठीक से काम करनी चाहिए
+                {% elif check_result.checkpoint_number == 6 %}
+                    सभी संकेतक और पुश बटन ठीक से काम करने चाहिए
+                {% elif check_result.checkpoint_number == 7 %}
+                    सुरक्षा पर्दे का ठीक से काम करना जांचें
+                {% endif %}
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="reference-image-container">
+                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=check_result.checkpoint_number %}" 
+                             alt="Reference Image for Checkpoint {{ check_result.checkpoint_number }}" 
+                             class="reference-image">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="status-container">
+                        <div class="status-label">
+                            Status / स्थिति:
+                            {% if check_result.updated_at != check_result.checked_at %}
+                                <span class="changed-indicator">MODIFIED</span>
+                            {% endif %}
+                        </div>
+                        <select name="{{ checklist.id }}-status_{{ check_result.checkpoint_number }}" 
+                                id="status_{{ check_result.checkpoint_number }}" 
+                                class="form-select status-select {% if check_result.status == 'OK' %}status-ok{% elif check_result.status == 'NG' %}status-ng{% endif %}"
+                                data-original-value="{{ check_result.status }}">
+                            <option value="">-- Select Status --</option>
+                            <option value="OK" class="status-ok" {% if check_result.status == 'OK' %}selected{% endif %}>OK ✓</option>
+                            <option value="NG" class="status-ng" {% if check_result.status == 'NG' %}selected{% endif %}>NG ✗</option>
+                        </select>
+                        
+                        <div class="mt-3">
+                            <label class="status-label" for="comments_{{ check_result.checkpoint_number }}">
+                                Comments / टिप्पणियाँ:
+                            </label>
+                            <textarea name="{{ checklist.id }}-comments_{{ check_result.checkpoint_number }}" 
+                                    id="comments_{{ check_result.checkpoint_number }}"
+                                    class="form-control comments-textarea"
+                                    placeholder="Enter any comments or observations..."
+                                    data-original-value="{{ check_result.comments }}">{{ check_result.comments }}</textarea>
+                        </div>
+                        
+                        {% if check_result.updated_at != check_result.checked_at %}
+                        <div class="mt-2">
+                            <small class="text-warning">
+                                <i class="fas fa-clock"></i> Last updated: {{ check_result.updated_at|date:"M d, Y H:i" }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <div class="text-end mt-4 mb-5">
+        <a href="{% url 'dtpm_new_detail' pk=checklist.id %}" class="btn btn-secondary me-2">
+            <i class="fas fa-times"></i> Cancel
+        </a>
+        <button type="submit" class="btn btn-warning btn-lg" id="saveBtn">
+            <i class="fas fa-save"></i> Update Checklist
+        </button>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelects = document.querySelectorAll('.status-select');
+    const textareas = document.querySelectorAll('.comments-textarea');
+    const saveBtn = document.getElementById('saveBtn');
+    let hasChanges = false;
+
+    // Function to check if there are changes
+    function checkForChanges() {
+        hasChanges = false;
+        
+        // Check status selects
+        statusSelects.forEach(select => {
+            if (select.value !== select.dataset.originalValue) {
+                hasChanges = true;
+            }
+        });
+        
+        // Check textareas
+        textareas.forEach(textarea => {
+            if (textarea.value !== textarea.dataset.originalValue) {
+                hasChanges = true;
+            }
+        });
+        
+        // Update save button
+        if (hasChanges) {
+            saveBtn.classList.remove('btn-warning');
+            saveBtn.classList.add('btn-success');
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+        } else {
+            saveBtn.classList.remove('btn-success');
+            saveBtn.classList.add('btn-warning');
+            saveBtn.innerHTML = '<i class="fas fa-save"></i> Update Checklist';
+        }
+    }
+
+    // Style the status dropdown options and add change detection
+    statusSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            // Reset the select style
+            this.classList.remove('status-ok', 'status-ng');
+            
+            // Apply the appropriate class based on selected value
+            if (this.value === 'OK') {
+                this.classList.add('status-ok');
+            } else if (this.value === 'NG') {
+                this.classList.add('status-ng');
+            }
+            
+            checkForChanges();
+        });
+    });
+
+    // Add change detection to textareas
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', checkForChanges);
+    });
+
+    // Warn user about unsaved changes
+    window.addEventListener('beforeunload', function(e) {
+        if (hasChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Don't warn when submitting the form
+    document.querySelector('form').addEventListener('submit', function() {
+        window.removeEventListener('beforeunload', arguments.callee);
+    });
+});
+</script>
+{% endblock %}

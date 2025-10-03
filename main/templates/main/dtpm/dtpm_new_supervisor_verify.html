@@ -1,0 +1,382 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Supervisor Verify DTPM Checklist{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-card {
+        background-color: #222;
+        border: 1px solid #444;
+    }
+    .verify-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+    }
+    .checkpoint-table th {
+        background-color: #333;
+        color: #ff0000;
+        border-color: #444;
+    }
+    .checkpoint-table td {
+        border-color: #444;
+    }
+    .status-ok {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .status-ng {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        font-weight: bold;
+    }
+    .status-na {
+        background-color: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+        font-weight: bold;
+    }
+    .status-pending {
+        background-color: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        font-weight: bold;
+    }
+    .verification-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .btn-verify {
+        background-color: #4CAF50;
+        border-color: #4CAF50;
+        color: white;
+    }
+    .btn-verify:hover {
+        background-color: #45a049;
+        border-color: #45a049;
+    }
+    .btn-reject {
+        background-color: #f44336;
+        border-color: #f44336;
+        color: white;
+    }
+    .btn-reject:hover {
+        background-color: #da190b;
+        border-color: #da190b;
+    }
+    .dtpm-badge {
+        background-color: #9C27B0;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .supervisor-badge {
+        background-color: #2196F3;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .verification-alert {
+        background-color: rgba(33, 150, 243, 0.1);
+        border: 1px solid #2196F3;
+        color: #2196F3;
+    }
+    .completion-stats {
+        background-color: rgba(76, 175, 80, 0.1);
+        border: 1px solid #4CAF50;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .incomplete-warning {
+        background-color: rgba(244, 67, 54, 0.1);
+        border: 1px solid #f44336;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .checkpoint-number {
+        background-color: #444;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        min-width: 30px;
+        text-align: center;
+    }
+    .supervisor-section {
+        background-color: rgba(33, 150, 243, 0.05);
+        border-left: 4px solid #2196F3;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3">
+            <i class="fas fa-user-tie me-2"></i>
+            Supervisor Verification
+            <span class="dtpm-badge ms-2">DTPM FMA-03</span>
+            <span class="supervisor-badge ms-2">SUPERVISOR</span>
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'dtpm_new_detail' pk=checklist.id %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Detail
+        </a>
+    </div>
+</div>
+
+
+
+<!-- DTPM Checklist Details Card -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Checklist Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Date:</strong> {{ checklist.date|date:"M d, Y" }}</p>
+                <p><strong>Shift:</strong> {{ checklist.get_checklist_shift_display  }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Operator:</strong> {{ checklist.operator.username }}</p>
+                <p><strong>Supervisor:</strong> {{ checklist.supervisor.username }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Created At:</strong> {{ checklist.created_at|date:"M d, Y H:i" }}</p>
+                <p><strong>Current Status:</strong> 
+                    <span class="badge bg-warning">{{ checklist.get_status_display }}</span>
+                </p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Model/Line:</strong> {{ checklist.current_model|default:"Not specified" }}</p>
+                <p><strong>Checklist Type:</strong> FMA-03 New</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Completion Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="completion-stats">
+            <h6 class="mb-2"><i class="fas fa-chart-pie me-2"></i>Completion Statistics</h6>
+            <div class="row text-center">
+                <div class="col-4">
+                    <div class="h4 text-success mb-1">{{ checkpoint_results|length }}</div>
+                    <small>Total Checkpoints</small>
+                </div>
+                <div class="col-4">
+                    <div class="h4 text-primary mb-1">
+                        {% with completed_count=0 %}
+                            {% for result in checkpoint_results %}
+                                {% if result.status %}
+                                    {% with completed_count=completed_count|add:1 %}{% endwith %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for result in checkpoint_results %}{% if result.status %}{{ forloop.counter }}{% endif %}{% empty %}0{% endfor %}
+                        {% endwith %}
+                    </div>
+                    <small>Completed</small>
+                </div>
+                <div class="col-4">
+                    <div class="h4 text-warning mb-1">
+                        {% for result in checkpoint_results %}{% if not result.status %}{{ forloop.counter }}{% endif %}{% empty %}0{% endfor %}
+                    </div>
+                    <small>Pending</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        {% if incomplete_checks %}
+        <div class="incomplete-warning">
+            <h6 class="mb-2 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Incomplete Checkpoints</h6>
+            <p class="mb-2">Some checkpoints are still incomplete. Please ensure all checkpoints are completed before supervisor approval.</p>
+            <a href="{% url 'dtpm_new_edit_checks' pk=checklist.id %}" class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-edit me-1"></i>Complete Checkpoints
+            </a>
+        </div>
+        {% else %}
+        <div class="completion-stats">
+            <h6 class="mb-2 text-success"><i class="fas fa-check-circle me-2"></i>All Checkpoints Complete</h6>
+            <p class="mb-0">All checkpoint results have been filled and are ready for supervisor review.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Checkpoint Results Table -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-list-check me-2"></i>Checkpoint Results Review</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover checkpoint-table mb-0">
+                <thead>
+                    <tr>
+                        <th width="10%">Checkpoint</th>
+                        <th width="15%">Status</th>
+                        <th width="30%">Description</th>
+                        <th width="20%">Result</th>
+                        <th width="25%">operator Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in checkpoint_results %}
+                    <tr>
+                        <td>
+                            <span class="checkpoint-number">#{{ result.checkpoint_number }}</span>
+                        </td>
+                        <td class="{% if not result.status %}status-pending{% elif result.status == 'OK' %}status-ok{% elif result.status == 'NG' %}status-ng{% elif result.status == 'N/A' %}status-na{% endif %}">
+                            {% if result.status %}
+                                {{ result.status }}
+                            {% else %}
+                                <i class="fas fa-clock me-1"></i>Pending
+                            {% endif %}
+                        </td>
+<td>
+    <strong>
+        {% if result.checkpoint_number == 1 %}
+            EMERGENCY push button is Working Properly
+        {% elif result.checkpoint_number == 2 %}
+            There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage
+        {% elif result.checkpoint_number == 3 %}
+            All nuts and bolts should not be loose or free
+        {% elif result.checkpoint_number == 4 %}
+            Check all sensors for damage or looseness
+        {% elif result.checkpoint_number == 5 %}
+            Tower lamp & Tube light should be working properly
+        {% elif result.checkpoint_number == 6 %}
+            All indicators & push buttons should be working properly
+        {% elif result.checkpoint_number == 7 %}
+            Check Safety curtain working properly
+        {% else %}
+            Checkpoint {{ result.checkpoint_number }}
+        {% endif %}
+    </strong>
+</td>
+                        <td>
+                            {% if result.status %}
+                                {% if result.status == 'OK' %}
+                                    <i class="fas fa-check-circle text-success"></i> Pass
+                                {% elif result.status == 'NG' %}
+                                    <i class="fas fa-times-circle text-danger"></i> Fail
+                                {% elif result.status == 'N/A' %}
+                                    <i class="fas fa-minus-circle text-warning"></i> Not Applicable
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted"><i class="fas fa-hourglass-half me-1"></i>Awaiting Result</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if result.comments %}
+                                <small>{{ result.comments|truncatewords:10 }}</small>
+                            {% else %}
+                                <span class="text-muted">No comments</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Supervisor Verification Form -->
+<div class="card verify-card">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-user-check me-2"></i>Supervisor Approval</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" id="verificationForm">
+            {% csrf_token %}
+            
+            {% if incomplete_checks %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Warning:</strong> This checklist has incomplete checkpoint results. Please complete all checkpoints before supervisor approval.
+            </div>
+            {% endif %}
+            
+            <div class="verification-actions mt-4">
+                <button type="submit" name="action" value="supervisor_approve" class="btn btn-verify btn-lg" 
+                        onclick="return confirmAction('supervisor_approve')" 
+                        {% if incomplete_checks %}disabled title="Complete all checkpoints first"{% endif %}>
+                    <i class="fas fa-thumbs-up me-2"></i>Supervisor Approve
+                </button>
+                <button type="submit" name="action" value="supervisor_reject" class="btn btn-reject btn-lg" onclick="return confirmAction('supervisor_reject')">
+                    <i class="fas fa-thumbs-down me-2"></i>Supervisor Reject
+                </button>
+                <a href="{% url 'dtpm_new_detail' pk=checklist.id %}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-ban me-2"></i>Cancel
+                </a>
+            </div>
+            
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Supervisor approval will send this checklist to Quality for final verification. Rejection will require operator to review and resubmit.
+                </small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmAction(action) {
+    let message;
+    if (action === 'supervisor_approve') {
+        message = 'Are you sure you want to approve this DTPM checklist as Supervisor?\n\nThis will send the checklist to Quality for final verification.';
+    } else {
+        message = 'Are you sure you want to reject this DTPM checklist?\n\nThe operator will need to review and resubmit.';
+    }
+    
+    if (confirm(message)) {
+        setTimeout(function() {
+            const form = document.getElementById('verificationForm');
+            const buttons = form.querySelectorAll('button[type="submit"]');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                if (btn.getAttribute('name') === 'action' && btn.value === action) {
+                    if (action === 'supervisor_approve') {
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Approving...';
+                    } else {
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Rejecting...';
+                    }
+                }
+            });
+        }, 100);
+        return true;
+    }
+    return false;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('verificationForm');
+    
+    form.addEventListener('submit', function(e) {
+        const submittedButton = document.activeElement;
+        if (submittedButton && submittedButton.type === 'submit') {
+            setTimeout(function() {
+                submittedButton.disabled = true;
+                submittedButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            }, 50);
+        }
+    });
+});
+</script>
+{% endblock %}
+
+
+

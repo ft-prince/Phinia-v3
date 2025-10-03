@@ -1,0 +1,591 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Operator Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    
+    .pulse-button {
+        animation: pulse 2s infinite;
+    }
+    
+    /* Compact styling */
+    .card {
+        margin-bottom: 1rem; /* Reduced spacing */
+    }
+    
+    .card-header {
+        padding: 0.5rem 1rem; /* Reduced padding */
+    }
+    
+    .card-body {
+        padding: 0.75rem 1rem; /* Reduced padding */
+    }
+    
+    .compact-stats {
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        flex: 1;
+    }
+    
+    .stat-value {
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    .single-row-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .operator-info {
+        display: flex;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .info-item {
+        flex: 1;
+        min-width: 150px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Shift Information -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-sm" style="background-color: #000000; color: #FFFFFF;">
+                <div class="card-header text-white" style="background-color: #CC0000;">
+                    <h5 class="mb-0">Current Shift Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="operator-info">
+                        <div class="info-item">
+                            <h6 class="text-danger">Current Time</h6>
+                            <p class="h5 mb-0" id="currentTime">{{ current_time|time:"H:i" }}</p>
+                        </div>
+                        <div class="info-item">
+                            <h6 class="text-danger">Date</h6>
+                            <p class="mb-0">{{ current_date|date:"d M Y" }}</p>
+                        </div>
+                        <div class="info-item">
+                            <h6 class="text-danger">Operator</h6>
+                            <p class="mb-0">{{ request.user }}</p>
+                        </div>
+                        <div class="info-item">
+                            <h6 class="text-danger">Operator Code</h6>
+                            <p class="mb-0">{{ request.user.company_id }}</p>
+                        </div>
+                        <div class="info-item">
+                            <h6 class="text-danger">Skill Level</h6>
+                            <p class="mb-0">{{ request.user.skill_matrix_level }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Checklist and Next Subgroup Time -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h5 class="mb-0">Daily Verification/Inspection Sheet Status</h5>
+                </div>
+                <!-- Around line 85-95 in your operator_dashboard.html -->
+<div class="card-body">
+    {% if active_checklist %}
+        <div class="single-row-content">
+            <!-- LEFT: Current Status with Frequency Info -->
+            <div>
+                <h6 class="text-danger mb-1">Current Status</h6>
+                <p class="mb-0">
+                    <strong>Subgroups:</strong> {{ current_subgroup_count }}/{{ max_subgroups }}
+                </p>
+                <p class="mb-0 text-muted" style="font-size: 0.85rem;">
+                    <i class="fas fa-clock me-1"></i>
+                    Every {{ frequency_hours }} hour{{ frequency_hours|pluralize }} 
+                    (max {{ max_subgroups }} subgroup{{ max_subgroups|pluralize }})
+                </p>
+            </div>
+            
+            <!-- MIDDLE: Time Remaining -->
+            <div>
+                {% if time_remaining %}
+                    <div class="alert alert-danger text-white mb-0" style="background-color: #770000; padding: 0.5rem;">
+                        <strong>Next Subgroup In:</strong> 
+                        <span id="timeRemaining" data-seconds="{{ time_remaining.seconds }}">
+                           {{ time_remaining_formatted }}
+                        </span>
+                    </div>
+                {% elif can_add_subgroup %}
+                    <div class="alert alert-success text-white mb-0" style="background-color: #28a745; padding: 0.5rem;">
+                        <strong>Ready to add new subgroup!</strong>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- RIGHT: Action Buttons -->
+            <div>
+                {% if can_add_subgroup %}
+                    <a href="{% url 'add_subgroup' checklist_id=active_checklist.id %}" 
+                       class="btn btn-danger btn-sm me-2">
+                        <i class="fas fa-plus-circle me-1"></i> Add Subgroup
+                    </a>
+                {% endif %}
+                <a href="{% url 'checklist_detail' checklist_id=active_checklist.id %}" 
+                   class="btn btn-outline-light btn-sm">
+                    <i class="fas fa-eye me-1"></i> View Details
+                </a>
+            </div>
+        </div>
+    {% else %}
+        <div class="text-center">
+            <p class="mb-3 text-danger">No active checklist for the current shift</p>
+            {% if can_create_new %}
+                <a href="{% url 'create_checklist' %}" class="btn btn-danger">
+                    <i class="fas fa-plus me-1"></i> Start New Checklist
+                </a>
+            {% else %}
+                <p class="text-danger mb-0">A verification workflow already exists for today.</p>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+        </div>
+    </div>
+
+    <!-- Alert Notifications -->
+    {% if active_verification and not today_ep_check %}
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="alert alert-danger" role="alert" style="background-color: #990000; border-color: #ff0000; color: white; padding: 0.75rem;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong><i class="fas fa-exclamation-triangle me-2"></i>EPVS Checksheet Required</strong>
+                        <span class="ms-2">Complete before end of shift</span>
+                    </div>
+                    <a href="{% url 'ep_check_create' %}" class="btn btn-light btn-sm pulse-button">
+                        <i class="fas fa-shield-alt me-1"></i> Create Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if active_verification and not today_dtpm_checklist %}
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="alert alert-danger" role="alert" style="background-color: #990000; border-color: #ff0000; color: white; padding: 0.75rem;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong><i class="fas fa-exclamation-triangle me-2"></i>DTPM Checklist Required</strong>
+                        <span class="ms-2">Complete before end of shift</span>
+                    </div>
+                    <a href="{% url 'dtpm_checklist_create' %}" class="btn btn-light btn-sm pulse-button">
+                        <i class="fas fa-clipboard-check me-1"></i> Create Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- FTQ Information Card -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h5 class="mb-0">First Time Quality (FTQ) Status</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_ftq %}
+                        <div class="compact-stats">
+                            <div class="stat-item">
+                                <p class="stat-label text-white">Production</p>
+                                <p class="stat-value text-white">{{ today_ftq.total_inspected }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">Defects</p>
+                                <p class="stat-value text-white">{{ today_ftq.total_defects }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">FTQ %</p>
+                                <p class="stat-value {% if ftq_percentage >= 98 %}text-success{% elif ftq_percentage >= 95 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ ftq_percentage|floatformat:2 }}%
+                                </p>
+                            </div>
+                            <div class="stat-item">
+                                <a href="{% url 'ftq_record_detail' pk=today_ftq.id %}" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center">
+                            <p class="text-danger mb-2">No FTQ record for today's shift</p>
+                            <a href="{% url 'ftq_record_create' %}" class="btn btn-danger btn-sm {% if not active_checklist %}disabled{% endif %}" 
+                               {% if not active_checklist %}
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="You must first create a Daily Verification Sheet"
+                               {% endif %}>
+                                <i class="fas fa-plus me-1"></i> Create FTQ Record
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EPVS Checksheet Card -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h5 class="mb-0">EPVS Checksheet Status</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_ep_check %}
+                        <div class="compact-stats">
+                            <div class="stat-item">
+                                <p class="stat-label text-white">OK Mechanisms</p>
+                                <p class="stat-value text-success">{{ ep_check_stats.ok_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">NG Mechanisms</p>
+                                <p class="stat-value text-danger">{{ ep_check_stats.ng_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">N/A</p>
+                                <p class="stat-value text-warning">{{ ep_check_stats.na_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white-50">Model</p>
+                                <p class="stat-value">{{ today_ep_check.current_model }}</p>
+                            </div>
+                            <div class="stat-item">
+<span class="badge {% if today_ep_check.status == 'supervisor_approved' or today_ep_check.status == 'quality_approved' %}bg-success{% elif today_ep_check.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+    {% if today_ep_check.status == 'supervisor_approved' %}
+        Production Supervisor Approved
+    {% elif today_ep_check.status == 'quality_approved' %}
+        Quality Approved
+    {% elif today_ep_check.status == 'rejected' %}
+        Rejected
+    {% elif today_ep_check.status == 'pending' %}
+        Pending
+    {% else %}
+        {{ today_ep_check.get_status_display }}
+    {% endif %}
+</span>
+                            </div>
+                            <div class="stat-item">
+                                <a href="{% url 'ep_check_detail' pk=today_ep_check.pk %}" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center">
+                            <p class="text-danger mb-2">No EPVS Checksheet for today's shift</p>
+                            <a href="{% url 'ep_check_create' %}" class="btn btn-danger btn-sm {% if not active_verification %}disabled{% endif %}" 
+                               {% if not active_verification %}
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="You must first create a Daily Verification Sheet"
+                               {% endif %}>
+                                <i class="fas fa-shield-alt me-1"></i> Create EPVS Check
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DTPM Checklist Card -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h5 class="mb-0">Daily TPM Sheet Status</h5>
+                </div>
+                <div class="card-body">
+                    {% if today_dtpm_checklist %}
+                        <div class="compact-stats">
+                            <div class="stat-item">
+                                <p class="stat-label text-white">OK Checkpoints</p>
+                                <p class="stat-value text-success">{{ dtpm_checklist_stats.ok_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">NG Checkpoints</p>
+                                <p class="stat-value text-danger">{{ dtpm_checklist_stats.ng_count }}</p>
+                            </div>
+                            <div class="stat-item">
+                                <p class="stat-label text-white">Total</p>
+                                <p class="stat-value text-white">{{ dtpm_checklist_stats.total_checkpoints }}</p>
+                            </div>
+                            <div class="stat-item">
+ <span class="badge {% if today_dtpm_checklist.status == 'quality_certified' or today_dtpm_checklist.status == 'supervisor_approved' %}bg-success{% elif today_dtpm_checklist.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+    {% if today_dtpm_checklist.status == 'supervisor_approved' %}
+        Production Supervisor Approved
+    {% elif today_dtpm_checklist.status == 'quality_certified' %}
+        Quality Approved
+    {% elif today_dtpm_checklist.status == 'rejected' %}
+        Rejected
+    {% elif today_dtpm_checklist.status == 'pending' %}
+        Pending
+    {% else %}
+        {{ today_dtpm_checklist.get_status_display }}
+    {% endif %}
+</span>
+                            </div>
+                            <div class="stat-item">
+                                <a href="{% url 'dtpm_new_detail' pk=today_dtpm_checklist.pk %}" class="btn btn-outline-light btn-sm">
+                                    <i class="fas fa-eye me-1"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center">
+                            <p class="text-danger mb-2">No DTPM Checklist for today's shift</p>
+                            <a href="{% url 'dtpm_checklist_create' %}" class="btn btn-danger btn-sm {% if not active_verification %}disabled{% endif %}" 
+                               {% if not active_verification %}
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="You must first create a Daily Verification Sheet"
+                               {% endif %}>
+                                <i class="fas fa-clipboard-check me-1"></i> Create DTPM Checklist
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Workflow Instructions Modal -->
+<div class="modal fade" id="workflowModal" tabindex="-1" aria-labelledby="workflowModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark text-white border border-danger">
+            <div class="modal-header bg-danger">
+                <h5 class="modal-title" id="workflowModalLabel">Workflow Instructions</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h5 class="text-center mb-3">Work Process Steps:</h5>
+                <ol class="list-group list-group-numbered">
+                    <li class="list-group-item d-flex justify-content-between align-items-start bg-dark text-white border-danger">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Step 1: Daily Verification Sheet</div>
+                            Create the initial inspection sheet
+                        </div>
+                        {% if active_checklist %}
+                        <span class="badge bg-success rounded-pill">Complete</span>
+                        {% else %}
+                        <span class="badge bg-danger rounded-pill">Not Started</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start bg-dark text-white border-danger">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Step 2: Subgroup Measurements</div>
+                            Add subgroup measurements every 2 hours (6 total)
+                        </div>
+                        {% if active_checklist and active_checklist.subgroup_entries.count > 0 %}
+                        <span class="badge bg-warning rounded-pill">In Progress ({{ active_checklist.subgroup_entries.count }}/6)</span>
+                        {% elif active_checklist %}
+                        <span class="badge bg-warning rounded-pill">Ready to Start</span>
+                        {% else %}
+                        <span class="badge bg-secondary rounded-pill">Not Ready</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start {% if active_verification and not today_ep_check %}bg-danger text-white{% else %}bg-dark text-white{% endif %} border-danger">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Step 3: EPVS Checksheet</div>
+                            Verify all error prevention mechanisms are working
+                            {% if active_verification and not today_ep_check %}
+                            <div class="mt-1"><i class="fas fa-exclamation-circle me-1"></i> <strong>Action Required</strong></div>
+                            {% endif %}
+                        </div>
+                        {% if today_ep_check %}
+                        <span class="badge bg-success rounded-pill">Complete</span>
+                        {% elif active_verification %}
+                        <span class="badge bg-danger rounded-pill">Action Required</span>
+                        {% else %}
+                        <span class="badge bg-secondary rounded-pill">Not Ready</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start {% if active_verification and not today_dtpm_checklist %}bg-danger text-white{% else %}bg-dark text-white{% endif %} border-danger">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Step 4: DTPM Checklist</div>
+                            Daily Tracking & Performance Monitoring tasks
+                            {% if active_verification and not today_dtpm_checklist %}
+                            <div class="mt-1"><i class="fas fa-exclamation-circle me-1"></i> <strong>Action Required</strong></div>
+                            {% endif %}
+                        </div>
+                        {% if today_dtpm_checklist %}
+                        <span class="badge bg-success rounded-pill">Complete</span>
+                        {% elif active_verification %}
+                        <span class="badge bg-danger rounded-pill">Action Required</span>
+                        {% else %}
+                        <span class="badge bg-secondary rounded-pill">Not Ready</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start {% if active_verification and not today_ftq %}bg-danger text-white{% else %}bg-dark text-white{% endif %} border-danger">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Step 5: FTQ Record</div>
+                            Create quality record with production and defect information
+                            {% if active_verification and not today_ftq %}
+                            <div class="mt-1"><i class="fas fa-exclamation-circle me-1"></i> <strong>Action Required</strong></div>
+                            {% endif %}
+                        </div>
+                        {% if today_ftq %}
+                        <span class="badge bg-success rounded-pill">Complete</span>
+                        {% elif active_verification %}
+                        <span class="badge bg-danger rounded-pill">Action Required</span>
+                        {% else %}
+                        <span class="badge bg-secondary rounded-pill">Not Ready</span>
+                        {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-start bg-dark text-white border-danger">
+                        <div class="ms-2 me-auto">
+                            <div class="fw-bold">Step 6: Supervisor Verification</div>
+                            Wait for supervisor to verify your entries
+                        </div>
+                        {% if active_verification and active_verification.status == 'supervisor_approved' %}
+                        <span class="badge bg-success rounded-pill">Complete</span>
+                        {% elif active_verification %}
+                        <span class="badge bg-secondary rounded-pill">Pending</span>
+                        {% else %}
+                        <span class="badge bg-secondary rounded-pill">Not Ready</span>
+                        {% endif %}
+                    </li>
+                </ol>                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> You can create FTQ, EPVS Check, and DTPM Checklists as soon as you've created the Daily Verification Sheet. Subgroups will be added throughout the day.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Close</button>
+                {% if not active_verification %}
+                    {% if can_create_new %}
+                    <a href="{% url 'create_checklist' %}" class="btn btn-danger">
+                        <i class="fas fa-plus me-1"></i> Start Verification Sheet
+                    </a>
+                    {% endif %}
+                {% elif active_verification and not today_ep_check %}
+                <a href="{% url 'ep_check_create' %}" class="btn btn-danger me-2">
+                    <i class="fas fa-shield-alt me-1"></i> Create EPVS Check
+                </a>
+                {% elif active_verification and not today_dtpm_checklist %}
+                <a href="{% url 'dtpm_checklist_create' %}" class="btn btn-danger me-2">
+                    <i class="fas fa-clipboard-check me-1"></i> Create DTPM Checklist
+                </a>
+                {% elif active_verification and not today_ftq %}
+                <a href="{% url 'ftq_record_create' %}" class="btn btn-danger">
+                    <i class="fas fa-plus me-1"></i> Create FTQ Record
+                </a>
+                {% elif can_add_subgroup %}
+                <a href="{% url 'add_subgroup' checklist_id=active_checklist.id %}" class="btn btn-warning me-2">
+                    <i class="fas fa-plus-circle me-1"></i> Add Subgroup
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show workflow modal on page load if active checklist exists and any required records are missing
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if active_verification %}
+            {% if not today_ftq or not today_ep_check or not today_dtpm_checklist %}
+                // Show modal automatically when verification exists but any required records are missing
+                const workflowModal = new bootstrap.Modal(document.getElementById('workflowModal'));
+                workflowModal.show();
+            {% endif %}
+        {% endif %}
+        
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+
+    // Update current time every second
+    function updateTime() {
+        const timeElement = document.getElementById('currentTime');
+        const now = new Date();
+        timeElement.textContent = now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+        });
+    }
+    
+    setInterval(updateTime, 1000);
+
+    // Update time remaining if exists
+    const timeRemainingElement = document.getElementById('timeRemaining');
+    if (timeRemainingElement) {
+        let totalSeconds = parseInt(timeRemainingElement.dataset.seconds);
+        
+        function updateTimeRemaining() {
+            if (totalSeconds <= 0) {
+                location.reload();
+                return;
+            }
+            
+            // Format as hours and minutes
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            
+            let timeText = '';
+            if (hours > 0) {
+                timeText += `${hours} hour${hours !== 1 ? 's' : ''}`;
+            }
+            if (minutes > 0 || hours === 0) {
+                if (hours > 0) timeText += ' ';
+                timeText += `${minutes} min`;
+            }
+            
+            timeRemainingElement.textContent = timeText;
+            
+            totalSeconds--;
+        }
+        
+        updateTimeRemaining();
+        setInterval(updateTimeRemaining, 1000);
+    }
+</script>
+{% endblock %}

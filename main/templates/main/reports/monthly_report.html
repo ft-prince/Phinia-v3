@@ -1,0 +1,133 @@
+{% extends 'main/base.html' %}
+{% load custom_tags %}
+
+{% block title %}Monthly Report{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Monthly Report ({{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }})</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Model-wise Statistics -->
+                    <div class="row mb-4">
+                        {% for model, stats in model_stats.items %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h6 class="mb-0">Model: {{ model }}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="text-center">
+                                            <h4>{{ stats.total }}</h4>
+                                            <small>Total</small>
+                                        </div>
+                                        <div class="text-center text-success">
+                                            <h4>{{ stats.approved }}</h4>
+                                            <small>Approved</small>
+                                        </div>
+                                        <div class="text-center text-danger">
+                                            <h4>{{ stats.rejected }}</h4>
+                                            <small>Rejected</small>
+                                        </div>
+                                    </div>
+                                    <div class="progress mt-3">
+                                        {% if stats.total > 0 %}
+                                        <div class="progress-bar bg-success" style="width: {{ stats.approved|divisibleby:stats.total|multiply:100 }}%">
+                                            {{ stats.approved|divisibleby:stats.total|multiply:100|floatformat:1 }}%
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Monthly Trends Chart -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Monthly Trends</h6>
+                        <canvas id="monthlyTrendChart"></canvas>
+                    </div>
+
+                    <!-- Monthly Summary Table -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Week</th>
+                                    <th>Total Checklists</th>
+                                    <th>Approved</th>
+                                    <th>Rejected</th>
+                                    <th>Approval Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for week in weekly_stats %}
+                                <tr>
+                                    <td>Week {{ forloop.counter }}</td>
+                                    <td>{{ week.total }}</td>
+                                    <td>{{ week.approved }}</td>
+                                    <td>{{ week.rejected }}</td>
+                                    <td>
+                                        {% if week.total > 0 %}
+                                            {{ week.approved|divisibleby:week.total|multiply:100|floatformat:1 }}%
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('monthlyTrendChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            datasets: [{
+                label: 'Total Checklists',
+                data: [{% for week in weekly_stats %}{{ week.total }},{% endfor %}],
+                borderColor: 'rgba(54, 162, 235, 1)',
+                fill: false
+            }, {
+                label: 'Approval Rate (%)',
+                data: [{% for week in weekly_stats %}
+                    {% if week.total > 0 %}
+                        {{ week.approved|divisibleby:week.total|multiply:100|floatformat:1 }},
+                    {% else %}
+                        0,
+                    {% endif %}
+                {% endfor %}],
+                borderColor: 'rgba(75, 192, 192, 1)',
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

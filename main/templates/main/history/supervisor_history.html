@@ -1,0 +1,132 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Supervisor History{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Supervisor History</h2>
+        </div>
+    </div>
+
+    <!-- Pending Verifications -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h5 class="mb-0">Pending Verifications</h5>
+                </div>
+                <div class="card-body">
+                    {% if pending_verifications %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Shift</th>
+                                    <th>Operator</th>
+                                    <th>Model</th>
+                                    <th>Subgroup</th>
+                                    <th>Measurements</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subgroup in pending_verifications %}
+                                <tr>
+                                    <td>{{ subgroup.timestamp|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ subgroup.checklist.shift.get_shift_type_display }}</td>
+                                    <td>{{ subgroup.checklist.shift.operator.username }}</td>
+                                    <td>{{ subgroup.checklist.selected_model }}</td>
+                                    <td>#{{ subgroup.subgroup_number }}</td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <span class="badge {% if -43 <= subgroup.uv_vacuum_test <= -35 %}bg-success{% else %}bg-danger{% endif %}">
+                                                UV Test: {{ subgroup.uv_vacuum_test }}
+                                            </span>
+                                            <span class="badge {% if 30 <= subgroup.uv_flow_value <= 40 %}bg-success{% else %}bg-danger{% endif %}">
+                                                Flow: {{ subgroup.uv_flow_value }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'verify_subgroup_measurement' subgroup.id %}" 
+                                           class="btn btn-primary btn-sm">Verify</a>
+                                        <a href="{% url 'checklist_detail' subgroup.checklist.id %}" 
+                                           class="btn btn-info btn-sm">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No pending verifications.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verified Entries -->
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Verification History</h5>
+                </div>
+                <div class="card-body">
+                    {% if verified_entries %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Verified At</th>
+                                    <th>Operator</th>
+                                    <th>Model</th>
+                                    <th>Subgroup</th>
+                                    <th>Status</th>
+                                    <th>Comments</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for verification in verified_entries %}
+                                <tr>
+                                    <td>{{ verification.verified_at|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ verification.subgroup.checklist.shift.operator.username }}</td>
+                                    <td>{{ verification.subgroup.checklist.selected_model }}</td>
+                                    <td>#{{ verification.subgroup.subgroup_number }}</td>
+                                    <td>
+                                        <span class="badge {% if verification.status == 'rejected' %}bg-danger{% else %}bg-success{% endif %}">
+                                            {{ verification.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if verification.comments %}
+                                            {{ verification.comments|truncatechars:30 }}
+                                        {% else %}
+                                            <span class="text-muted">No comments</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'edit_verification' verification.id %}" 
+                                           class="btn btn-secondary btn-sm">Edit</a>
+                                        <a href="{% url 'checklist_detail' verification.subgroup.checklist.id %}" 
+                                           class="btn btn-info btn-sm">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">No verification history.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

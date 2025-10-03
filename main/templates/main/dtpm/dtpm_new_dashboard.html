@@ -1,0 +1,512 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}DTPM Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(255, 0, 0, 0.2);
+    }
+    .stat-card {
+        padding: 20px;
+        text-align: center;
+    }
+    .stat-card .stat-value {
+        font-size: 36px;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    .stat-card .stat-label {
+        font-size: 16px;
+        color: #aaa;
+    }
+    .chart-container {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .issue-card {
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 1px solid #dc3545;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        padding: 15px;
+    }
+    .date-filter {
+        background-color: #222;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .trend-indicator {
+        font-size: 14px;
+        margin-left: 5px;
+    }
+    .trend-up {
+        color: #28a745;
+    }
+    .trend-down {
+        color: #dc3545;
+    }
+    .custom-date-inputs {
+        display: none;
+    }
+    .custom-date-inputs.active {
+        display: flex;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-chart-bar"></i> DTPM Dashboard</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'dtpm_new_list' %}" class="btn btn-primary">
+            <i class="fas fa-list"></i> View All Checklists
+        </a>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="date-filter">
+    <form method="get" action="" id="filterForm">
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="mb-0">
+                    <label>Time Period:</label>
+                    <select name="date_filter" id="dateFilterSelect" class="form-select">
+                        <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 Days</option>
+                        <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 Days</option>
+                        <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 Days</option>
+                        <option value="180" {% if days == 180 %}selected{% endif %}>Last 180 Days</option>
+                        <option value="custom" {% if custom_date %}selected{% endif %}>Custom Range</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-9 text-end">
+                <p class="mb-0 mt-2">Showing data from {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }}</p>
+            </div>
+        </div>
+        <div class="row custom-date-inputs {% if custom_date %}active{% endif %}" id="customDateInputs">
+            <div class="col-md-4">
+                <div class="mb-0">
+                    <label>Start Date:</label>
+                    <input type="date" name="start_date" class="form-control" value="{{ start_date|date:'Y-m-d' }}">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-0">
+                    <label>End Date:</label>
+                    <input type="date" name="end_date" class="form-control" value="{{ end_date|date:'Y-m-d' }}">
+                </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Apply Filter</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="dashboard-card stat-card">
+            <div class="stat-label">Total Checklists</div>
+            <div class="stat-value">{{ stats.total_checklists }}</div>
+            {% if stats.total_trend > 0 %}
+            <div class="trend-indicator trend-up"><i class="fas fa-arrow-up"></i> {{ stats.total_trend|floatformat:1 }}%</div>
+            {% elif stats.total_trend < 0 %}
+            <div class="trend-indicator trend-down"><i class="fas fa-arrow-down"></i> {{ stats.total_trend|floatformat:1|cut:"-" }}%</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card stat-card">
+            <div class="stat-label">Verified</div>
+            <div class="stat-value text-success">{{ stats.verified_count }}</div>
+            <div>{{ stats.success_rate|floatformat:1 }}% Success Rate</div>
+            {% if stats.success_rate_trend > 0 %}
+            <div class="trend-indicator trend-up"><i class="fas fa-arrow-up"></i> {{ stats.success_rate_trend|floatformat:1 }}%</div>
+            {% elif stats.success_rate_trend < 0 %}
+            <div class="trend-indicator trend-down"><i class="fas fa-arrow-down"></i> {{ stats.success_rate_trend|floatformat:1|cut:"-" }}%</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card stat-card">
+            <div class="stat-label">Rejected</div>
+            <div class="stat-value text-danger">{{ stats.rejected_count }}</div>
+            {% if stats.rejected_trend > 0 %}
+            <div class="trend-indicator trend-down"><i class="fas fa-arrow-up"></i> {{ stats.rejected_trend|floatformat:1 }}%</div>
+            {% elif stats.rejected_trend < 0 %}
+            <div class="trend-indicator trend-up"><i class="fas fa-arrow-down"></i> {{ stats.rejected_trend|floatformat:1|cut:"-" }}%</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-card stat-card">
+            <div class="stat-label">Pending</div>
+            <div class="stat-value text-warning">{{ stats.pending_count }}</div>
+            <div>{{ stats.completion_rate|floatformat:1 }}% Completion Rate</div>
+            {% if stats.completion_rate_trend > 0 %}
+            <div class="trend-indicator trend-up"><i class="fas fa-arrow-up"></i> {{ stats.completion_rate_trend|floatformat:1 }}%</div>
+            {% elif stats.completion_rate_trend < 0 %}
+            <div class="trend-indicator trend-down"><i class="fas fa-arrow-down"></i> {{ stats.completion_rate_trend|floatformat:1|cut:"-" }}%</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h4>Checkpoint OK Rate (%)</h4>
+            <canvas id="checkpointChart" height="300"></canvas>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="chart-container">
+            <h4>Daily Success Rate Trend</h4>
+            <canvas id="trendChart" height="300"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Weekly Summary Chart -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="chart-container">
+            <h4>Weekly Checklist Status Breakdown</h4>
+            <canvas id="weeklyChart" height="200"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Checkpoint Stats Table -->
+<div class="card dashboard-card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-tasks"></i> Checkpoint Statistics</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Description</th>
+                        <th>OK Count</th>
+                        <th>NG Count</th>
+                        <th>OK Rate</th>
+                        <th>Change</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cp_num, cp_stats in checkpoint_stats.items %}
+                    <tr>
+                        <td>{{ cp_num }}</td>
+                        <td>{{ cp_stats.description|truncatechars:50 }}</td>
+                        <td>{{ cp_stats.ok_count }}</td>
+                        <td>{{ cp_stats.ng_count }}</td>
+                        <td>
+                            <div class="progress" style="height: 20px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ cp_stats.ok_rate }}%;" 
+                                     aria-valuenow="{{ cp_stats.ok_rate }}" aria-valuemin="0" aria-valuemax="100">
+                                    {{ cp_stats.ok_rate|floatformat:1 }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            {% if cp_stats.change > 0 %}
+                            <span class="text-success"><i class="fas fa-arrow-up"></i> {{ cp_stats.change|floatformat:1 }}%</span>
+                            {% elif cp_stats.change < 0 %}
+                            <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ cp_stats.change|floatformat:1|cut:"-" }}%</span>
+                            {% else %}
+                            <span class="text-muted">No change</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Open Issues -->
+<div class="card dashboard-card">
+    <div class="card-header">
+        <h5><i class="fas fa-exclamation-triangle"></i> Open Issues</h5>
+    </div>
+    <div class="card-body">
+        {% if open_issues %}
+        {% for issue in open_issues %}
+        <div class="issue-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h6>Checkpoint #{{ issue.check_result.checkpoint_number }}: {{ issue.check_result.get_checkpoint_number_display|truncatechars:30 }}</h6>
+                    <p>{{ issue.description|truncatechars:100 }}</p>
+                    <div class="text-muted">
+                        <small>Reported by {{ issue.reported_by.username }} on {{ issue.created_at|date:"M d, Y" }}</small>
+                    </div>
+                </div>
+                <div class="ms-3">
+                    <span class="badge bg-{% if issue.priority == 'low' %}secondary{% elif issue.priority == 'medium' %}warning{% elif issue.priority == 'high' %}danger{% else %}danger{% endif %}">
+                        {{ issue.get_priority_display }}
+                    </span>
+                    <br>
+                    <span class="badge bg-{% if issue.status == 'open' %}danger{% elif issue.status == 'in_progress' %}primary{% endif %} mt-2">
+                        {{ issue.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="text-end mt-2">
+                <a href="{% url 'dtpm_new_resolve_issue' issue_id=issue.id %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-wrench"></i> Resolve
+                </a>
+                <a href="{% url 'dtpm_new_detail' pk=issue.check_result.checklist.id %}" class="btn btn-sm btn-info">
+                    <i class="fas fa-eye"></i> View Checklist
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-center">No open issues found in the selected time period.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Parse chart data from Django template
+    const chartData = JSON.parse('{{ chart_data|safe }}');
+    const trendData = JSON.parse('{{ trend_data|safe }}');
+    const weeklyData = JSON.parse('{{ weekly_data|safe }}');
+    
+    // Set up the checkpoint chart
+    document.addEventListener('DOMContentLoaded', function() {
+        // Bar chart for checkpoint rates
+        const ctxBar = document.getElementById('checkpointChart').getContext('2d');
+        const checkpointChart = new Chart(ctxBar, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'OK Rate (%)',
+                    data: chartData.ok_rates,
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            afterLabel: function(context) {
+                                const index = context.dataIndex;
+                                return chartData.descriptions[index];
+                            }
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Line chart for success rate trend
+        const ctxLine = document.getElementById('trendChart').getContext('2d');
+        const trendChart = new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: trendData.dates,
+                datasets: [{
+                    label: 'Success Rate (%)',
+                    data: trendData.success_rates,
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(40, 167, 69, 1)'
+                }, {
+                    label: 'Completion Rate (%)',
+                    data: trendData.completion_rates,
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: 'rgba(255, 193, 7, 1)'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff',
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.parsed.y;
+                                return `${label}: ${value.toFixed(1)}%`;
+                            },
+                            footer: function(tooltipItems) {
+                                const dataIndex = tooltipItems[0].dataIndex;
+                                return `Total Checklists: ${trendData.checklist_counts[dataIndex]}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Weekly status breakdown chart
+        const ctxStacked = document.getElementById('weeklyChart').getContext('2d');
+        const weeklyChart = new Chart(ctxStacked, {
+            type: 'bar',
+            data: {
+                labels: weeklyData.weeks,
+                datasets: [{
+                    label: 'Verified',
+                    data: weeklyData.verified,
+                    backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                    borderColor: 'rgba(40, 167, 69, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Rejected',
+                    data: weeklyData.rejected,
+                    backgroundColor: 'rgba(220, 53, 69, 0.7)',
+                    borderColor: 'rgba(220, 53, 69, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Pending',
+                    data: weeklyData.pending,
+                    backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                    borderColor: 'rgba(255, 193, 7, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        stacked: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        }
+                    },
+                    x: {
+                        stacked: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            footer: function(tooltipItems) {
+                                const index = tooltipItems[0].dataIndex;
+                                const total = weeklyData.verified[index] + 
+                                            weeklyData.rejected[index] + 
+                                            weeklyData.pending[index];
+                                return `Total: ${total}`;
+                            }
+                        }
+                    },
+                    legend: {
+                        labels: {
+                            color: '#ffffff'
+                        }
+                    }
+                }
+            }
+        });
+    });
+    
+    // Handle custom date range selection
+    document.getElementById('dateFilterSelect').addEventListener('change', function() {
+        const customDateInputs = document.getElementById('customDateInputs');
+        
+        if (this.value === 'custom') {
+            customDateInputs.classList.add('active');
+        } else {
+            customDateInputs.classList.remove('active');
+            document.getElementById('filterForm').submit();
+        }
+    });
+</script>
+{% endblock %}

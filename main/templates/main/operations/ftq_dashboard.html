@@ -1,0 +1,1284 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}FTQ Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Base dashboard styles */
+    .dashboard-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+        transition: all 0.3s;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(255, 0, 0, 0.6);
+    }
+    
+    .dashboard-card .card-title {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 10px;
+    }
+    
+    .stats-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+    
+    .stats-label {
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .canvas-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    
+    /* Filter bar styling */
+    .filter-bar {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .date-range-label {
+        color: #ff0000;
+        font-weight: 600;
+    }
+    
+    /* Button styling */
+    .btn-outline-light {
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .btn-outline-light:hover {
+        background-color: rgba(255, 0, 0, 0.7);
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    /* Trend indicators */
+    .trend-up {
+        color: #00ff00;
+    }
+    
+    .trend-down {
+        color: #ff0000;
+    }
+    
+    .trend-stable {
+        color: #ffcc00;
+    }
+    
+    /* Model stats styling */
+    .model-stat {
+        background-color: rgba(255, 0, 0, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 10px;
+        transition: all 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .model-stat:hover {
+        background-color: rgba(255, 0, 0, 0.2);
+        transform: scale(1.02);
+    }
+    
+    .model-name {
+        font-weight: 600;
+        color: #ffffff;
+    }
+    
+    .model-ftq {
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+    
+    .ftq-high {
+        background-color: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+    }
+    
+    .ftq-medium {
+        background-color: rgba(255, 165, 0, 0.2);
+        color: #ffa500;
+    }
+    
+    .ftq-low {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ff0000;
+    }
+    
+    /* Defect item styling */
+    .defect-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .defect-name {
+        color: #ffffff;
+        font-weight: 500;
+    }
+    
+    .defect-count {
+        background-color: #ff0000;
+        color: #ffffff;
+        padding: 2px 8px;
+        border-radius: 15px;
+        font-weight: 600;
+    }
+    
+    /* Date picker styling */
+    input[type="date"] {
+        background-color: #222222;
+        border: 1px solid #444444;
+        border-radius: 6px;
+        color: #ffffff;
+        padding: 6px 10px;
+    }
+    
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+    }
+    
+    /* Tooltips */
+    .info-tooltip {
+        position: relative;
+        cursor: pointer;
+        margin-left: 5px;
+    }
+    
+    .info-tooltip .tooltip-text {
+        visibility: hidden;
+        background-color: #333333;
+        color: #ffffff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -150px;
+        width: 300px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    
+    .info-tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    /* Toggle buttons */
+    .view-toggle-btn {
+        background-color: #333333;
+        border: 1px solid #444444;
+        color: #cccccc;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+    
+    .view-toggle-btn.active {
+        background-color: #ff0000;
+        color: #ffffff;
+        border-color: #ff0000;
+    }
+    
+    /* Status indicators */
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+    
+    .status-good {
+        background-color: #00ff00;
+    }
+    
+    .status-warning {
+        background-color: #ffcc00;
+    }
+    
+    .status-bad {
+        background-color: #ff0000;
+    }
+    
+    /* Enhanced trend indicators */
+    .trend-indicator {
+        display: flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .trend-up {
+        background-color: rgba(0, 255, 0, 0.1);
+        color: #00ff00;
+    }
+    
+    .trend-down {
+        background-color: rgba(255, 0, 0, 0.1);
+        color: #ff0000;
+    }
+    
+    .trend-stable {
+        background-color: rgba(255, 255, 0, 0.1);
+        color: #ffff00;
+    }
+    
+    /* Defect detail modal */
+    .defect-detail-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s;
+    }
+    
+    .defect-detail-modal.active {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .defect-detail-content {
+        background-color: #222222;
+        border: 2px solid #ff0000;
+        border-radius: 12px;
+        padding: 20px;
+        width: 80%;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.5);
+    }
+    
+    .defect-detail-header {
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .defect-detail-close {
+        background: none;
+        border: none;
+        color: #ffffff;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    
+    /* Date range inputs styling */
+    .date-range-inputs {
+        display: flex;
+        align-items: center;
+    }
+    
+    .date-range-inputs .date-separator {
+        margin: 0 10px;
+        color: #ffffff;
+    }
+    
+    .custom-date-btn {
+        background-color: transparent;
+        border: 1px solid #ffffff;
+        color: #ffffff;
+        border-radius: 4px;
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+    
+    .custom-date-btn:hover {
+        background-color: rgba(255, 0, 0, 0.3);
+    }
+    
+    .custom-date-btn.active {
+        background-color: #ff0000;
+        border-color: #ff0000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="fas fa-chart-line me-2"></i>FTQ Dashboard</h2>
+        <div>
+            <a href="{% url 'ftq_list' %}" class="btn btn-outline-light">
+                <i class="fas fa-clipboard-list me-1"></i> All Records
+            </a>
+            <a href="{% url 'ftq_report_daily' %}" class="btn btn-primary ms-2">
+                <i class="fas fa-file-alt me-1"></i> Reports
+            </a>
+        </div>
+    </div>
+    
+    <!-- Filter Bar -->
+    <div class="dashboard-card filter-bar">
+        <form method="get" action="" class="row g-3 align-items-center">
+            <div class="col-md-2">
+                <span class="date-range-label">Date Range:</span>
+            </div>
+            <div class="col-md-6">
+                <div class="btn-group" role="group">
+                    <a href="?days=7" class="btn {% if days == 7 %}btn-primary{% else %}btn-outline-light{% endif %}">Last 7 Days</a>
+                    <a href="?days=30" class="btn {% if days == 30 %}btn-primary{% else %}btn-outline-light{% endif %}">Last 30 Days</a>
+                    <a href="?days=90" class="btn {% if days == 90 %}btn-primary{% else %}btn-outline-light{% endif %}">Last 90 Days</a>
+                    <a href="?days=180" class="btn {% if days == 180 %}btn-primary{% else %}btn-outline-light{% endif %}">Last 6 Months</a>
+                    <button type="button" id="customDateToggle" class="btn btn-outline-light">Custom</button>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div id="dateRangeDisplay" class="text-white">
+                    <i class="fas fa-calendar-alt me-2"></i>{{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}
+                </div>
+                <div id="customDateInputs" class="date-range-inputs mt-2" style="display: none;">
+                    <input type="date" name="start_date" id="start_date" class="form-control form-control-sm" value="{{ start_date|date:'Y-m-d' }}">
+                    <span class="date-separator">to</span>
+                    <input type="date" name="end_date" id="end_date" class="form-control form-control-sm" value="{{ end_date|date:'Y-m-d' }}">
+                    <button type="submit" class="btn btn-sm btn-primary ms-2">Apply</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Summary Statistics -->
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Overall FTQ</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.ftq_percentage|floatformat:2 }}%</div>
+                        <div class="stats-label">Quality Rate</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title"><i class="fas fa-box me-2"></i>Total Production</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.total_inspected }}</div>
+                        <div class="stats-label">Units</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-boxes"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title"><i class="fas fa-bug me-2"></i>Total Defects</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.total_defects }}</div>
+                        <div class="stats-label">Defective Units</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title"><i class="fas fa-file-alt me-2"></i>Total Records</h5>
+                <div class="d-flex justify-content-between align-items-end">
+                    <div>
+                        <div class="stats-value">{{ stats.total_records }}</div>
+                        <div class="stats-label">FTQ Records</div>
+                    </div>
+                    <div class="display-4 text-danger opacity-25">
+                        <i class="fas fa-clipboard-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Charts Row -->
+    <div class="row">
+        <!-- FTQ Trend Chart -->
+        <div class="col-md-8 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-chart-line me-2"></i>Daily FTQ Trend</span>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="view-toggle-btn active" id="viewFTQPercentage">FTQ %</button>
+                        <button type="button" class="view-toggle-btn" id="viewDefectCount">Defect Count</button>
+                        <button type="button" class="view-toggle-btn" id="viewInspectionCount">Total Inspected</button>
+                    </div>
+                </h5>
+                <div class="canvas-container">
+                    <canvas id="ftqTrendChart"></canvas>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div>
+                        <small class="text-muted">Average FTQ: <span class="fw-bold text-white" id="avgFTQ">{{ stats.ftq_percentage|floatformat:2 }}%</span></small>
+                    </div>
+                    <div>
+                        <small class="text-muted">Trend: 
+                            <span class="fw-bold {% if chart_ftq|last > chart_ftq|first %}trend-up{% else %}trend-down{% endif %}">
+                                <i class="fas {% if chart_ftq|last > chart_ftq|first %}fa-arrow-up{% else %}fa-arrow-down{% endif %}"></i>
+                                {{ chart_ftq|last|floatformat:2 }}%
+                            </span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Model Performance -->
+        <div class="col-md-4 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title d-flex justify-content-between align-items-center">
+<!-- Continuing from the previous template -->
+                    <span><i class="fas fa-cubes me-2"></i>Model Performance</span>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="view-toggle-btn active" id="viewModelFTQ">FTQ %</button>
+                        <button type="button" class="view-toggle-btn" id="viewModelUnits">Units</button>
+                    </div>
+                </h5>
+                <div id="modelFTQView">
+                    {% for model in model_stats %}
+                    <div class="model-stat">
+                        <span class="model-name">{{ model.model_name }}</span>
+                        <span class="model-ftq {% if model.ftq_percentage >= 99 %}ftq-high{% elif model.ftq_percentage >= 95 %}ftq-medium{% else %}ftq-low{% endif %}">
+                            {{ model.ftq_percentage|floatformat:2 }}% 
+                            <span class="info-tooltip">
+                                <i class="fas fa-info-circle"></i>
+                                <span class="tooltip-text">
+                                    Inspected: {{ model.total_inspected }}<br>
+                                    Defects: {{ model.total_defects }}
+                                </span>
+                            </span>
+                        </span>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-info-circle me-2"></i> No model data available
+                    </div>
+                    {% endfor %}
+                </div>
+                <div id="modelUnitsView" style="display: none;">
+                    <div class="canvas-container">
+                        <canvas id="modelUnitsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Additional Charts -->
+    <div class="row">
+        <!-- Shift Performance -->
+        <div class="col-md-4 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title"><i class="fas fa-clock me-2"></i>Shift Performance</h5>
+                <div class="canvas-container">
+                    <canvas id="shiftChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Top Defects -->
+        <div class="col-md-4 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title"><i class="fas fa-exclamation-circle me-2"></i>Top Defects</h5>
+                <div class="canvas-container">
+                    <canvas id="topDefectsChart"></canvas>
+                </div>
+                <div class="text-center mt-2">
+                    <small class="text-muted">Click on a defect to see detailed analysis</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Model Comparison -->
+        <div class="col-md-4 mb-4">
+            <div class="dashboard-card">
+                <h5 class="card-title"><i class="fas fa-chart-bar me-2"></i>Model Comparison</h5>
+                <div class="canvas-container">
+                    <canvas id="modelComparisonChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Defect Detail Modal -->
+    <div id="defectDetailModal" class="defect-detail-modal">
+        <div class="defect-detail-content">
+            <div class="defect-detail-header">
+                <h4 id="defectDetailTitle" class="text-white"><i class="fas fa-bug me-2"></i>Defect Detail</h4>
+                <button id="defectDetailClose" class="defect-detail-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="canvas-container">
+                        <canvas id="defectTrendChart"></canvas>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="text-white mb-3">Defect Statistics</h5>
+                    <div class="stats-item mb-3">
+                        <div class="text-muted mb-1">Total Count</div>
+                        <div class="stats-value" id="defectTotalCount">0</div>
+                    </div>
+                    <div class="stats-item mb-3">
+                        <div class="text-muted mb-1">% of All Defects</div>
+                        <div class="stats-value" id="defectPercentage">0%</div>
+                    </div>
+                    <div class="stats-item mb-3">
+                        <div class="text-muted mb-1">Most Common in Model</div>
+                        <div class="stats-value" id="defectCommonModel">-</div>
+                    </div>
+                    <div class="stats-item mb-3">
+                        <div class="text-muted mb-1">Most Common in Shift</div>
+                        <div class="stats-value" id="defectCommonShift">-</div>
+                    </div>
+                    <div class="stats-item mb-3">
+                        <div class="text-muted mb-1">Trend</div>
+                        <div id="defectTrend">-</div>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5 class="text-white mb-3">Potential Solutions</h5>
+                    <div id="defectSolutions" class="border-start border-danger ps-3">
+                        <p class="text-muted">Please select a defect to see recommended solutions.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Parse the chart data from JSON
+    const chartData = JSON.parse('{{ chart_data|escapejs }}');
+    
+    // Set up Chart.js defaults for dark theme
+    Chart.defaults.color = '#ffffff';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+    
+    // Toggle custom date inputs
+    const customDateToggle = document.getElementById('customDateToggle');
+    const customDateInputs = document.getElementById('customDateInputs');
+    const dateRangeDisplay = document.getElementById('dateRangeDisplay');
+    
+    customDateToggle.addEventListener('click', function() {
+        if (customDateInputs.style.display === 'none') {
+            customDateInputs.style.display = 'flex';
+            dateRangeDisplay.style.display = 'none';
+            customDateToggle.classList.add('active');
+        } else {
+            customDateInputs.style.display = 'none';
+            dateRangeDisplay.style.display = 'block';
+            customDateToggle.classList.remove('active');
+        }
+    });
+    
+    // If custom date params are present in URL, show the custom inputs
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('start_date') && urlParams.has('end_date')) {
+        customDateInputs.style.display = 'flex';
+        dateRangeDisplay.style.display = 'none';
+        customDateToggle.classList.add('active');
+    }
+    
+    // Prepare additional data for charts
+    const inspectionData = chartData.dates.map((date, index) => {
+        const inspected = chartData.total_inspected_daily ? chartData.total_inspected_daily[index] : 0;
+        const defects = chartData.total_defects_daily ? chartData.total_defects_daily[index] : 0;
+        return { date, inspected, defects };
+    });
+    
+    // Calculate 7-day moving average
+    const calculateMovingAverage = (data, window) => {
+        return data.map((value, index, array) => {
+            const start = Math.max(0, index - window + 1);
+            const end = index + 1;
+            const windowValues = array.slice(start, end);
+            const sum = windowValues.reduce((a, b) => a + b, 0);
+            return sum / windowValues.length;
+        });
+    };
+    
+    const ftqMovingAvg = calculateMovingAverage(chartData.ftq, 7);
+    
+    // Daily FTQ Trend Chart
+    const ftqTrendCtx = document.getElementById('ftqTrendChart').getContext('2d');
+    const ftqTrendChart = new Chart(ftqTrendCtx, {
+        type: 'line',
+        data: {
+            labels: chartData.dates,
+            datasets: [
+                {
+                    label: 'FTQ Percentage',
+                    data: chartData.ftq,
+                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                    borderColor: '#ff0000',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#ff0000',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: '7-Day Moving Average',
+                    data: ftqMovingAvg,
+                    backgroundColor: 'transparent',
+                    borderColor: '#ffcc00',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    tension: 0.4,
+                    fill: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            if (context.dataset.label === 'FTQ Percentage') {
+                                return `FTQ: ${context.parsed.y.toFixed(2)}%`;
+                            } else if (context.dataset.label === '7-Day Moving Average') {
+                                return `7-Day Avg: ${context.parsed.y.toFixed(2)}%`;
+                            } else if (context.dataset.label === 'Total Inspected') {
+                                return `Units: ${context.parsed.y}`;
+                            } else if (context.dataset.label === 'Defect Count') {
+                                return `Defects: ${context.parsed.y}`;
+                            }
+                        },
+                        afterBody: function(tooltipItems) {
+                            const idx = tooltipItems[0].dataIndex;
+                            const date = chartData.dates[idx];
+                            const inspected = inspectionData[idx].inspected;
+                            const defects = inspectionData[idx].defects;
+                            
+                            return [
+                                '',
+                                `Date: ${date}`,
+                                `Total Inspected: ${inspected}`,
+                                `Defects: ${defects}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Toggle between different FTQ trend views
+    document.getElementById('viewFTQPercentage').addEventListener('click', function() {
+        showFTQView();
+        this.classList.add('active');
+        document.getElementById('viewDefectCount').classList.remove('active');
+        document.getElementById('viewInspectionCount').classList.remove('active');
+    });
+    
+    document.getElementById('viewDefectCount').addEventListener('click', function() {
+        showDefectCountView();
+        this.classList.add('active');
+        document.getElementById('viewFTQPercentage').classList.remove('active');
+        document.getElementById('viewInspectionCount').classList.remove('active');
+    });
+    
+    document.getElementById('viewInspectionCount').addEventListener('click', function() {
+        showInspectionCountView();
+        this.classList.add('active');
+        document.getElementById('viewFTQPercentage').classList.remove('active');
+        document.getElementById('viewDefectCount').classList.remove('active');
+    });
+    
+    function showFTQView() {
+        ftqTrendChart.data.datasets = [
+            {
+                label: 'FTQ Percentage',
+                data: chartData.ftq,
+                backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                borderColor: '#ff0000',
+                borderWidth: 2,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#ff0000',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                tension: 0.3,
+                fill: true
+            },
+            {
+                label: '7-Day Moving Average',
+                data: ftqMovingAvg,
+                backgroundColor: 'transparent',
+                borderColor: '#ffcc00',
+                borderWidth: 2,
+                borderDash: [5, 5],
+                pointRadius: 0,
+                tension: 0.4,
+                fill: false
+            }
+        ];
+        ftqTrendChart.options.scales.y = {
+            beginAtZero: true,
+            max: 100,
+            grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+            },
+            ticks: {
+                callback: function(value) {
+                    return value + '%';
+                }
+            }
+        };
+        ftqTrendChart.update();
+    }
+    
+    function showDefectCountView() {
+        ftqTrendChart.data.datasets = [{
+            label: 'Defect Count',
+            data: inspectionData.map(d => d.defects),
+            backgroundColor: 'rgba(255, 99, 132, 0.2)',
+            borderColor: 'rgb(255, 99, 132)',
+            borderWidth: 2,
+            pointBackgroundColor: '#ffffff',
+            pointRadius: 4,
+            tension: 0.3,
+            fill: true
+        }];
+        ftqTrendChart.options.scales.y = {
+            beginAtZero: true,
+            grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+            }
+        };
+        ftqTrendChart.update();
+    }
+    
+    function showInspectionCountView() {
+        ftqTrendChart.data.datasets = [{
+            label: 'Total Inspected',
+            data: inspectionData.map(d => d.inspected),
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgb(54, 162, 235)',
+            borderWidth: 2,
+            pointBackgroundColor: '#ffffff',
+            pointRadius: 4,
+            tension: 0.3,
+            fill: true
+        }];
+        ftqTrendChart.options.scales.y = {
+            beginAtZero: true,
+            grid: {
+                color: 'rgba(255, 255, 255, 0.1)'
+            }
+        };
+        ftqTrendChart.update();
+    }
+    
+    // Model toggle views
+    let modelUnitsChart = null;
+    
+    document.getElementById('viewModelFTQ').addEventListener('click', function() {
+        document.getElementById('modelFTQView').style.display = 'block';
+        document.getElementById('modelUnitsView').style.display = 'none';
+        this.classList.add('active');
+        document.getElementById('viewModelUnits').classList.remove('active');
+    });
+    
+    document.getElementById('viewModelUnits').addEventListener('click', function() {
+        document.getElementById('modelFTQView').style.display = 'none';
+        document.getElementById('modelUnitsView').style.display = 'block';
+        this.classList.add('active');
+        document.getElementById('viewModelFTQ').classList.remove('active');
+        
+        // Create chart if it doesn't exist
+        if (!modelUnitsChart) {
+            const modelUnitsCtx = document.getElementById('modelUnitsChart').getContext('2d');
+            modelUnitsChart = new Chart(modelUnitsCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.models,
+                    datasets: [
+                        {
+                            label: 'Inspected',
+                            data: chartData.model_inspected,
+                            backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Defects',
+                            data: chartData.model_defects,
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            stacked: false,
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+    
+    // Shift Performance Chart
+    const shiftCtx = document.getElementById('shiftChart').getContext('2d');
+    new Chart(shiftCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.shifts,
+            datasets: [{
+                label: 'FTQ Percentage by Shift',
+                data: chartData.shift_ftq,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `FTQ: ${context.parsed.y.toFixed(2)}%`;
+                        },
+                        afterBody: function(tooltipItems) {
+                            const idx = tooltipItems[0].dataIndex;
+                            const shift = chartData.shifts[idx];
+                            const inspected = chartData.shift_inspected[idx];
+                            const defects = chartData.shift_defects[idx];
+                            
+                            return [
+                                '',
+                                `Shift: ${shift}`,
+                                `Total Inspected: ${inspected}`,
+                                `Defects: ${defects}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Top Defects Chart
+    const topDefectsCtx = document.getElementById('topDefectsChart').getContext('2d');
+    const topDefectsChart = new Chart(topDefectsCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.top_defect_names,
+            datasets: [{
+                label: 'Defect Count',
+                data: chartData.top_defect_counts,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(255, 159, 64, 0.7)',
+                    'rgba(255, 205, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(153, 102, 255, 0.7)',
+                    'rgba(201, 203, 207, 0.7)',
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(255, 159, 64, 0.5)',
+                    'rgba(255, 205, 86, 0.5)'
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const percentage = (context.parsed.x / chartData.top_defect_counts.reduce((a, b) => a + b, 0) * 100).toFixed(1);
+                            return `Count: ${context.parsed.x} (${percentage}% of all defects)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+    
+    // Model Comparison Chart
+    const modelCtx = document.getElementById('modelComparisonChart').getContext('2d');
+    new Chart(modelCtx, {
+        type: 'polarArea',
+        data: {
+            labels: chartData.models,
+            datasets: [{
+                data: chartData.model_ftq,
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.7)',
+                    'rgba(54, 162, 235, 0.7)',
+                    'rgba(255, 206, 86, 0.7)',
+                    'rgba(75, 192, 192, 0.7)',
+                    'rgba(153, 102, 255, 0.7)'
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        padding: 15
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.raw.toFixed(2)}%`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Defect Detail Modal Functionality
+    const defectDetailModal = document.getElementById('defectDetailModal');
+    const defectDetailTitle = document.getElementById('defectDetailTitle');
+    const defectDetailClose = document.getElementById('defectDetailClose');
+    const defectTotalCount = document.getElementById('defectTotalCount');
+    const defectPercentage = document.getElementById('defectPercentage');
+    const defectCommonModel = document.getElementById('defectCommonModel');
+    const defectCommonShift = document.getElementById('defectCommonShift');
+    const defectTrend = document.getElementById('defectTrend');
+    const defectSolutions = document.getElementById('defectSolutions');
+    
+    let defectTrendChart = null;
+    
+    // Close modal on button click
+    defectDetailClose.addEventListener('click', function() {
+        defectDetailModal.classList.remove('active');
+    });
+    
+    // Close modal on outside click
+    defectDetailModal.addEventListener('click', function(event) {
+        if (event.target === defectDetailModal) {
+            defectDetailModal.classList.remove('active');
+        }
+    });
+    
+    // Show defect details when clicking on a defect in the chart
+    topDefectsChart.canvas.addEventListener('click', function(evt) {
+        const points = topDefectsChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+        
+        if (points.length) {
+            const firstPoint = points[0];
+            const defectName = chartData.top_defect_names[firstPoint.index];
+            const defectCount = chartData.top_defect_counts[firstPoint.index];
+            
+            showDefectDetails(defectName, defectCount);
+        }
+    });
+    
+    // Function to show defect details in the modal
+    function showDefectDetails(defectName, defectCount) {
+        // Set modal title
+        defectDetailTitle.innerHTML = `<i class="fas fa-bug me-2"></i>${defectName} Detail`;
+        
+        // Set defect statistics
+        defectTotalCount.textContent = defectCount;
+        
+        const totalDefects = chartData.top_defect_counts.reduce((a, b) => a + b, 0);
+        const percentage = ((defectCount / totalDefects) * 100).toFixed(1);
+        defectPercentage.textContent = `${percentage}%`;
+        
+        // Set common model and shift
+        if (chartData.defect_common_models && chartData.defect_common_models[defectName]) {
+            defectCommonModel.textContent = chartData.defect_common_models[defectName];
+        } else {
+            defectCommonModel.textContent = 'Unknown';
+        }
+        
+        if (chartData.defect_common_shifts && chartData.defect_common_shifts[defectName]) {
+            defectCommonShift.textContent = chartData.defect_common_shifts[defectName];
+        } else {
+            defectCommonShift.textContent = 'Unknown';
+        }
+        
+        // Set trend information
+        if (chartData.defect_trends && chartData.defect_trends[defectName]) {
+            const trend = chartData.defect_trends[defectName];
+            const trendIcon = trend.direction === 'up' ? 'fa-arrow-up' : (trend.direction === 'down' ? 'fa-arrow-down' : 'fa-equals');
+            const trendClass = trend.direction === 'up' ? 'trend-up' : (trend.direction === 'down' ? 'trend-down' : 'trend-stable');
+            const trendText = `${trend.percent_change > 0 ? '+' : ''}${trend.percent_change}% (Last 7 days)`;
+            
+            defectTrend.innerHTML = `<span class="trend-indicator ${trendClass}"><i class="fas ${trendIcon} me-2"></i>${trendText}</span>`;
+        } else {
+            defectTrend.innerHTML = `<span class="trend-indicator trend-stable"><i class="fas fa-equals me-2"></i>Stable</span>`;
+        }
+        
+        // Set solution recommendations (mock data - in a real app, this would come from backend)
+        const solutionTemplates = [
+            `<div class="solution-item mb-3">
+                <h6 class="text-white">Process Adjustment</h6>
+                <p>Adjust the production process parameters for ${defectName} by implementing tighter tolerance controls.</p>
+            </div>
+            <div class="solution-item mb-3">
+                <h6 class="text-white">Training Recommendation</h6>
+                <p>Schedule refresher training for operators on the inspection criteria for ${defectName}.</p>
+            </div>`,
+            
+            `<div class="solution-item mb-3">
+                <h6 class="text-white">Equipment Maintenance</h6>
+                <p>Check and calibrate measurement tools used for detecting ${defectName}.</p>
+            </div>
+            <div class="solution-item mb-3">
+                <h6 class="text-white">Material Investigation</h6>
+                <p>Investigate if recent material changes could be contributing to ${defectName}.</p>
+            </div>`,
+            
+            `<div class="solution-item mb-3">
+                <h6 class="text-white">Quality Gate Review</h6>
+                <p>Review quality gate procedures specifically for ${defectName} detection.</p>
+            </div>
+            <div class="solution-item mb-3">
+                <h6 class="text-white">Supplier Engagement</h6>
+                <p>Engage with component suppliers to address potential issues causing ${defectName}.</p>
+            </div>`
+        ];
+        
+        defectSolutions.innerHTML = solutionTemplates[Math.floor(Math.random() * solutionTemplates.length)];
+        
+        // Create defect trend chart using daily data
+        const defectTrendCtx = document.getElementById('defectTrendChart').getContext('2d');
+        
+        // Prepare daily defect data for chart
+        let defectHistory = [];
+        let defectDates = [];
+        
+        if (chartData.daily_defect_data && chartData.daily_defect_data[defectName]) {
+            const dailyData = chartData.daily_defect_data[defectName];
+            defectDates = Object.keys(dailyData).sort();
+            defectHistory = defectDates.map(date => dailyData[date]);
+        } else {
+            // Mock data if real data not available
+            defectDates = chartData.dates;
+            for (let i = 0; i < defectDates.length; i++) {
+                const variation = Math.floor(defectCount * 0.3 * (Math.random() - 0.5));
+                const historicalCount = Math.max(0, defectCount + variation);
+                defectHistory.push(historicalCount);
+            }
+        }
+        
+        if (defectTrendChart) {
+            defectTrendChart.destroy();
+        }
+        
+        defectTrendChart = new Chart(defectTrendCtx, {
+            type: 'line',
+            data: {
+                labels: defectDates,
+                datasets: [{
+                    label: 'Defect Count',
+                    data: defectHistory,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: '#ff6384',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: '#ff6384',
+                    pointRadius: 3,
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: `${defectName} Trend Over Time`,
+                        color: '#ffffff'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Show the modal
+        defectDetailModal.classList.add('active');
+    }
+});
+</script>
+{% endblock %}

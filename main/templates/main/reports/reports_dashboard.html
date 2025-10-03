@@ -1,0 +1,210 @@
+{% extends 'main/base.html' %}
+{% load custom_filters %}
+
+{% block title %}Reports Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Reports Dashboard</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group">
+                        <a href="{% url 'daily_report' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-calendar-day"></i> Daily Report
+                        </a>
+                        <a href="{% url 'weekly_report' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-calendar-week"></i> Weekly Report
+                        </a>
+                        <a href="{% url 'monthly_report' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-calendar-alt"></i> Monthly Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Summary -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">Today's Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div class="text-center">
+                            <h3>{{ daily_stats.total }}</h3>
+                            <small>Total</small>
+                        </div>
+                        <div class="text-center text-success">
+                            <h3>{{ daily_stats.approved }}</h3>
+                            <small>Approved</small>
+                        </div>
+                        <div class="text-center text-danger">
+                            <h3>{{ daily_stats.rejected }}</h3>
+                            <small>Rejected</small>
+                        </div>
+                    </div>
+                    <div class="progress mt-3">
+                        <div class="progress-bar bg-success" style="width: {{ daily_stats.approval_rate }}%">
+                            {{ daily_stats.approval_rate }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">Weekly Overview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div class="text-center">
+                            <h3>{{ weekly_stats.total }}</h3>
+                            <small>Total</small>
+                        </div>
+                        <div class="text-center text-success">
+                            <h3>{{ weekly_stats.approved }}</h3>
+                            <small>Approved</small>
+                        </div>
+                        <div class="text-center text-danger">
+                            <h3>{{ weekly_stats.rejected }}</h3>
+                            <small>Rejected</small>
+                        </div>
+                    </div>
+                    <div class="progress mt-3">
+                        <div class="progress-bar bg-success" style="width: {{ weekly_stats.approval_rate }}%">
+                            {{ weekly_stats.approval_rate }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">Monthly Summary</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div class="text-center">
+                            <h3>{{ monthly_stats.total }}</h3>
+                            <small>Total</small>
+                        </div>
+                        <div class="text-center text-success">
+                            <h3>{{ monthly_stats.approved }}</h3>
+                            <small>Approved</small>
+                        </div>
+                        <div class="text-center text-danger">
+                            <h3>{{ monthly_stats.rejected }}</h3>
+                            <small>Rejected</small>
+                        </div>
+                    </div>
+                    <div class="progress mt-3">
+                        <div class="progress-bar bg-success" style="width: {{ monthly_stats.approval_rate }}%">
+                            {{ monthly_stats.approval_rate }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model-wise Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Model-wise Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Total</th>
+                                    <th>Approved</th>
+                                    <th>Rejected</th>
+                                    <th>Approval Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in model_stats %}
+                                <tr>
+                                    <td>{{ stat.selected_model }}</td>
+                                    <td>{{ stat.total }}</td>
+                                    <td class="text-success">{{ stat.approved }}</td>
+                                    <td class="text-danger">{{ stat.rejected }}</td>
+                                    <td>
+                                        {% if stat.total > 0 %}
+                                        {{ stat.approved|percentage:stat.total|floatformat:1 }}%
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Recent Activity</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Model</th>
+                                    <th>Status</th>
+                                    <th>Operator</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for entry in recent_activity %}
+                                <tr>
+                                    <td>{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ entry.selected_model }}</td>
+                                    <td>
+                                        <span class="badge {% if entry.status == 'quality_approved' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ entry.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ entry.shift.operator.username }}</td>
+                                    <td>
+                                        <a href="{% url 'checklist_detail' entry.id %}" class="btn btn-sm btn-info">
+                                            View Details
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

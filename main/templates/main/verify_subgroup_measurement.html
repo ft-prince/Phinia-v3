@@ -1,0 +1,139 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Verify Subgroup Measurements{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">{{ verifier_type }} Verification - Subgroup {{ subgroup.subgroup_number }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if existing_verification %}
+                    <div class="alert alert-info mb-4">
+                        <h6 class="alert-heading mb-2">Previous Verification Details</h6>
+                        <p class="mb-1">Status: {{ existing_verification.get_status_display }}</p>
+                        <p class="mb-1">Verified By: {{ existing_verification.verified_by.get_full_name }}</p>
+                        <p class="mb-1">Time: {{ existing_verification.verified_at }}</p>
+                        {% if existing_verification.comments %}
+                        <p class="mb-0">Comments: {{ existing_verification.comments }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Measurement Review -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Measurement Review</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card {% if measurements.uv_vacuum_test_ok %}border-success{% else %}border-danger{% endif %}">
+                                    <div class="card-body">
+                                        <h6>UV Vacuum Test</h6>
+                                        <p class="mb-0">
+                                            Value: {{ subgroup.uv_vacuum_test }} kPa
+                                            <br>
+                                            Required: -43 to -35 kPa
+                                            <br>
+                                            <span class="badge {% if measurements.uv_vacuum_test_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                                {% if measurements.uv_vacuum_test_ok %}In Range{% else %}Out of Range{% endif %}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card {% if measurements.uv_flow_value_ok %}border-success{% else %}border-danger{% endif %}">
+                                    <div class="card-body">
+                                        <h6>UV Flow Value</h6>
+                                        <p class="mb-0">
+                                            Value: {{ subgroup.uv_flow_value }} LPM
+                                            <br>
+                                            Required: 30-40 LPM
+                                            <br>
+                                            <span class="badge {% if measurements.uv_flow_value_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                                {% if measurements.uv_flow_value_ok %}In Range{% else %}Out of Range{% endif %}
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Checks -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2">Quality Checks</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-group">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Assembly Check
+                                        <span class="badge {% if measurements.assembly_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ subgroup.umbrella_valve_assembly }}
+                                        </span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Pressing Check
+                                        <span class="badge {% if measurements.pressing_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ subgroup.uv_clip_pressing }}
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-group">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Workstation Clean
+                                        <span class="badge {% if subgroup.workstation_clean == 'Yes' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ subgroup.workstation_clean }}
+                                        </span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Contamination Check
+                                        <span class="badge {% if subgroup.bin_contamination_check == 'Yes' %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ subgroup.bin_contamination_check }}
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Verification Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label">{% if existing_verification %}Update {% endif %}Verification Status *</label>
+                            {{ form.status }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">{% if existing_verification %}New {% endif %}Comments</label>
+                            {{ form.comments }}
+                            <div class="form-text">
+                                {% if existing_verification %}
+                                Please provide any new comments or observations for this update.
+                                {% else %}
+                                Please provide any comments or observations, especially if rejecting measurements.
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                {% if existing_verification %}
+                                Update Verification
+                                {% else %}
+                                Submit Verification
+                                {% endif %}
+                            </button>
+                            <a href="{% url 'checklist_detail' subgroup.checklist.id %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends 'main/base.html' %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">User Profile</h5>
+                    <a href="{% url 'edit_profile' %}" class="btn btn-light btn-sm">Edit Profile</a>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center mb-4">
+                                <div class="avatar-circle mb-3">
+                                    <span class="initials">{{ user.username|make_list|first|upper }}</span>
+                                </div>
+                                <h5>{{ user.get_full_name|default:user.username }}</h5>
+                                <span class="badge bg-info">{{ user.get_user_type_display }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <table class="table">
+                                <tr>
+                                    <th>Username:</th>
+                                    <td>{{ user.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Email:</th>
+                                    <td>{{ user.email }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Role:</th>
+                                    <td>{{ user.get_user_type_display }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Date Joined:</th>
+                                    <td>{{ user.date_joined|date:"F d, Y" }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Last Login:</th>
+                                    <td>{{ user.last_login|date:"F d, Y H:i" }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Activity Summary -->
+                    {% if user.user_type == 'operator' %}
+                    <div class="mt-4">
+                        <h6 class="border-bottom pb-2">Recent Activity</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h3>{{ total_checklists }}</h3>
+                                        <small>Total Checklists</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h3>{{ approved_checklists }}</h3>
+                                        <small>Approved</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h3>{{ pending_checklists }}</h3>
+                                        <small>Pending</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Recent Activity List -->
+                    <div class="mt-4">
+                        <h6 class="border-bottom pb-2">Recent Actions</h6>
+                        <div class="list-group">
+                            {% for action in recent_actions %}
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ action.action_type }}</h6>
+                                    <small>{{ action.timestamp|timesince }} ago</small>
+                                </div>
+                                <p class="mb-1">{{ action.description }}</p>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted">No recent activity</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 100px;
+    height: 100px;
+    background-color: #007bff;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+}
+
+.initials {
+    font-size: 45px;
+    color: white;
+    font-weight: bold;
+}
+</style>
+{% endblock %}

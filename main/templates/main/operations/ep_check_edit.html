@@ -1,0 +1,591 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Edit EP Check{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background-color: #222;
+        border: 1px solid #444;
+        margin-bottom: 20px;
+    }
+    .form-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .important-label {
+        color: #ff0000;
+        font-weight: bold;
+    }
+    .form-label {
+        font-weight: 500;
+    }
+    .form-text {
+        color: #aaa;
+    }
+    .form-control, .form-select {
+        background-color: #333;
+        border-color: #555;
+        color: #ffffff;
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: #444;
+        border-color: #ff0000;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    .form-title {
+        color: #ff0000;
+        border-bottom: 1px solid #444;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    .mechanism-table th {
+        background-color: #333;
+        color: #ff0000;
+        border-color: #444;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+    .mechanism-table td {
+        border-color: #444;
+        font-size: 0.9rem;
+        color:white !important;
+    }
+    .table-header-row {
+        background-color: #2a2a2a;
+    }
+    .ep-id-col {
+        font-weight: bold;
+        color: #ff0000;
+    }
+    .status-select {
+        min-width: 100px;
+    }
+    .hindi-text {
+        font-style: italic;
+        color: #cccccc;
+        margin-top: 4px;
+    }
+    /* Base container settings */
+    .container, .container-fluid {
+        max-width: 100% !important;
+        padding-left: 10px;
+        padding-right: 10px;
+        width: 100%;
+    }
+    
+    /* Form card styling */
+    .form-card {
+        background-color: #222;
+        border: 1px solid #444;
+        margin-bottom: 20px;
+        width: 100%;
+        overflow: hidden;
+    }
+    
+    .form-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+        padding: 10px 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .important-label {
+        color: #ff0000;
+        font-weight: bold;
+    }
+    
+    .form-label {
+        font-weight: 500;
+    }
+    
+    .form-text {
+        color: #aaa;
+    }
+    
+    .form-control, .form-select {
+        background-color: #333;
+        border-color: #555;
+        color: #ffffff;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #444;
+        border-color: #ff0000;
+        color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .form-title {
+        color: #ff0000;
+        border-bottom: 1px solid #444;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    /* Table styling with fixed issues */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .mechanism-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .mechanism-table th, 
+    .mechanism-table td {
+        padding: 8px 5px;
+        vertical-align: top;
+        line-height: 1.3;
+    }
+    
+    .mechanism-table th {
+        background-color: #333;
+        color: #ff0000;
+        border-color: #444;
+        font-size: 0.9rem;
+        white-space: normal;
+        height: auto;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .mechanism-table td {
+        border-color: #444;
+        font-size: 0.85rem;
+        color: white !important;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        height: auto;
+    }
+    
+    .table-header-row {
+        background-color: #2a2a2a;
+    }
+    
+    .ep-id-col {
+        font-weight: bold;
+        color: #ff0000;
+    }
+    
+    .status-select {
+        min-width: 80px;
+        max-width: 100%;
+    }
+    
+    .hindi-text {
+        font-style: italic;
+        color: #cccccc;
+        margin-top: 4px;
+        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+    
+    /* Prevent text overflow and ensure proper wrapping */
+    .mechanism-table td > div,
+    .mechanism-table td > input,
+    .mechanism-table td > select,
+    .mechanism-table td > textarea {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Column width adjustments with better distribution */
+    .mechanism-table th:nth-child(1), 
+    .mechanism-table td:nth-child(1) {
+        width: 5%;
+    }
+    
+    .mechanism-table th:nth-child(2), 
+    .mechanism-table td:nth-child(2) {
+        width: 8%;
+    }
+    
+    .mechanism-table th:nth-child(3), 
+    .mechanism-table td:nth-child(3) {
+        width: 7%;
+    }
+    
+    .mechanism-table th:nth-child(4), 
+    .mechanism-table td:nth-child(4) {
+        width: 18%;
+    }
+    
+    .mechanism-table th:nth-child(5), 
+    .mechanism-table td:nth-child(5) {
+        width: 18%;
+    }
+    
+    .mechanism-table th:nth-child(6), 
+    .mechanism-table td:nth-child(6) {
+        width: 10%;
+    }
+    
+    .mechanism-table th:nth-child(7), 
+    .mechanism-table td:nth-child(7) {
+        width: 5%;
+        text-align: center;
+    }
+    
+    .mechanism-table th:nth-child(8), 
+    .mechanism-table td:nth-child(8) {
+        width: 12%;
+    }
+    
+    .mechanism-table th:nth-child(9), 
+    .mechanism-table td:nth-child(9) {
+        width: 5%;
+        text-align: center;
+    }
+    
+    .mechanism-table th:nth-child(10), 
+    .mechanism-table td:nth-child(10) {
+        width: 4%;
+        text-align: center;
+    }
+    
+    .mechanism-table th:nth-child(11), 
+    .mechanism-table td:nth-child(11) {
+        width: 8%;
+    }
+    
+    /* Form-check adjustments to prevent overlapping */
+    .form-check {
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .form-check-input {
+        margin: 0;
+        float: none;
+    }
+    
+    /* Form and row full width adjustments */
+    form {
+        width: 100%;
+    }
+    
+    .row {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    /* Ensure content takes full width */
+    #content {
+        width: 100%;
+        padding: 0;
+    }
+    
+    /* Adjust input fields to prevent overflow */
+    input.form-control, 
+    select.form-select, 
+    textarea.form-control {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.85rem;
+        min-height: 30px;
+    }
+    
+    /* Center the switch toggles */
+    .form-switch {
+        display: flex;
+        justify-content: center;
+        padding-left: 0;
+    }
+    
+    .form-switch .form-check-input {
+        margin-left: 0;
+    }
+    
+    /* Better responsive behavior */
+    @media (max-width: 1200px) {
+        .mechanism-table th,
+        .mechanism-table td {
+            padding: 6px 4px;
+            font-size: 0.8rem;
+        }
+        
+        .hindi-text {
+            font-size: 0.75rem;
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .table-responsive {
+            overflow-x: scroll;
+        }
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3"><i class="fas fa-edit me-2"></i>Edit EP Check</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_detail' ep_check.pk %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Detail
+        </a>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="card form-card mb-4">
+        <div class="card-header form-header">
+            <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Error Prevention Form - Basic Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label for="date" class="form-label">Date:</label>
+                        {{ form.date }}
+                        {% if form.date.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.date.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+              
+            </div>
+            
+            <div class="form-group">
+                <label for="comments" class="form-label">Comments:</label>
+                {{ form.comments }}
+                {% if form.comments.errors %}
+                    <div class="invalid-feedback d-block">
+                        {{ form.comments.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="card form-card">
+        <div class="card-header form-header">
+            <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Masterlist of Error Prevention</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mechanism-table mb-0">
+                    <thead>
+                        <tr class="table-header-row">
+                            <th>EP #</th>
+                            <th>MODEL</th>
+                            <th>WORK STATION</th>
+                            <th>PURPOSE OF ERROR PROOFING</th>
+                            <th>VERIFICATION METHOD</th>
+                            <th> EP Master</th>
+                            <th>Working</th>
+                            <th>Alternative Method</th>
+                            <th>Status</th>
+                            <th>N/A</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for status in ep_check.mechanism_statuses.all %}
+                        <tr>
+                            <td class="ep-id-col">EP # {{ forloop.counter|stringformat:"02d" }}</td>
+                            <td>P703 U704 FD SA/Gnome</td>
+                            <td>FMA-03-35</td>
+                            <td>
+                                {% if forloop.counter == 1 %}
+                                    Ensure right model selection in respective of Model selection
+                                    <div class="hindi-text">मॉडल चयन के संबंध में सही मॉडल चयन सुनिश्चित करें</div>
+                                {% elif forloop.counter == 2 %}
+                                    Ensure Umbrella valve presence sensor working on umbrella valve press to retainer operation
+                                    <div class="hindi-text">सुनिश्चित करें कि अम्ब्रेला वाल्व उपस्थिति सेंसर काम कर रहा है</div>
+                                {% elif forloop.counter == 3 %}
+                                    Ensure Umbrella valve and retainer Assy complete stroke confirmation sensor working on UV press to retainer operation
+                                    <div class="hindi-text">सुनिश्चित करें कि अम्ब्रेला वाल्व और रिटेनर असेंबली पूर्ण स्ट्रोक पुष्टिकरण सेंसर काम कर रहा है</div>
+                                {% elif forloop.counter == 4 %}
+                                    Ensure UV Clip presence sensor working
+                                    <div class="hindi-text">सुनिश्चित करें कि UV क्लिप उपस्थिति सेंसर काम कर रहा है</div>
+                                {% elif forloop.counter == 5 %}
+                                    Ensure UV Clip fully snap locked with 2 no's of retainer snap
+                                    <div class="hindi-text">सुनिश्चित करें कि यूवी क्लिप दोनों रिटेनर स्नैप के साथ पूरी तरह से लॉक हो</div>
+                                {% elif forloop.counter == 6 %}
+                                    Ensure Umbrella valve Flow Test
+                                    <div class="hindi-text">अम्ब्रेला वाल्व प्रवाह परीक्षण सुनिश्चित करें</div>
+                                {% elif forloop.counter == 7 %}
+                                    Ensure umbrella valve vacuum test
+                                    <div class="hindi-text">अम्ब्रेला वाल्व वैक्यूम परीक्षण सुनिश्चित करें</div>
+                                {% elif forloop.counter == 8 %}
+                                    Verify machine LVDT mounting
+                                    <div class="hindi-text">मशीन LVDT माउंटिंग Verify करें</div>
+                                {% elif forloop.counter == 9 %}
+                                    Ensure top & bottom tool alignment
+                                    <div class="hindi-text">top और bottom tool alignment सुनिश्चित करें</div>
+                                {% elif forloop.counter == 10 %}
+                                    Ensure complete cycle ok working
+                                    <div class="hindi-text">सुनिश्चित करें कि पूरा cycle ठीक से काम कर रहा है</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if forloop.counter == 1 %}
+                                    Start the machine by selecting other model then running model on HMI. Machine should not start
+                                    <div class="hindi-text">HMI पर चल रहे मॉडल के बाद अन्य मॉडल का चयन करके मशीन शुरू करें। मशीन शुरू नहीं होनी चाहिए</div>
+                                {% elif forloop.counter == 2 %}
+                                    Keep the retainer on station without umbrella valve and press manually, vacuum will not start on Top tool.
+                                    <div class="hindi-text">रिटेनर को बिना अम्ब्रेला वाल्व के स्टेशन पर रखें और मैन्युअल रूप से दबाएं, टॉप टूल पर वैक्यूम शुरू नहीं होगा।</div>
+                                {% elif forloop.counter == 3 %}
+                                    Keep the retainer on station with umbrella valve and press manually, vacuum will start on Top tool.
+                                    <div class="hindi-text">अम्ब्रेला वाल्व के साथ स्टेशन पर रिटेनर रखें और मैन्युअल रूप से दबाएं, Top tool पर वैक्यूम शुरू हो जाएगा।</div>
+                                {% elif forloop.counter == 4 %}
+                                    Load the master of UV Clip in top tool and check the master Judgement on machine
+                                    <div class="hindi-text">यूवी क्लिप के मास्टर को top tool में लोड करें और मशीन पर मास्टर निर्णय की जांच करें</div>
+                                {% elif forloop.counter == 5 %}
+                                    Load the Snap NG master, Machine cycle should show NG cycle
+                                    <div class="hindi-text">स्नैप एनजी मास्टर लोड करें, मशीन cycle को एनजी cycle दिखाना चाहिए</div>
+                                {% elif forloop.counter == 6 %}
+                                    Start the machine with master and judgement will given by machine
+                                    <div class="hindi-text">मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा</div>
+                                {% elif forloop.counter == 7 %}
+                                    Start the machine with master and judgement will given by machine
+                                    <div class="hindi-text">मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा</div>
+                                {% elif forloop.counter == 8 %}
+                                    Load LVDT master
+                                    <div class="hindi-text">LVDT मास्टर को लोड करें</div>
+                                {% elif forloop.counter == 9 %}
+                                    Load alignment master in bottom tool, slide & than lift by hand, Machine show OK if alignment is OK
+                                    <div class="hindi-text">अलाइनमेंट मास्टर को नीचे वाले टूल में लोड करें, स्लाइड करें और फिर हाथ से उठाएं, अगर अलाइनमेंट ठीक है तो मशीन ओके दिखाती है</div>
+                                {% elif forloop.counter == 10 %}
+                                    Load Ok master in machine lower nest
+                                    <div class="hindi-text">मशीन के निचले नेस्ट में ओके मास्टर लोड करें</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if forloop.counter == 1 %}
+                                    EPVS
+                                {% elif forloop.counter == 2 %}
+                                    FMA-03-35-M01(T6) / FMA-03-35-M09(Gnome)
+                                {% elif forloop.counter == 3 %}
+                                    N/A
+                                {% elif forloop.counter == 4 %}
+                                    FMA-03-35-M02 (T6/Gnome)
+                                {% elif forloop.counter == 5 %}
+                                    FMA-03-35-M03 (T6) / FMA-03-35-M10 (Gnome)
+                                {% elif forloop.counter == 6 %}
+                                    FMA-03-35-M04 (T6) / FMA-03-35-M11 (Gnome)
+                                {% elif forloop.counter == 7 %}
+                                    FMA-03-35-M05 (T6) / FMA-03-35-M12 (Gnome)
+                                {% elif forloop.counter == 8 %}
+                                    FMA-03-35-M06 (T6/Gnome)
+                                {% elif forloop.counter == 9 %}
+                                    FMA-03-35-M07 (T6/Gnome)
+                                {% elif forloop.counter == 10 %}
+                                    FMA-03-35-M08 (T6) / FMA-03-35-M13(Gnome)
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" 
+                                           id="is_working_{{ forloop.counter|stringformat:"02d" }}" 
+                                           name="is_working_{{ forloop.counter|stringformat:"02d" }}" 
+                                           {% if status.is_working %}checked{% endif %}>
+                                </div>
+                            </td>
+                            <td>
+                                <input type="text" class="form-control" 
+                                       id="alternative_method_{{ forloop.counter|stringformat:"02d" }}" 
+                                       name="alternative_method_{{ forloop.counter|stringformat:"02d" }}" 
+                                       value="{{ status.alternative_method|default:'100% Inspection By Operator' }}">
+                            </td>
+                            <td>
+                                <select class="form-select status-select" 
+                                        id="status_{{ forloop.counter|stringformat:"02d" }}" 
+                                        name="status_{{ forloop.counter|stringformat:"02d" }}"
+                                        {% if status.is_not_applicable %}disabled{% endif %}>
+                                    <option value="" {% if not status.status %}selected{% endif %}>-- Select --</option>
+                                    <option value="OK" {% if status.status == 'OK' %}selected{% endif %}>OK</option>
+                                    <option value="NG" {% if status.status == 'NG' %}selected{% endif %}>NG</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input na-toggle" 
+                                           id="is_na_{{ forloop.counter|stringformat:"02d" }}" 
+                                           name="is_na_{{ forloop.counter|stringformat:"02d" }}"
+                                           {% if status.is_not_applicable %}checked{% endif %}
+                                           onchange="toggleStatus(this, 'status_{{ forloop.counter|stringformat:"02d" }}')">
+                                </div>
+                            </td>
+                            <td>
+                                <textarea class="form-control" 
+                                          id="comments_{{ forloop.counter|stringformat:"02d" }}" 
+                                          name="comments_{{ forloop.counter|stringformat:"02d" }}" 
+                                          rows="1">{{ status.comments }}</textarea>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <!-- If no mechanism statuses exist, show a message or empty rows -->
+                        <tr>
+                            <td colspan="11" class="text-center py-3">
+                                <em>No mechanism statuses found. Please create the EP check properly.</em>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4 mb-4">
+        <a href="{% url 'ep_check_detail' ep_check.pk %}" class="btn btn-outline-light">
+            Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Update EP Check
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Function to toggle status dropdown when N/A is checked
+function toggleStatus(checkbox, statusId) {
+    const selectElement = document.getElementById(statusId);
+    selectElement.disabled = checkbox.checked;
+    if (checkbox.checked) {
+        selectElement.value = '';
+    }
+}
+
+$(document).ready(function() {
+    // Handle N/A toggle on page load for existing data
+    $('.na-toggle').each(function() {
+        const statusId = $(this).attr('id').replace('is_na_', 'status_');
+        toggleStatus(this, statusId);
+    });
+    
+    // Ensure form uses POST method
+    $('form').attr('method', 'post');
+});
+</script>
+{% endblock %}

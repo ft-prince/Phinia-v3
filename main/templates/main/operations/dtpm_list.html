@@ -1,0 +1,220 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        background-color: #222;
+        transition: transform 0.3s;
+    }
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(255, 0, 0, 0.3);
+    }
+    .status-pending {
+        color: #ffc107;
+    }
+    .status-verified {
+        color: #28a745;
+    }
+    .status-rejected {
+        color: #dc3545;
+    }
+    .filter-card {
+        background-color: #333;
+        border: 1px solid #444;
+    }
+    .stats-card {
+        background-color: #1d1d1d;
+        border-radius: 10px;
+        border: 1px solid #444;
+    }
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2><i class="fas fa-clipboard-list me-2"></i>{{ title }}</h2>
+        <hr class="border-danger opacity-50">
+    </div>
+</div>
+
+<!-- Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stats-card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Total Checklists</h6>
+                    <h3 class="m-0">{{ stats.total }}</h3>
+                </div>
+                <div class="stat-icon text-danger">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Completed</h6>
+                    <h3 class="m-0">{{ stats.completed }}</h3>
+                </div>
+                <div class="stat-icon text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Pending</h6>
+                    <h3 class="m-0">{{ stats.pending }}</h3>
+                </div>
+                <div class="stat-icon text-warning">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card p-3 h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Issues</h6>
+                    <h3 class="m-0">{{ stats.issues_count }}</h3>
+                </div>
+                <div class="stat-icon text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Card -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="filter-card p-3">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" class="form-control bg-dark text-white" id="date_from" name="date_from" 
+                           value="{{ filter_form.date_from.value|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" class="form-control bg-dark text-white" id="date_to" name="date_to"
+                           value="{{ filter_form.date_to.value|default:'' }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="shift" class="form-label">Shift</label>
+                    <select class="form-select bg-dark text-white" id="shift" name="shift">
+                        <option value="">All Shifts</option>
+                        <option value="day" {% if filter_form.shift.value == "day" %}selected{% endif %}>Day</option>
+                        <option value="night" {% if filter_form.shift.value == "night" %}selected{% endif %}>Night</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status" class="form-label">Status</label>
+                    <select class="form-select bg-dark text-white" id="status" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="pending" {% if filter_form.status.value == "pending" %}selected{% endif %}>Pending</option>
+                        <option value="verified" {% if filter_form.status.value == "verified" %}selected{% endif %}>Verified</option>
+                        <option value="rejected" {% if filter_form.status.value == "rejected" %}selected{% endif %}>Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Checklists -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Checklists</h4>
+            <a href="{% url 'dtpm_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Checklist
+            </a>
+        </div>
+        
+        {% if checklists %}
+        <div class="table-responsive">
+            <table class="table table-dark table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Shift</th>
+                        <th>Operator</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for checklist in checklists %}
+                    <tr>
+                        <td>{{ checklist.id }}</td>
+                        <td>{{ checklist.date }}</td>
+                        <td>{{ checklist.shift.get_shift_type_display }}</td>
+                        <td>{{ checklist.operator.username }}</td>
+                        <td>
+                            {% if checklist.status == 'pending' %}
+                            <span class="badge bg-warning">Pending</span>
+                            {% elif checklist.status == 'verified' %}
+                            <span class="badge bg-success">Verified</span>
+                            {% elif checklist.status == 'rejected' %}
+                            <span class="badge bg-danger">Rejected</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ checklist.created_at|date:"M d, Y H:i" }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'dtpm_detail' pk=checklist.pk %}" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if checklist.status == 'pending' and user == checklist.operator %}
+                                <a href="{% url 'dtpm_edit' pk=checklist.pk %}" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% if checklist.status == 'pending' and user == checklist.supervisor %}
+                                <a href="{% url 'dtpm_verify' pk=checklist.pk %}" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-check-double"></i>
+                                </a>
+                                {% endif %}
+                                <a href="{% url 'export_dtpm_excel' pk=checklist.pk %}" class="btn btn-sm btn-outline-light">
+                                    <i class="fas fa-file-excel"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-dark" role="alert">
+            No checklists found matching your criteria.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

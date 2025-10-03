@@ -1,0 +1,284 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Quality Verification - EP Check{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-card {
+        background-color: #222;
+        border: 1px solid #444;
+    }
+    .verify-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+    }
+    .mechanism-table th {
+        background-color: #333;
+        color: #ff0000;
+        border-color: #444;
+    }
+    .mechanism-table td {
+        border-color: #444;
+    }
+    .status-ok {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .status-ng {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        font-weight: bold;
+    }
+    .status-na {
+        background-color: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+        font-weight: bold;
+    }
+    .verification-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .btn-approve {
+        background-color: #4CAF50;
+        border-color: #4CAF50;
+        color: white;
+    }
+    .btn-approve:hover {
+        background-color: #45a049;
+        border-color: #45a049;
+    }
+    .btn-reject {
+        background-color: #f44336;
+        border-color: #f44336;
+        color: white;
+    }
+    .btn-reject:hover {
+        background-color: #da190b;
+        border-color: #da190b;
+    }
+    .quality-badge {
+        background-color: #2196F3;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .verification-alert {
+        background-color: rgba(33, 150, 243, 0.1);
+        border: 1px solid #2196F3;
+        color: #2196F3;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3">
+            <i class="fas fa-shield-alt me-2"></i>
+            {{ title }}
+            <span class="quality-badge ms-2">QUALITY REVIEW</span>
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_detail' pk=ep_check.id %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Detail
+        </a>
+    </div>
+</div>
+
+<!-- Quality Verification Alert -->
+<div class="alert verification-alert mb-4">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-info-circle me-2"></i>
+        <div>
+            <strong>Quality Verification Required:</strong> This EP check has been approved by the supervisor and is now pending your quality review and final approval.
+        </div>
+    </div>
+</div>
+
+<!-- EP Check Details Card -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Check Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Date:</strong> {{ ep_check.date }}</p>
+                <p><strong>Current Model:</strong> {{ ep_check.current_model }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Shift:</strong> {{ ep_check.get_shift_display  }}</p>
+                <p><strong>Operator:</strong> {{ ep_check.operator.username }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Created At:</strong> {{ ep_check.created_at|date:"M d, Y H:i" }}</p>
+                <p><strong>Current Status:</strong> 
+                    <span class="badge bg-warning">{{ ep_check.get_status_display }}</span>
+                </p>
+            </div>
+            <div class="col-md-3">
+                {% if ep_check.supervisor %}
+                <p><strong>Approved By:</strong> {{ ep_check.supervisor.username }}</p>
+                <p><strong>Supervisor Comments:</strong></p>
+                <small class="text-muted">{{ ep_check.supervisor_comments|default:"No comments provided" }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- EP Mechanism Statuses Table -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Mechanism Status Review</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mechanism-table mb-0">
+                <thead>
+                    <tr>
+                        <th width="25%">Mechanism ID</th>
+                        <th width="10%">Status</th>
+                        <th width="10%">Working</th>
+                        <th width="10%">N/A</th>
+                        <th width="20%">Alternative Method</th>
+                        <th width="25%">Operator Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for status in mechanism_statuses %}
+                    <tr>
+                        <td>
+                            <strong>{{ status.get_ep_mechanism_id_display }}</strong>
+                        </td>
+                        <td class="{% if status.is_not_applicable %}status-na{% elif status.status == 'OK' %}status-ok{% elif status.status == 'NG' %}status-ng{% endif %}">
+                            {% if status.is_not_applicable %}
+                                N/A
+                            {% else %}
+                                {{ status.status }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if status.is_working %}
+                                <i class="fas fa-check text-success"></i> Yes
+                            {% else %}
+                                <i class="fas fa-times text-danger"></i> No
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if status.is_not_applicable %}
+                                <i class="fas fa-check text-warning"></i> Yes
+                            {% else %}
+                                <i class="fas fa-times text-muted"></i> No
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if status.alternative_method %}
+                                <span class="text-info">{{ status.alternative_method }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if status.comments %}
+                                <small>{{ status.comments }}</small>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Quality Verification Form -->
+<div class="card verify-card">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Quality Verification Decision</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" id="verificationForm">
+            {% csrf_token %}
+            <div class="form-group mb-4">
+                <label for="comments" class="form-label">
+                    <i class="fas fa-comment me-1"></i>Quality Verification Comments:
+                </label>
+                <textarea 
+                    class="form-control" 
+                    id="comments" 
+                    name="comments" 
+                    rows="4" 
+                    placeholder="Enter your quality verification comments and observations...&#10;&#10;Consider:&#10;- Compliance with standard procedures&#10;- Accuracy of mechanism status reporting&#10;- Completeness of documentation&#10;- Any recommendations for improvement"
+                ></textarea>
+                <small class="form-text text-muted">
+                    Please provide detailed feedback regarding the quality of this EP check.
+                </small>
+            </div>
+            
+            <div class="verification-actions mt-4">
+                <button type="submit" name="action" value="approve" class="btn btn-approve btn-lg" onclick="return confirmAction('approve', this)">
+                    <i class="fas fa-check me-2"></i>Approve (Quality)
+                </button>
+                <button type="submit" name="action" value="reject" class="btn btn-reject btn-lg" onclick="return confirmAction('reject', this)">
+                    <i class="fas fa-times me-2"></i>Reject
+                </button>
+                <a href="{% url 'ep_check_detail' pk=ep_check.id %}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-ban me-2"></i>Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmAction(action, buttonElement) {
+    const actionText = action === 'approve' ? 'approve' : 'reject';
+    const message = `Are you sure you want to ${actionText} this EP check?\n\nThis action will finalize the quality verification process.`;
+    
+    if (confirm(message)) {
+        // Store original button content
+        const originalContent = buttonElement.innerHTML;
+        
+        // Show loading state on the clicked button only
+        buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        buttonElement.disabled = true;
+        
+        // Use setTimeout to allow the DOM to update before form submission
+        setTimeout(() => {
+            // Submit the form programmatically
+            document.getElementById('verificationForm').submit();
+        }, 100);
+        
+        return false; // Prevent immediate form submission
+    }
+    return false;
+}
+
+// Auto-resize textarea
+document.getElementById('comments').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+});
+
+// Alternative: Handle form submission directly
+document.getElementById('verificationForm').addEventListener('submit', function(e) {
+    // If form is already being processed, prevent double submission
+    if (this.dataset.submitting === 'true') {
+        e.preventDefault();
+        return false;
+    }
+    
+    // Mark form as being submitted
+    this.dataset.submitting = 'true';
+});
+</script>
+{% endblock %}

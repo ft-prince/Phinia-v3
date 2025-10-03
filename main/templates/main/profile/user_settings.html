@@ -1,0 +1,111 @@
+{% extends 'main/base.html' %}
+
+{% block title %}User Settings{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">User Settings</h5>
+                    <a href="{% url 'user_profile' %}" class="btn btn-light btn-sm">Back to Profile</a>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                        {% endfor %}
+                        {% endif %}
+
+                        <!-- Notification Settings -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Notification Settings</h6>
+                            <div class="form-check mb-3">
+                                <input type="checkbox" class="form-check-input" 
+                                       id="notification_settings" name="notification_settings"
+                                       {% if user.email_notifications %}checked{% endif %}>
+                                <label class="form-check-label" for="notification_settings">
+                                    Receive email notifications
+                                </label>
+                                <div class="form-text">
+                                    You'll receive notifications about checklist approvals and rejections
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Theme Settings -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Display Settings</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Theme Preference</label>
+                                <select name="theme_preference" class="form-select">
+                                    <option value="light" {% if user.theme_preference == 'light' %}selected{% endif %}>
+                                        Light Mode
+                                    </option>
+                                    <option value="dark" {% if user.theme_preference == 'dark' %}selected{% endif %}>
+                                        Dark Mode
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Language Settings -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Language Settings</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Preferred Language</label>
+                                <select name="language" class="form-select">
+                                    <option value="en">English</option>
+                                    <option value="hi">Hindi</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Dashboard Settings -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Dashboard Preferences</h6>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" 
+                                       id="show_statistics" name="show_statistics" checked>
+                                <label class="form-check-label" for="show_statistics">
+                                    Show Statistics on Dashboard
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input type="checkbox" class="form-check-input" 
+                                       id="show_recent" name="show_recent" checked>
+                                <label class="form-check-label" for="show_recent">
+                                    Show Recent Activities
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Save Settings</button>
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme switcher logic
+    const themeSelect = document.querySelector('select[name="theme_preference"]');
+    themeSelect.addEventListener('change', function() {
+        document.body.classList.toggle('dark-mode', this.value === 'dark');
+    });
+});
+</script>
+{% endblock %}

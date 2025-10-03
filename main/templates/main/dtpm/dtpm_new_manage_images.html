@@ -1,0 +1,121 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Manage Check Images{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkpoint-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+    }
+    .checkpoint-header {
+        background-color: #222;
+        padding: 10px 15px;
+        border-radius: 10px 10px 0 0;
+        border-bottom: 1px solid #444;
+    }
+    .image-container {
+        background-color: #000;
+        border: 1px solid #444;
+        border-radius: 5px;
+        padding: 5px;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    .image-container img {
+        max-width: 100%;
+        max-height: 150px;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="fas fa-images"></i> Manage Check Images</h2>
+        <p>Checklist Date: {{ checklist.date }} - {{ checklist.shift.get_shift_type_display }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'dtpm_new_detail' pk=checklist.id %}" class="btn btn-primary">
+            <i class="fas fa-arrow-left"></i> Back to Checklist
+        </a>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <!-- Image Reference Library Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5><i class="fas fa-info-circle"></i> Image Management</h5>
+        </div>
+        <div class="card-body">
+            <p>
+                Use this page to manage images for each checkpoint. Upload reference images to show the correct
+                condition for each checkpoint. Reference images will be shown to operators when they fill in
+                checkpoint results.
+            </p>
+        </div>
+    </div>
+    
+    <!-- Checkpoint Images -->
+<!-- Checkpoint Images -->
+{% for check in checkpoint_results %}
+<div class="checkpoint-card">
+    <div class="checkpoint-header">
+        <h5 class="mb-0">Checkpoint #{{ check.checkpoint_number }}: {{ check.get_checkpoint_number_display }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <!-- Reference Image -->
+                <h6>Reference Image</h6>
+                <div class="mb-3">
+                    <input type="file" name="check_reference_{{ check.id }}" class="form-control" accept="image/*">
+                </div>
+                {% if check.reference_image %}
+                <div class="image-container">
+                    <p>Current Reference Image:</p>
+                    <img src="{{ check.reference_image.url }}" alt="Reference Image" class="img-fluid">
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    No reference image set.
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <!-- Result Image (if any) -->
+                <h6>Result Image</h6>
+                <div class="mb-3">
+                    <input type="file" name="check_image_{{ check.id }}" class="form-control" accept="image/*">
+                </div>
+                {% if check.result_image %}
+                <div class="image-container">
+                    <p>Current Result Image:</p>
+                    <img src="{{ check.result_image.url }}" alt="Result Image" class="img-fluid">
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    No result image uploaded.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<div class="text-end mt-4">
+    <button type="submit" class="btn btn-primary btn-lg">
+        <i class="fas fa-save"></i> Save Images
+    </button>
+</div>
+</form>
+{% endblock %}

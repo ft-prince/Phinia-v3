@@ -1,0 +1,183 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Edit Mechanism Statuses{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mechanism-form {
+        background-color: #222;
+        border: 1px solid #444;
+        margin-bottom: 20px;
+    }
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-check-input:checked {
+        background-color: #ff0000;
+        border-color: #ff0000;
+    }
+    .status-selector .btn {
+        border: 2px solid transparent;
+        color: #fff;
+        font-weight: bold;
+    }
+    .status-selector .btn-ok {
+        background-color: rgba(76, 175, 80, 0.2);
+        border-color: #4CAF50;
+    }
+    .status-selector .btn-ng {
+        background-color: rgba(244, 67, 54, 0.2);
+        border-color: #f44336;
+    }
+    .status-selector .btn.active {
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+    .mechanism-card {
+        border-left: 4px solid #ff0000;
+        background-color: #222;
+        margin-bottom: 20px;
+    }
+    .mechanism-title {
+        color: #ff0000;
+    }
+    .disabled-form-group {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3"><i class="fas fa-tasks me-2"></i>Update Mechanism Statuses</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_detail' pk=ep_check.id %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Detail
+        </a>
+    </div>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    
+    {% for form in formset %}
+    <div class="card mechanism-card">
+        <div class="card-header">
+            <h5 class="mechanism-title mb-0">
+                {{ form.instance.get_ep_mechanism_id_display }}
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for hidden in form.hidden_fields %}
+                {{ hidden }}
+            {% endfor %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.prefix }}-is_not_applicable" class="form-label">Is Not Applicable:</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input na-toggle" 
+                                   id="{{ form.prefix }}-is_not_applicable" 
+                                   name="{{ form.prefix }}-is_not_applicable" 
+                                   {% if form.instance.is_not_applicable %}checked{% endif %}>
+                            <label class="form-check-label" for="{{ form.prefix }}-is_not_applicable">
+                                Mark as N/A
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.prefix }}-is_working" class="form-label">Is Working:</label>
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" 
+                                   id="{{ form.prefix }}-is_working" 
+                                   name="{{ form.prefix }}-is_working" 
+                                   {% if form.instance.is_working %}checked{% endif %}>
+                            <label class="form-check-label" for="{{ form.prefix }}-is_working">
+                                Mechanism is working
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group status-form-group {% if form.instance.is_not_applicable %}disabled-form-group{% endif %}">
+                <label class="form-label">Status:</label>
+                <div class="btn-group status-selector" role="group" aria-label="Status Selection">
+                    <input type="radio" class="btn-check" name="{{ form.prefix }}-status" 
+                           id="{{ form.prefix }}-status-ok" autocomplete="off" 
+                           value="OK" {% if form.instance.status == 'OK' %}checked{% endif %}>
+                    <label class="btn btn-ok" for="{{ form.prefix }}-status-ok">OK</label>
+                    
+                    <input type="radio" class="btn-check" name="{{ form.prefix }}-status" 
+                           id="{{ form.prefix }}-status-ng" autocomplete="off" 
+                           value="NG" {% if form.instance.status == 'NG' %}checked{% endif %}>
+                    <label class="btn btn-ng" for="{{ form.prefix }}-status-ng">NG</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.prefix }}-alternative_method" class="form-label">Alternative Method:</label>
+                <input type="text" class="form-control" 
+                       id="{{ form.prefix }}-alternative_method" 
+                       name="{{ form.prefix }}-alternative_method" 
+                       value="{{ form.instance.alternative_method|default:'100% Inspection By Operator' }}">
+            </div>
+            
+            <div class="form-group mb-0">
+                <label for="{{ form.prefix }}-comments" class="form-label">Comments:</label>
+                <textarea class="form-control" 
+                          id="{{ form.prefix }}-comments" 
+                          name="{{ form.prefix }}-comments" 
+                          rows="2">{{ form.instance.comments }}</textarea>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+        <a href="{% url 'ep_check_detail' pk=ep_check.id %}" class="btn btn-outline-light">
+            Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Save All Changes
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle N/A toggle
+    $('.na-toggle').change(function() {
+        let statusGroup = $(this).closest('.card-body').find('.status-form-group');
+        if($(this).is(':checked')) {
+            statusGroup.addClass('disabled-form-group');
+        } else {
+            statusGroup.removeClass('disabled-form-group');
+        }
+    });
+    
+    // Style for active status buttons
+    $('.btn-check').change(function() {
+        $(this).parent().find('label').removeClass('active');
+        if($(this).is(':checked')) {
+            $('label[for="' + $(this).attr('id') + '"]').addClass('active');
+        }
+    });
+    
+    // Trigger change on page load to set initial state
+    $('.na-toggle').trigger('change');
+    $('.btn-check:checked').trigger('change');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,330 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-radius: 8px;
+    }
+    
+    .check-card {
+        background-color: #333;
+        border-radius: 8px;
+        border: 1px solid #444;
+        transition: transform 0.2s;
+        margin-bottom: 15px;
+    }
+    
+    .check-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+    }
+    
+    .check-status-OK {
+        border-left: 4px solid #28a745;
+    }
+    
+    .check-status-NG {
+        border-left: 4px solid #dc3545;
+    }
+    
+    .check-status-empty {
+        border-left: 4px solid #6c757d;
+    }
+    
+    .check-number {
+        background-color: #444;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .check-result {
+        font-weight: bold;
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+    
+    .result-OK {
+        background-color: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+    }
+    
+    .result-NG {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+    }
+    
+    .result-empty {
+        background-color: rgba(108, 117, 125, 0.2);
+        color: #ffffff;
+    }
+    
+    .issue-card {
+        background-color: #2d2d2d;
+        border: 1px solid #444;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .badge-priority-high {
+        background-color: #dc3545;
+    }
+    
+    .badge-priority-medium {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .badge-priority-low {
+        background-color: #17a2b8;
+    }
+    
+    .badge-status-open {
+        background-color: #dc3545;
+    }
+    
+    .badge-status-in_progress {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .badge-status-resolved {
+        background-color: #28a745;
+    }
+    
+    .header-image {
+        max-height: 200px;
+        object-fit: contain;
+        border-radius: 8px;
+        border: 1px solid #444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="fas fa-clipboard-list me-2"></i>
+            DTPM Checklist #{{ checklist.id }}
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group" role="group">
+            {% if can_edit %}
+            <a href="{% url 'dtpm_edit' pk=checklist.pk %}" class="btn btn-outline-light">
+                <i class="fas fa-edit me-2"></i>Edit
+            </a>
+            <a href="{% url 'dtpm_edit_checks' pk=checklist.pk %}" class="btn btn-outline-light">
+                <i class="fas fa-tasks me-2"></i>Edit Checks
+            </a>
+            {% endif %}
+            
+            {% if can_verify %}
+            <a href="{% url 'dtpm_verify' pk=checklist.pk %}" class="btn btn-outline-success">
+                <i class="fas fa-check-double me-2"></i>Verify
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'export_dtpm_excel' pk=checklist.pk %}" class="btn btn-outline-warning">
+                <i class="fas fa-file-excel me-2"></i>Export
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="detail-card p-4 h-100">
+            <h4 class="mb-3">Checklist Information</h4>
+            <div class="row mb-2">
+                <div class="col-md-4 text-muted">Date:</div>
+                <div class="col-md-8">{{ checklist.date }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-4 text-muted">Shift:</div>
+                <div class="col-md-8">{{ checklist.shift.get_shift_type_display }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-4 text-muted">Operator:</div>
+                <div class="col-md-8">{{ checklist.operator.username }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-4 text-muted">Supervisor:</div>
+                <div class="col-md-8">{{ checklist.supervisor.username }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-4 text-muted">Status:</div>
+                <div class="col-md-8">
+                    {% if checklist.status == 'pending' %}
+                    <span class="badge bg-warning">Pending</span>
+                    {% elif checklist.status == 'verified' %}
+                    <span class="badge bg-success">Verified</span>
+                    {% elif checklist.status == 'rejected' %}
+                    <span class="badge bg-danger">Rejected</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-4 text-muted">Created:</div>
+                <div class="col-md-8">{{ checklist.created_at|date:"M d, Y H:i" }}</div>
+            </div>
+            {% if checklist.notes %}
+            <div class="row mt-3">
+                <div class="col-12 text-muted mb-1">Notes:</div>
+                <div class="col-12">{{ checklist.notes }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        {% if checklist.header_image %}
+        <div class="detail-card p-4 text-center h-100">
+            <h4 class="mb-3">Header Image</h4>
+            <img src="{{ checklist.header_image.url }}" alt="Header Image" class="img-fluid header-image">
+        </div>
+        {% else %}
+        <div class="detail-card p-4 h-100">
+            <h4 class="mb-3">Status Summary</h4>
+            <div class="d-flex justify-content-center align-items-center h-75">
+                <div class="text-center">
+                    {% if checklist.status == 'pending' %}
+                    <i class="fas fa-clock text-warning" style="font-size: 5rem;"></i>
+                    <h5 class="mt-3 text-warning">Pending Verification</h5>
+                    {% elif checklist.status == 'verified' %}
+                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                    <h5 class="mt-3 text-success">Verified Successfully</h5>
+                    {% elif checklist.status == 'rejected' %}
+                    <i class="fas fa-times-circle text-danger" style="font-size: 5rem;"></i>
+                    <h5 class="mt-3 text-danger">Rejected</h5>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h4 class="mb-3">Check Results</h4>
+        
+        {% for check in check_results %}
+        <div class="check-card p-3 {% if check.result == 'OK' %}check-status-OK{% elif check.result == 'NG' %}check-status-NG{% else %}check-status-empty{% endif %}">
+            <div class="d-flex align-items-center mb-2">
+                <div class="check-number me-3">{{ check.item_number }}</div>
+                <h5 class="mb-0">{{ check.get_item_number_display }}</h5>
+                <div class="ms-auto">
+                    <span class="check-result {% if check.result == 'OK' %}result-OK{% elif check.result == 'NG' %}result-NG{% else %}result-empty{% endif %}">
+                        {% if check.result %}{{ check.result }}{% else %}Not Checked{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            {% if check.comments %}
+            <div class="mt-2 mb-2">
+                <small class="text-muted">Comments:</small>
+                <p class="mb-0 ms-2">{{ check.comments }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="small text-muted">
+                    Checked by: {{ check.checked_by.username }} at {{ check.checked_at|date:"M d, Y H:i" }}
+                </div>
+                
+                <div>
+                    {% if checklist.status == 'pending' and user == checklist.operator %}
+                    <a href="{% url 'dtpm_report_issue' check_id=check.id %}" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Report Issue
+                    </a>
+                    {% endif %}
+                    
+                    {% if check.image %}
+                    <a href="{{ check.image.url }}" target="_blank" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-image me-1"></i>View Image
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="alert alert-dark">No check results available.</div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if issues %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h4 class="mb-3">Issues ({{ issues|length }})</h4>
+        
+        {% for issue in issues %}
+        <div class="issue-card p-3 mb-3">
+            <div class="d-flex align-items-center mb-2">
+                <h5 class="mb-0">Issue for Check #{{ issue.check_result.item_number }}</h5>
+                <div class="ms-auto">
+                    <span class="badge badge-priority-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
+                    <span class="badge badge-status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+                </div>
+            </div>
+            
+            <p class="mb-3">{{ issue.description }}</p>
+            
+            <div class="row mb-2">
+                <div class="col-md-6">
+                    <small class="text-muted">Reported by: {{ issue.reported_by.username }} on {{ issue.created_at|date:"M d, Y H:i" }}</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    {% if issue.status != 'resolved' and user.user_type in 'shift_supervisor,quality_supervisor' %}
+                    <a href="{% url 'dtpm_resolve_issue' issue_id=issue.id %}" class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-check-circle me-1"></i>Resolve
+                    </a>
+                    {% endif %}
+                    
+                    {% if issue.issue_image %}
+                    <a href="{{ issue.issue_image.url }}" target="_blank" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-image me-1"></i>View Issue Image
+                    </a>
+                    {% endif %}
+                    
+                    {% if issue.resolution_image %}
+                    <a href="{{ issue.resolution_image.url }}" target="_blank" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-image me-1"></i>View Resolution Image
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if issue.action_taken %}
+            <div class="mt-3 pt-3 border-top border-secondary">
+                <h6>Resolution:</h6>
+                <p>{{ issue.action_taken }}</p>
+                
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted">
+                        Resolved by: {{ issue.assigned_to.username }}
+                        {% if issue.resolution_date %}
+                        on {{ issue.resolution_date|date:"M d, Y H:i" }}
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

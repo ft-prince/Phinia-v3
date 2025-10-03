@@ -1,0 +1,233 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="120">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Station Media Slider</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background-color: black;
+        }
+        
+        .slider-container {
+            height: 100vh;
+            width: 100vw;
+            background-color: black;
+            position: relative;
+        }
+        
+        .slider-container video {
+            height: 100%;
+            width: 100%;
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            object-fit: contain;
+        }
+        
+        .slider-container iframe {
+            height: 100vh;
+            width: 100vw;
+            display: none;
+            position: absolute;
+            top: 0%;
+            left: 0;
+            border: none;
+            background-color: white;
+        }
+        
+        .slider-container img {
+            height: 100%;
+            width: 100%;
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            object-fit: contain;
+            background-color: white;
+        }
+        
+        .slider-container .active {
+            display: block !important;
+        }
+        
+        .overlay-text {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            background-color: black;
+            color: white;
+            z-index: 10;
+            font-size: 42px;
+            padding: 5px 20px;
+            border-radius: 5px;
+            display:none;
+        }
+        
+        .back-button {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background-color: #CC0000;
+            color: white;
+            border: 2px solid white;
+            border-radius: 5px;
+            padding: 8px 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .back-button:hover {
+            background-color: #990000;
+        }
+        
+        .back-button::before {
+            content: "←";
+            margin-right: 5px;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="slider-container" id="slider-container"></div>
+    <div id="overlay-text" class="overlay-text">{{ station.screen_name }}</div>
+    <a href="{% url 'dashboard' %}" class="back-button">Back</a>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const stationId = `{{ station.id }}`;
+            const url = `/station/${stationId}/media/`;
+            let currentIndex = 0;
+            let mediaElements = [];
+            let slideshowTimer;
+    
+            const playCurrentMedia = () => {
+                if (mediaElements.length === 0) return;
+                
+                // Remove active class from all elements
+                mediaElements.forEach(element => {
+                    element.classList.remove('active');
+                });
+                
+                // Add active class to current element
+                const currentMedia = mediaElements[currentIndex];
+                currentMedia.classList.add('active');
+                
+                // Always use the defined duration
+                const duration = parseInt(currentMedia.dataset.duration) || 15000;
+                
+                // Handle video playback
+                if (currentMedia.tagName === 'VIDEO') {
+                    currentMedia.currentTime = 0;
+                    currentMedia.play().catch(e => console.error("Error playing video:", e));
+                } else if (currentMedia.tagName === 'IFRAME') {
+                    // For PDFs, adjust zoom to fit content
+                    const pdfContent = currentMedia.contentDocument;
+                    if (pdfContent) {
+                        currentMedia.src = currentMedia.src + '#zoom=FitH';
+                    }
+                }
+                
+                // Clear any existing timer
+                if (slideshowTimer) {
+                    clearTimeout(slideshowTimer);
+                }
+                
+                // Set timer for next slide
+                slideshowTimer = setTimeout(() => {
+                    currentIndex = (currentIndex + 1) % mediaElements.length;
+                    playCurrentMedia();
+                }, duration);
+                
+                console.log(`Playing media ${currentIndex} for ${duration}ms`);
+            };
+
+            const stopCurrentMedia = () => {
+                if (mediaElements.length === 0) return;
+                
+                const currentMedia = mediaElements[currentIndex];
+                if (currentMedia.tagName === 'VIDEO') {
+                    currentMedia.pause();
+                    currentMedia.currentTime = 0;
+                }
+                if (slideshowTimer) {
+                    clearTimeout(slideshowTimer);
+                }
+            };
+
+            const fetchMedia = async () => {
+                try {
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data.media && data.media.length > 0) {
+                        stopCurrentMedia();
+                        
+                        const sliderContainer = document.getElementById('slider-container');
+                        sliderContainer.innerHTML = '';
+                        mediaElements = [];
+            
+                        for (const media of data.media) {
+                            let mediaElement;
+                            
+                            if (['mp4', 'mov'].includes(media.type)) {
+                                mediaElement = document.createElement('video');
+                                mediaElement.src = media.url;
+                                mediaElement.controls = false;
+                                mediaElement.loop = false;
+                                mediaElement.muted = true;
+                                mediaElement.playsInline = true;
+                            } else if (media.type === 'pdf') {
+                                mediaElement = document.createElement('iframe');
+                                mediaElement.src = media.url + '#toolbar=0&navpanes=0&scrollbar=0&zoom=FitH';
+                                mediaElement.onload = () => console.log('PDF loaded:', media.url);
+                                mediaElement.onerror = () => console.error('PDF failed to load:', media.url);
+                            } else if (media.type === 'image') {
+                                mediaElement = document.createElement('img');
+                                mediaElement.src = media.url;
+                                mediaElement.alt = media.product_name;
+                            }
+                            
+                            if (mediaElement) {
+                                mediaElement.dataset.duration = media.duration * 1000;
+                                sliderContainer.appendChild(mediaElement);
+                                mediaElements.push(mediaElement);
+                            }
+                        }
+            
+                        currentIndex = 0;
+                        playCurrentMedia();
+                    }
+                } catch (error) {
+                    console.error('Error fetching media:', error);
+                }
+            };
+
+            fetchMedia();
+            setInterval(fetchMedia, 300000);
+            
+            // Alternative back button functionality using browser history
+            document.querySelector('.back-button').addEventListener('click', function(e) {
+                // If you prefer to use history back instead of direct link to dashboard
+                // e.preventDefault();
+                // window.history.back();
+            });
+        });
+    </script>
+</body>
+</html>

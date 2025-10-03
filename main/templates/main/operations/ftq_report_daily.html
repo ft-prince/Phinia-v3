@@ -1,0 +1,432 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}Daily FTQ Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .report-card .card-title {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 10px;
+    }
+    
+    .report-date-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .date-selector {
+        display: flex;
+        align-items: center;
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 10px 15px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .date-selector input {
+        background-color: transparent;
+        border: none;
+        color: #ffffff;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    
+    .date-selector input:focus {
+        outline: none;
+    }
+    
+    .date-selector label {
+        color: #ff0000;
+        font-weight: 600;
+        margin-right: 10px;
+    }
+    
+    .date-nav-btn {
+        background-color: transparent;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+    
+    .date-nav-btn:hover {
+        background-color: rgba(255, 0, 0, 0.5);
+        color: #ffffff;
+        transform: scale(1.1);
+    }
+    
+    .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #ffffff;
+        text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+    }
+    
+    .summary-label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .ftq-badge {
+        font-size: 2.5rem;
+        font-weight: 700;
+        padding: 10px 20px;
+        border-radius: 25px;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    
+    .ftq-high {
+        background-color: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+    }
+    
+    .ftq-medium {
+        background-color: rgba(255, 165, 0, 0.2);
+        color: #ffa500;
+    }
+    
+    .ftq-low {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ff0000;
+    }
+    
+    .shift-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s;
+        height: 100%;
+    }
+    
+    .shift-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(255, 0, 0, 0.6);
+    }
+    
+    .shift-header {
+        background-color: rgba(255, 0, 0, 0.3);
+        color: #ffffff;
+        padding: 12px 15px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        border-bottom: 2px solid #ffffff;
+    }
+    
+    .shift-body {
+        padding: 15px;
+    }
+    
+    .model-row {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .model-row:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .model-name {
+        font-weight: 600;
+        color: #ffffff;
+        font-size: 1.1rem;
+    }
+    
+    .model-stats {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-weight: 700;
+        color: #ffffff;
+        font-size: 1.2rem;
+    }
+    
+    .stat-label {
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .defect-table {
+        width: 100%;
+        margin-bottom: 0;
+        color: #ffffff;
+    }
+    
+    .defect-table thead th {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ffffff;
+        font-weight: 600;
+        padding: 10px;
+        border-bottom: 2px solid #ff0000;
+    }
+    
+    .defect-table tbody tr:nth-child(odd) {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .defect-table tbody tr:nth-child(even) {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    
+    .defect-table tbody tr:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .defect-table td {
+        padding: 10px;
+        vertical-align: middle;
+    }
+    
+    .defect-count {
+        background-color: #ff0000;
+        color: #ffffff;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 15px;
+        display: inline-block;
+        min-width: 40px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="fas fa-calendar-day me-2"></i>Daily FTQ Report</h2>
+        <div>
+            <a href="{% url 'ftq_dashboard' %}" class="btn btn-outline-light">
+                <i class="fas fa-chart-line me-1"></i> Dashboard
+            </a>
+            <div class="btn-group ms-2">
+                <a href="{% url 'ftq_report_daily' %}" class="btn btn-primary">Daily</a>
+                <a href="{% url 'ftq_report_weekly' %}" class="btn btn-outline-light">Weekly</a>
+                <a href="{% url 'ftq_report_monthly' %}" class="btn btn-outline-light">Monthly</a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Date Navigation -->
+    <form method="get" action="" id="dateForm">
+        <div class="report-date-nav">
+            <button type="button" class="date-nav-btn" id="prevDay">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            
+            <div class="date-selector">
+                <label for="date">Report Date:</label>
+                <input type="date" id="date" name="date" value="{{ report_date|date:'Y-m-d' }}" onchange="document.getElementById('dateForm').submit()">
+            </div>
+            
+            <button type="button" class="date-nav-btn" id="nextDay">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </form>
+    
+    <!-- Summary Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="report-card">
+                <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Daily Summary for {{ report_date|date:"F d, Y" }}</h5>
+                
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="ftq-badge 
+                            {% if daily_ftq >= 99 %}ftq-high{% elif daily_ftq >= 95 %}ftq-medium{% else %}ftq-low{% endif %}">
+                            {{ daily_ftq|floatformat:2 }}%
+                        </div>
+                        <div class="summary-label">Overall FTQ</div>
+                    </div>
+                    
+                    <div class="col-md-3 text-center">
+                        <div class="summary-value">{{ daily_total_inspected }}</div>
+                        <div class="summary-label">Total Production</div>
+                    </div>
+                    
+                    <div class="col-md-3 text-center">
+                        <div class="summary-value">{{ daily_total_defects }}</div>
+                        <div class="summary-label">Total Defects</div>
+                    </div>
+                    
+                    <div class="col-md-3 text-center">
+                        <div class="summary-value">{{ shifts|length }}</div>
+                        <div class="summary-label">Shifts Reported</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Shift Details -->
+    <div class="row mb-4">
+        {% for shift_key, shift in shifts.items %}
+        <div class="col-md-4 mb-4">
+            <div class="shift-card">
+                <div class="shift-header">
+                    <i class="fas fa-clock me-2"></i> {{ shift.shift_name }}
+                </div>
+                <div class="shift-body">
+                    <!-- Shift Summary -->
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <div class="stat-value">{{ shift.total_inspected }}</div>
+                            <div class="stat-label">Production</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-value">{{ shift.total_defects }}</div>
+                            <div class="stat-label">Defects</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="stat-value">{{ shift.ftq_percentage|floatformat:1 }}%</div>
+                            <div class="stat-label">FTQ</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Models within Shift -->
+                    {% for model_key, model in shift.models.items %}
+                    <div class="model-row">
+                        <div class="model-name">{{ model.model_name }}</div>
+                        <div class="model-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">{{ model.total_inspected }}</div>
+                                <div class="stat-label">Production</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ model.total_defects }}</div>
+                                <div class="stat-label">Defects</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">{{ model.ftq_percentage|floatformat:1 }}%</div>
+                                <div class="stat-label">FTQ</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-exclamation-circle me-2"></i> No model data available
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="report-card">
+                <div class="text-center text-muted py-5">
+                    <i class="fas fa-info-circle me-2"></i> No FTQ records available for this date
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Defects Breakdown -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="report-card">
+                <h5 class="card-title"><i class="fas fa-exclamation-circle me-2"></i>Defects Breakdown</h5>
+                
+                {% if defects %}
+                <div class="table-responsive">
+                    <table class="defect-table">
+                        <thead>
+                            <tr>
+                                <th width="10%">#</th>
+                                <th width="60%">Defect Type</th>
+                                <th width="15%" class="text-center">Count</th>
+                                <th width="15%" class="text-center">Percentage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for defect in defects %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ defect.name }}</td>
+                                <td class="text-center">
+                                    <span class="defect-count">{{ defect.count }}</span>
+                                </td>
+                                <td class="text-center">
+                                    {% if daily_total_defects > 0 %}
+                                        {{ defect.count|divisibleby:daily_total_defects|floatformat:1 }}%
+                                    {% else %}
+                                        0.0%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No defects recorded for this date
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Date navigation handlers
+        const dateInput = document.getElementById('date');
+        const currentDate = new Date(dateInput.value);
+        
+        document.getElementById('prevDay').addEventListener('click', function() {
+            const prevDate = new Date(currentDate);
+            prevDate.setDate(prevDate.getDate() - 1);
+            dateInput.value = prevDate.toISOString().split('T')[0];
+            document.getElementById('dateForm').submit();
+        });
+        
+        document.getElementById('nextDay').addEventListener('click', function() {
+            const nextDate = new Date(currentDate);
+            nextDate.setDate(nextDate.getDate() + 1);
+            const today = new Date();
+            
+            // Don't allow navigation to future dates
+            if (nextDate <= today) {
+                dateInput.value = nextDate.toISOString().split('T')[0];
+                document.getElementById('dateForm').submit();
+            }
+        });
+    });
+</script>
+{% endblock %}

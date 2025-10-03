@@ -1,0 +1,297 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Create New Checklist{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card" style="background-color: #000000; color: #FFFFFF;">
+                <div class="card-header text-white" style="background-color: #CC0000;">
+                    <h5 class="mb-0">Create New Checklist <span style="font-size: 80%; font-weight: normal;">(नई चेकलिस्ट बनाएँ)</span></h5>
+                </div>
+                <div class="card-body" style="background-color: #111;">
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <h6>Please correct the following errors:</h6>
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <p>{{ field.label }}: {{ error }}</p>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    {% if form.warnings %}
+                    <div class="alert alert-warning">
+                        <h6>Warnings:</h6>
+                        {% for warning in form.warnings %}
+                            <p>{{ warning }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <form method="post" id="checklistForm">
+                        {% csrf_token %}
+                        
+                        <style>
+                            .form-row { display: flex; align-items: flex-start; margin-bottom: 15px; }
+                            .form-label-col { width: 250px; padding-right: 15px; }
+                            .form-input-col { flex: 1; }
+                            .label-text { min-height: 40px; font-weight: 500; color: #e0e0e0; }
+                            .help-text { font-size: 80%; color:rgb(211, 218, 223) !important; }
+                            .form-section { border: 2px solid #ffffff; border-radius: 8px; padding: 15px; margin-bottom: 20px; background-color: rgba(255, 255, 255, 0.05); }
+                            .section-header { margin: -25px 0 15px 15px; background-color: #000000; display: inline-block; padding: 5px 15px; border: 2px solid #CC0000; border-radius: 5px; }
+                            .dynamic-section { border: 2px dashed #CC0000; border-radius: 8px; padding: 15px; margin-bottom: 20px; background-color: rgba(204, 0, 0, 0.05); }
+                            select, input[type="text"], input[type="number"], textarea { background-color: #222; color: white; border: 2px solid white; border-radius: 4px; padding: 8px 12px; width: 100%; }
+                            select:focus, input:focus, textarea:focus { outline: none; border-color: #CC0000; box-shadow: 0 0 5px rgba(204, 0, 0, 0.5); }
+                            select:disabled, input:disabled { background-color: #333; border-color: #CC0000; opacity: 0.8; }
+                            .auto-selected { font-size: 80%; color: #CC0000; margin-top: 5px; }
+                            .frequency-info { background-color: rgba(204, 0, 0, 0.2); border: 1px solid #CC0000; padding: 10px; border-radius: 5px; margin-top: 10px; }
+                            .nok-comment-field { margin-top: 5px; display: none; }
+                            .nok-comment-field.show { display: block; }
+                            @media (max-width: 768px) {
+                                .form-row { flex-direction: column; }
+                                .form-label-col { width: 100%; margin-bottom: 5px; }
+                            }
+                        </style>
+                        
+                        <div class="form-section">
+                            <h6 class="section-header text-danger">Initial Setup <span style="font-size: 85%; font-weight: normal; color: #ddd;">प्रारंभिक सेटअप</span></h6>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="new_shift" class="form-label"><div class="label-text">Shift</div><div class="help-text text-secondary">Shift select करना है</div></label></div>
+                                <div class="form-input-col">{{ form.new_shift }}</div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="selected_model" class="form-label"><div class="label-text">Program selection on HMI</div><div class="help-text text-secondary">HMI से Program select करना है</div></label></div>
+                                <div class="form-input-col">
+                                    {{ form.selected_model }}
+                                    <div class="help-text">Selecting a model will automatically set the correct tool IDs and part numbers</div>
+                                    <div class="help-text text-secondary">मॉडल चुनने पर सभी टूल आईडी और पार्ट नंबर स्वचालित रूप से सेट हो जाएंगे</div>
+                                    <div id="frequencyInfo" class="frequency-info" style="display: none;">
+                                        <strong>Measurement Frequency Configuration:</strong>
+                                        <div id="frequencyDetails"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6 class="section-header text-danger">Standard Measurements <span style="font-size: 85%; font-weight: normal; color: #ddd;">मानक मापन</span></h6>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="line_pressure" class="form-label"><div class="label-text">Line Pressure (4.5 - 5.5 bar)</div><div class="help-text text-secondary">लाइन प्रेशर 4.5 से 5.5 बार के बीच होना चाहिए</div></label></div>
+                                <div class="form-input-col">{{ form.line_pressure }}</div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="uv_flow_input_pressure" class="form-label"><div class="label-text">UV Flow Input Test Pressure<br>13 ± 2 KPa (11-15 kPa)</div><div class="help-text text-secondary">यूवी फ्लो इनपुट टेस्ट प्रेशर 11-15 kPa के बीच होना चाहिए</div></label></div>
+                                <div class="form-input-col">{{ form.uv_flow_input_pressure }}</div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="test_pressure_vacuum" class="form-label"><div class="label-text">Test Pressure for Vacuum generation (0.25 - 0.3 MPa)</div><div class="help-text text-secondary">वैक्यूम जनरेशन के लिए टेस्ट प्रेशर 0.25 - 0.3 MPa के बीच होना चाहिए</div></label></div>
+                                <div class="form-input-col">{{ form.test_pressure_vacuum }}</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6 class="section-header text-danger">Status Checks <span style="font-size: 85%; font-weight: normal; color: #ddd;">स्टेटस चेक</span></h6>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="oring_condition" class="form-label"><div class="label-text">O-ring condition (UV Flow check sealing area)</div><div class="help-text text-secondary">O-ring सील की स्थिति सही होनी चाहिए</div></label></div>
+                                <div class="form-input-col">{{ form.oring_condition }}</div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="master_verification_lvdt" class="form-label"><div class="label-text">Master Verification for LVDT</div><div class="help-text text-secondary">LVDT के लिए मास्टर वेरिफिकेशन करें</div></label></div>
+                                <div class="form-input-col">{{ form.master_verification_lvdt }}</div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="good_bad_master_verification" class="form-label"><div class="label-text">Good/Bad master verification (refer EPVS)</div><div class="help-text text-secondary">गुड/बैड मास्टर वेरिफिकेशन (EPVS देखें)</div></label></div>
+                                <div class="form-input-col">{{ form.good_bad_master_verification }}</div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-label-col"><label for="tool_alignment" class="form-label"><div class="label-text">Tool Alignment (Top & Bottom)</div><div class="help-text text-secondary">Tool Alignment सही होना चाहिए</div></label></div>
+                                <div class="form-input-col">{{ form.tool_alignment }}</div>
+                            </div>
+                        </div>
+
+                        <div class="form-section">
+                            <h6 class="section-header text-danger">IDs and Part Numbers <span style="font-size: 85%; font-weight: normal; color: #ddd;">आईडी और पार्ट नंबर</span></h6>
+                            <div class="form-row"><div class="form-label-col"><label for="top_tool_id" class="form-label"><div class="label-text">Tool Id: Top Tool ID</div><div class="help-text text-muted">FMA-03-35-T05 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">टॉप टूल आईडी</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.top_tool_id }}</div>{{ form.top_tool_id_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
+                            <div class="form-row"><div class="form-label-col"><label for="bottom_tool_id" class="form-label"><div class="label-text">Bottom Tool ID</div><div class="help-text text-muted">FMA-03-35-T06 (P703/U704/SA/FD)</div><div class="help-text text-muted">FMA-03-35-T08 (Gnome)</div><div class="help-text text-secondary">बॉटम टूल आईडी</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.bottom_tool_id }}</div>{{ form.bottom_tool_id_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
+                            <div class="form-row"><div class="form-label-col"><label for="uv_assy_stage_id" class="form-label"><div class="label-text">UV Assy Stage 1 ID</div><div class="help-text text-muted">FMA-03-35-T07 (P703/U704/SA/FD)</div><div class="help-text text-muted">FMA-03-35-T09 (Gnome)</div><div class="help-text text-secondary">यूवी असेंबली स्टेज 1 आईडी</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.uv_assy_stage_id }}</div>{{ form.uv_assy_stage_id_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
+                            <div class="form-row"><div class="form-label-col"><label for="retainer_part_no" class="form-label"><div class="label-text">Retainer Part no</div><div class="help-text text-muted">42001878 (P703/U704/SA/FD)</div><div class="help-text text-muted">42050758 (Gnome)</div><div class="help-text text-secondary">रिटेनर पार्ट नंबर</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.retainer_part_no }}</div>{{ form.retainer_part_no_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
+                            <div class="form-row"><div class="form-label-col"><label for="uv_clip_part_no" class="form-label"><div class="label-text">UV Clip Part No</div><div class="help-text text-muted">42000829 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">यूवी क्लिप पार्ट नंबर</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.uv_clip_part_no }}</div>{{ form.uv_clip_part_no_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
+                            <div class="form-row"><div class="form-label-col"><label for="umbrella_part_no" class="form-label"><div class="label-text">Umbrella Part No</div><div class="help-text text-muted">25094588 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">अम्ब्रेला पार्ट नंबर</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.umbrella_part_no }}</div>{{ form.umbrella_part_no_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
+                            <div class="form-row"><div class="form-label-col"><label for="retainer_id_lubrication" class="form-label"><div class="label-text">Retainer ID Lubrication - Visual Check</div><div class="help-text text-secondary">रिटेनर आईडी लुब्रिकेशन - दृश्य जांच</div></label></div><div class="form-input-col">{{ form.retainer_id_lubrication }}</div></div>
+                            <div class="form-row"><div class="form-label-col"><label for="error_proofing_verification" class="form-label"><div class="label-text">All Error proofing / Error detection verification done</div><div class="help-text text-secondary">सभी एरर प्रूफिंग / एरर डिटेक्शन वेरिफिकेशन पूरी हो गई है</div></label></div><div class="form-input-col">{{ form.error_proofing_verification }}</div></div>
+                        </div>
+
+                        <div id="dynamicFieldsContainer"></div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-danger btn-lg" style="border: 2px solid white; font-weight: bold;">
+                                Create Checklist and Continue to Subgroup 1<br>
+                                <span style="font-size: 85%;">चेकलिस्ट बनाएं और सबग्रुप 1 पर जारी रखें</span>
+                            </button>
+                            <a href="{% url 'operator_dashboard' %}" class="btn btn-outline-light" style="border: 2px solid white;">
+                                Cancel<br><span style="font-size: 85%;">रद्द करें</span>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('checklistForm');
+    const modelSelector = document.getElementById('id_selected_model');
+    
+    // Frequency configurations and dynamic parameters from the view
+    const frequencyConfigs = {{ frequency_configs_json|safe }};
+    const dynamicParameters = {{ dynamic_parameters_json|safe }};
+    
+    // Model mapping for tool IDs
+    const modelMappings = {
+        'P703': { topToolId: 'FMA-03-35-T05', bottomToolId: 'FMA-03-35-T06', uvAssyStageId: 'FMA-03-35-T07', retainerPartNo: '42001878', uvClipPartNo: '42000829', umbrellaPartNo: '25094588' },
+        'U704': { topToolId: 'FMA-03-35-T05', bottomToolId: 'FMA-03-35-T06', uvAssyStageId: 'FMA-03-35-T07', retainerPartNo: '42001878', uvClipPartNo: '42000829', umbrellaPartNo: '25094588' },
+        'FD': { topToolId: 'FMA-03-35-T05', bottomToolId: 'FMA-03-35-T06', uvAssyStageId: 'FMA-03-35-T07', retainerPartNo: '42001878', uvClipPartNo: '42000829', umbrellaPartNo: '25094588' },
+        'SA': { topToolId: 'FMA-03-35-T05', bottomToolId: 'FMA-03-35-T06', uvAssyStageId: 'FMA-03-35-T07', retainerPartNo: '42001878', uvClipPartNo: '42000829', umbrellaPartNo: '25094588' },
+        'Gnome': { topToolId: 'FMA-03-35-T05', bottomToolId: 'FMA-03-35-T08', uvAssyStageId: 'FMA-03-35-T09', retainerPartNo: '42050758', uvClipPartNo: '42000829', umbrellaPartNo: '25094588' }
+    };
+    
+    const topToolId = document.getElementById('id_top_tool_id');
+    const bottomToolId = document.getElementById('id_bottom_tool_id');
+    const uvAssyStageId = document.getElementById('id_uv_assy_stage_id');
+    const retainerPartNo = document.getElementById('id_retainer_part_no');
+    const uvClipPartNo = document.getElementById('id_uv_clip_part_no');
+    const umbrellaPartNo = document.getElementById('id_umbrella_part_no');
+    
+    function setSelectValue(selectElement, value) {
+        for (let i = 0; i < selectElement.options.length; i++) {
+            if (selectElement.options[i].value === value) {
+                selectElement.selectedIndex = i;
+                break;
+            }
+        }
+    }
+    
+    function updateFrequencyInfo() {
+        const selectedModel = modelSelector.value;
+        const frequencyInfo = document.getElementById('frequencyInfo');
+        const frequencyDetails = document.getElementById('frequencyDetails');
+        
+        if (selectedModel && frequencyConfigs[selectedModel]) {
+            const config = frequencyConfigs[selectedModel];
+            frequencyInfo.style.display = 'block';
+            frequencyDetails.innerHTML = `<p class="mb-0">• Measurement Frequency: Every <strong>${config.frequency_hours}</strong> hour(s)<br>• Maximum Subgroups: <strong>${config.max_subgroups}</strong> per shift<br><span class="text-secondary">• माप आवृत्ति: प्रत्येक <strong>${config.frequency_hours}</strong> घंटे<br>• अधिकतम सबग्रुप: <strong>${config.max_subgroups}</strong> प्रति शिफ्ट</span></p>`;
+        } else {
+            frequencyInfo.style.display = 'none';
+        }
+    }
+    
+    function updateDynamicFields() {
+        const selectedModel = modelSelector.value;
+        const container = document.getElementById('dynamicFieldsContainer');
+        container.innerHTML = '';
+        
+        if (selectedModel && dynamicParameters[selectedModel] && dynamicParameters[selectedModel].length > 0) {
+            const section = document.createElement('div');
+            section.className = 'dynamic-section';
+            section.innerHTML = '<h6 class="section-header text-danger" style="margin: -25px 0 15px 15px;">Model-Specific Parameters <span style="font-size: 85%; font-weight: normal; color: #ddd;">मॉडल-विशिष्ट पैरामीटर</span></h6>';
+            
+            dynamicParameters[selectedModel].forEach(param => {
+                const fieldRow = document.createElement('div');
+                fieldRow.className = 'form-row';
+                
+                let labelHtml = `<label class="form-label"><div class="label-text">${param.parameter_name}</div>`;
+                if (param.parameter_name_hindi) labelHtml += `<div class="help-text text-secondary">${param.parameter_name_hindi}</div>`;
+                if (param.help_text) labelHtml += `<div class="help-text text-muted">${param.help_text}</div>`;
+                labelHtml += `</label>`;
+                
+                const fieldName = `dynamic_${param.id}`;
+                let inputHtml = '';
+                if (param.measurement_type === 'numeric') {
+                    inputHtml = `<input type="number" step="any" name="${fieldName}" id="id_${fieldName}" class="form-control" placeholder="${param.min_value}-${param.max_value} ${param.unit}">`;
+                } else if (param.measurement_type === 'ok_nok') {
+                    inputHtml = `<select name="${fieldName}" id="id_${fieldName}" class="form-control nok-select"><option value="">---</option><option value="OK">OK</option><option value="NOK">NOK</option></select>`;
+                } else if (param.measurement_type === 'yes_no') {
+                    inputHtml = `<select name="${fieldName}" id="id_${fieldName}" class="form-control yes-no-select"><option value="">---</option><option value="Yes">Yes</option><option value="No">No</option></select>`;
+                }
+                
+                if (param.requires_comment_if_nok) {
+                    inputHtml += `<div class="nok-comment-field" id="comment_${fieldName}"><textarea name="${fieldName}_comment" rows="2" class="form-control mt-2" placeholder="Comment required if NOK/No"></textarea></div>`;
+                }
+
+                fieldRow.innerHTML = `<div class="form-label-col">${labelHtml}</div><div class="form-input-col">${inputHtml}</div>`;
+                section.appendChild(fieldRow);
+            });
+            
+            container.appendChild(section);
+            
+            document.querySelectorAll('.nok-select, .yes-no-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const fieldId = this.id.replace('id_', '');
+                    const commentDiv = document.getElementById(`comment_${fieldId}`);
+                    if (commentDiv) {
+                        if (this.value === 'NOK' || this.value === 'No') {
+                            commentDiv.classList.add('show');
+                        } else {
+                            commentDiv.classList.remove('show');
+                        }
+                    }
+                });
+            });
+        }
+    }
+    
+    function updateFormFields() {
+        const selectedModel = modelSelector.value;
+        const mapping = modelMappings[selectedModel];
+        
+        if (mapping) {
+            setSelectValue(topToolId, mapping.topToolId);
+            setSelectValue(bottomToolId, mapping.bottomToolId);
+            setSelectValue(uvAssyStageId, mapping.uvAssyStageId);
+            setSelectValue(retainerPartNo, mapping.retainerPartNo);
+            setSelectValue(uvClipPartNo, mapping.uvClipPartNo);
+            setSelectValue(umbrellaPartNo, mapping.umbrellaPartNo);
+            [topToolId, bottomToolId, uvAssyStageId, retainerPartNo, uvClipPartNo, umbrellaPartNo].forEach(el => el.disabled = true);
+        } else {
+            [topToolId, bottomToolId, uvAssyStageId, retainerPartNo, uvClipPartNo, umbrellaPartNo].forEach(el => el.disabled = false);
+        }
+        
+        updateFrequencyInfo();
+        updateDynamicFields();
+    }
+    
+    modelSelector.addEventListener('change', updateFormFields);
+    updateFormFields(); // Initial call
+    
+    form.addEventListener('submit', function(e) {
+        // Client-side warning for out-of-range values
+        let warnings = [];
+        const linePressure = parseFloat(form.line_pressure.value);
+        if (linePressure < 4.5 || linePressure > 5.5) warnings.push('Line pressure is outside the recommended range (4.5 - 5.5 bar).');
+        const uvPressure = parseFloat(form.uv_flow_input_pressure.value);
+        if (uvPressure < 11 || uvPressure > 15) warnings.push('UV flow input pressure is outside the recommended range (11 - 15 kPa).');
+        const testPressure = parseFloat(form.test_pressure_vacuum.value);
+        if (testPressure < 0.25 || testPressure > 0.3) warnings.push('Test pressure for vacuum is outside the recommended range (0.25 - 0.3 MPa).');
+
+        if (warnings.length > 0) {
+            if (!confirm('Warnings:\n\n' + warnings.join('\n') + '\n\nDo you want to proceed anyway?')) {
+                e.preventDefault();
+            }
+        }
+        
+        // Re-enable disabled fields so their values are submitted
+        [topToolId, bottomToolId, uvAssyStageId, retainerPartNo, uvClipPartNo, umbrellaPartNo].forEach(el => el.disabled = false);
+    });
+});
+</script>
+{% endblock %}

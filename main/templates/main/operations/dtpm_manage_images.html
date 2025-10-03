@@ -1,0 +1,154 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .check-card {
+        background-color: #333;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .check-number {
+        background-color: #444;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 15px;
+    }
+    
+    .form-control {
+        background-color: #333;
+        border: 1px solid #555;
+        color: #fff;
+    }
+    
+    .form-control:focus {
+        background-color: #444;
+        color: #fff;
+        border-color: #ff0000;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .image-preview {
+        max-height: 150px;
+        border-radius: 4px;
+        border: 1px solid #444;
+        margin-top: 10px;
+    }
+    
+    .image-upload-area {
+        border: 2px dashed #555;
+        padding: 20px;
+        text-align: center;
+        border-radius: 8px;
+        background-color: #2a2a2a;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .image-upload-area:hover {
+        background-color: #333;
+        border-color: #888;
+    }
+    
+    .upload-icon {
+        font-size: 2rem;
+        color: #888;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="fas fa-images me-2"></i>
+            {{ title }}
+        </h2>
+        <p class="text-muted">Checklist #{{ checklist.id }} for {{ checklist.date }}, {{ checklist.shift.get_shift_type_display }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'dtpm_detail' pk=checklist.pk %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Checklist
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Header Image Section -->
+            <div class="form-card mb-4">
+                <h4 class="mb-3">Header Image</h4>
+                
+                {% if checklist.header_image %}
+                <div class="mb-3">
+                    <img src="{{ checklist.header_image.url }}" alt="Header Image" class="image-preview">
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <label for="header_image" class="form-label">Upload Header Image</label>
+                    <input type="file" name="header_image" id="header_image" class="form-control" accept="image/*">
+                </div>
+            </div>
+            
+            <!-- Check Images Section -->
+            <h4 class="mb-3">Check Item Images</h4>
+            <p class="text-muted mb-4">Upload standard images for each check item. These will be used as reference for operators.</p>
+            
+            {% for check in check_results %}
+                <div class="check-card">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="check-number">{{ check.item_number }}</div>
+                        <h5 class="mb-0">{{ check.get_item_number_display }}</h5>
+                    </div>
+                    
+                    {% if check.image %}
+                    <div class="mb-3">
+                        <img src="{{ check.image.url }}" alt="Check Image" class="image-preview">
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-3">
+                        <label for="check_image_{{ check.id }}" class="form-label">Upload Image</label>
+                        <input type="file" name="check_image_{{ check.id }}" id="check_image_{{ check.id }}" class="form-control" accept="image/*">
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <div class="form-card">
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'dtpm_detail' pk=checklist.pk %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Save All Images
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,287 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Checklist System{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/all.min1.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/all.min2.css' %}" />
+
+    {% load static %}
+
+    {% block extra_css %}{% endblock %}
+    
+    <!-- Global Styles -->
+    <style>
+        body {
+            background-color: black;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Navbar styling */
+        .navbar {
+            background-color: #000000;
+            position: relative;
+            padding: 10px 0;
+            border-bottom: none;
+            margin-bottom: 8px;
+        }
+        
+        /* Custom animated border */
+        .navbar::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #ff0000, #ffffff, #ff0000);
+            background-size: 200% 100%;
+            border-radius: 10px 10px 80px 80px !important;
+            box-shadow: 0 3px 8px rgba(255, 0, 0, 0.5);
+            animation: borderSlide 4s infinite alternate;
+        }
+        
+        @keyframes borderSlide {
+            0% {
+                background-position: 0% 50%;
+            }
+            100% {
+                background-position: 100% 50%;
+            }
+        }
+        
+        .navbar-brand img {
+            transition: transform 0.3s;
+        }
+        
+        .navbar-brand:hover img {
+            transform: scale(1.05);
+        }
+        
+        .navbar-container {
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* Navbar link hover effect */
+        .navbar-nav .nav-link {
+            color: #ff0000 !important;
+            font-weight: 500;
+            padding: 8px 15px;
+            margin: 0 5px;
+            border-radius: 8px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .navbar-nav .nav-link::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background-color: #ffffff;
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+        
+        .navbar-nav .nav-link:hover::before {
+            width: 80%;
+        }
+        
+        .navbar-nav .nav-link:hover {
+            color: #ffffff !important;
+            background-color: rgba(255, 0, 0, 0.2);
+            transform: translateY(-3px);
+        }
+        
+        .navbar-nav .nav-link.active {
+            color: #ffffff !important;
+            background-color: #cc0000;
+        }
+        
+        /* Dropdown styling */
+        .dropdown-menu {
+            background-color: #111111;
+            border: 2px solid #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+            overflow: hidden;
+            margin-top: 10px;
+            animation: dropdownFade 0.3s ease;
+        }
+        
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .dropdown-item {
+          
+            padding: 10px 15px;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        
+        .dropdown-item:hover {
+            background-color: rgba(204, 0, 0, 0.5);
+        
+            border-left: 3px solid #ffffff;
+            padding-left: 20px;
+        }
+        
+        .dropdown-divider {
+            border-color: rgba(255, 255, 255, 0.2);
+            margin: 5px 0;
+        }
+        
+        /* Button styling */
+        .btn-primary {
+            background-color: #ff0000 !important;
+            border-color: #ffffff !important;
+            border-width: 2px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #cc0000 !important;
+            border-color: #ffffff !important;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Card and form styling */
+        .card {
+            border: 2px solid #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+        }
+        
+        /* Alerts styling */
+        .alert {
+            border-width: 2px;
+            border-radius: 8px;
+        }
+        th{
+      
+        }
+        td{
+         color:white !important
+        }
+        .hidden-field {
+    display: none;
+}
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container navbar-container">
+            <!-- Left Side: PHINIA Logo -->
+            <a class="navbar-brand" href="{% url 'dashboard' %}">
+                <img src="{% static 'images/image2.png' %}" alt="Phinia Logo" height="68">
+            </a>
+    
+            <!-- Navbar Toggler for Mobile -->
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    style="border: 1px solid #ffffff;">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+    
+            <!-- Right Side Content -->
+            {% if user.is_authenticated %}
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                           href="{% url 'dashboard' %}">
+                           <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'station_media_slider' station_id=1 %}">
+                            <i class="fas fa-tachometer-alt me-1"></i> Screen-1
+                        </a>
+                    </li>
+             
+                    
+                    
+                    <!-- User Profile Dropdown (Right-Aligned) -->
+                    <li class="nav-item dropdown ms-3">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown" aria-expanded="false"
+                           style="border: 1px solid #ff0000; border-radius: 20px; padding: 5px 15px; background: rgba(255,0,0,0.1);">
+                            <i class="fas fa-user-circle me-1"></i> {{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li><a class="dropdown-item" href="{% url 'user_profile' %}">
+                                <i class="fas fa-user me-2"></i>Profile
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'user_settings' %}">
+                                <i class="fas fa-cog me-2"></i>Settings
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'logout' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item" style="color: #ff0000; font-weight: bold;">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>                    
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Add this to your navbar in base.html, after your existing navigation items -->
+            {% endif %}
+        </div>
+
+        
+    </nav>
+        
+    <!-- Messages -->
+<!-- Messages - Filtered to show only warnings and errors -->
+{% if messages %}
+<div class="container mt-3">
+    {% for message in messages %}
+        <!-- Only show warning and error messages, skip success and info -->
+        {% if message.tags == 'warning' or message.tags == 'error' or message.tags == 'danger' %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+
+    <!-- Main Content -->
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+
+    <!-- jQuery -->
+    <script src="{% static 'js/jquery-3.6.0.min.js' %}"></script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

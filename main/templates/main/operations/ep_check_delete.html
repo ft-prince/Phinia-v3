@@ -1,0 +1,76 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Delete EP Check{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-left: 4px solid #f44336;
+    }
+    .delete-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+        color: #f44336;
+    }
+    .delete-warning {
+        color: #f44336;
+        font-size: 1.2rem;
+        margin-bottom: 1.5rem;
+    }
+    .delete-info {
+        border-left: 3px solid #ff9800;
+        padding-left: 15px;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3"><i class="fas fa-trash-alt me-2"></i>Delete EP Check</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_detail' pk=checklist.id %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Detail
+        </a>
+    </div>
+</div>
+
+<div class="card delete-card">
+    <div class="card-header delete-header">
+        <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Confirm Deletion</h5>
+    </div>
+    <div class="card-body">
+        <div class="delete-warning">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            Warning: This action cannot be undone!
+        </div>
+        
+        <p>Are you sure you want to permanently delete the following EP Check?</p>
+        
+        <div class="delete-info">
+            <p><strong>Date:</strong> {{ checklist.date }}</p>
+            <p><strong>Current Model:</strong> {{ checklist.current_model }}</p>
+            <p><strong>Shift:</strong> {{ checklist.shift.get_shift_type_display }}</p>
+            <p><strong>Operator:</strong> {{ checklist.operator.username }}</p>
+            <p><strong>Status:</strong> {{ checklist.get_status_display }}</p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% url 'ep_check_detail' pk=checklist.id %}" class="btn btn-outline-light">
+                    Cancel
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash-alt me-2"></i>Delete Permanently
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,376 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}Verify FTQ Record{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .verify-card .card-title {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 10px;
+    }
+    
+    .detail-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    
+    .detail-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .detail-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+    }
+    
+    .detail-value {
+        color: #ffffff;
+        font-weight: 600;
+    }
+    
+    .ftq-badge {
+        font-size: 2.5rem;
+        font-weight: 700;
+        padding: 10px 20px;
+        border-radius: 25px;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    
+    .ftq-high {
+        background-color: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+    }
+    
+    .ftq-medium {
+        background-color: rgba(255, 165, 0, 0.2);
+        color: #ffa500;
+    }
+    
+    .ftq-low {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ff0000;
+    }
+    
+    .defect-table {
+        width: 100%;
+        margin-bottom: 0;
+        color: #ffffff;
+    }
+    
+    .defect-table thead th {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ffffff;
+        font-weight: 600;
+        padding: 10px;
+        border-bottom: 2px solid #ff0000;
+    }
+    
+    .defect-table tbody tr:nth-child(odd) {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .defect-table tbody tr:nth-child(even) {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    
+    .defect-table tbody tr:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .defect-table td {
+        padding: 10px;
+        vertical-align: middle;
+    }
+    
+    .defect-count {
+        background-color: #ff0000;
+        color: #ffffff;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 15px;
+        display: inline-block;
+        min-width: 40px;
+        text-align: center;
+    }
+    
+    .form-control, .form-select {
+        background-color: #111111;
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #111111;
+        color: #ffffff;
+        border-color: #ff0000;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .action-btn {
+        transition: all 0.3s;
+        border-width: 2px;
+        font-weight: 500;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    .verification-badge {
+        position: absolute;
+        top: -15px;
+        right: -15px;
+        background-color: #ff0000;
+        color: #ffffff;
+        font-weight: 700;
+        padding: 15px;
+        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.6);
+        font-size: 1.3rem;
+        transform: rotate(15deg);
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="fas fa-check-circle me-2"></i>Verify FTQ Record</h2>
+        <div>
+            <a href="{% url 'ftq_list' %}" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-1"></i> Back to List
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Main Info Card -->
+        <div class="col-md-4">
+            <div class="verify-card position-relative">
+                <div class="verification-badge">Verify</div>
+                <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Record Information</h5>
+                <ul class="detail-list">
+                    <li>
+                        <span class="detail-label">Date:</span>
+                        <span class="detail-value">{{ ftq_record.date|date:"F d, Y" }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Shift:</span>
+                        <span class="detail-value">{{ ftq_record.get_shift_type_display }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Model:</span>
+                        <span class="detail-value">{{ ftq_record.get_model_name_display }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Julian Date:</span>
+                        <span class="detail-value">{{ ftq_record.julian_date|date:"Y-m-d" }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Production/Day:</span>
+                        <span class="detail-value">{{ ftq_record.total_inspected }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Production/Shift:</span>
+                        <span class="detail-value">{{ ftq_record.production_per_shift }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Created By:</span>
+                        <span class="detail-value">{{ ftq_record.created_by.get_full_name|default:ftq_record.created_by.username }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Created At:</span>
+                        <span class="detail-value">{{ ftq_record.created_at|date:"F d, Y H:i" }}</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Quality Stats Card -->
+            <div class="verify-card">
+                <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Quality Metrics</h5>
+                <div class="text-center mb-3">
+                    <span class="ftq-badge 
+                        {% if ftq_percentage >= 99 %}ftq-high{% elif ftq_percentage >= 95 %}ftq-medium{% else %}ftq-low{% endif %}">
+                        {{ ftq_percentage|floatformat:2 }}%
+                    </span>
+                    <p class="mt-2 text-white">First Time Quality</p>
+                </div>
+                
+                <ul class="detail-list mt-3">
+                    <li>
+                        <span class="detail-label">Total Production:</span>
+                        <span class="detail-value">{{ ftq_record.total_inspected }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Total Defects:</span>
+                        <span class="detail-value">{{ ftq_record.total_defects }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Good Units:</span>
+                        <span class="detail-value">{{ ftq_record.total_inspected|add:"-"|add:ftq_record.total_defects }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Defect Rate:</span>
+                        <span class="detail-value">
+                            {% if ftq_record.total_inspected > 0 %}
+                                {{ ftq_record.total_defects|divisibleby:ftq_record.total_inspected|floatformat:2 }}%
+                            {% else %}
+                                0.00%
+                            {% endif %}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Defect Lists and Verification Form -->
+        <div class="col-md-8">
+            <!-- Default Defects Card -->
+            <div class="verify-card">
+                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Default Defects</h5>
+                {% if default_defects %}
+                <div class="table-responsive">
+                    <table class="defect-table">
+                        <thead>
+                            <tr>
+                                <th width="10%">S.No.</th>
+                                <th width="65%">Defect Description</th>
+                                <th width="25%" class="text-center">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for defect in default_defects %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    {{ defect.defect_type.name }}
+                                    {% if defect.defect_type.is_critical %}
+                                    <span class="badge bg-danger ms-2">Critical</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="defect-count">{{ defect.count }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No default defects recorded
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Custom Defects Card -->
+            <div class="verify-card">
+                <h5 class="card-title"><i class="fas fa-plus-circle me-2"></i>Additional Defects</h5>
+                {% if custom_defects %}
+                <div class="table-responsive">
+                    <table class="defect-table">
+                        <thead>
+                            <tr>
+                                <th width="10%">S.No.</th>
+                                <th width="65%">Defect Description</th>
+                                <th width="25%" class="text-center">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for defect in custom_defects %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ defect.defect_type_custom.name }}</td>
+                                <td class="text-center">
+                                    <span class="defect-count">{{ defect.count }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No additional defects recorded
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Verification Form -->
+            <div class="verify-card">
+                <h5 class="card-title"><i class="fas fa-clipboard-check me-2"></i>Verification</h5>
+                
+                <form method="post" id="verifyForm">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="comments" class="form-label">Verification Comments</label>
+                        <textarea id="comments" name="comments" class="form-control" rows="4" 
+                                  placeholder="Enter any comments about this FTQ record"></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-center mt-4">
+                        <button type="submit" name="action" value="approve" class="btn btn-success action-btn px-4 me-3">
+                            <i class="fas fa-check-circle me-1"></i> Approve Record
+                        </button>
+                        <button type="submit" name="action" value="reject" class="btn btn-danger action-btn px-4">
+                            <i class="fas fa-times-circle me-1"></i> Reject Record
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form submission confirmation
+    document.getElementById('verifyForm').addEventListener('submit', function(event) {
+        const action = event.submitter.value;
+        
+        if (action === 'reject') {
+            const confirmation = confirm('Are you sure you want to reject this FTQ record?');
+            if (!confirmation) {
+                event.preventDefault();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

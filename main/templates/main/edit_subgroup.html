@@ -1,0 +1,431 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Edit Subgroup {{ subgroup.subgroup_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        background-color: #111111 !important;
+        border: 2px solid #ff0000 !important;
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+    }
+    
+    .card-header {
+        background-color: #cc0000 !important;
+        color: #ffffff !important;
+        border-bottom: 2px solid #ffffff;
+    }
+    
+    .form-label {
+        color: #ffffff;
+    }
+    
+    .form-control {
+        background-color: #000000;
+        color: #ffffff;
+        border: 1px solid #ff0000;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .form-control:hover {
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.1);
+    }
+    
+    .form-control:focus {
+        background-color: #000000;
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+        outline: none;
+    }
+    
+    .form-text {
+        color: rgba(255, 255, 255, 0.6) !important;
+    }
+    
+    .warning-message {
+        color: #ff4444 !important;
+    }
+    
+    .btn-primary {
+        background-color: #ff0000 !important;
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+    }
+    
+    .btn-primary:hover {
+        background-color: #cc0000 !important;
+    }
+    
+    .btn-secondary {
+        background-color: #333333 !important;
+        border-color: #ff0000 !important;
+        color: #ffffff !important;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #444444 !important;
+        border-color: #ffffff !important;
+    }
+    
+    .form-select {
+        background-color: #000000;
+        color: #ffffff;
+        border: 1px solid #ff0000;
+    }
+    
+    .form-select:focus {
+        background-color: #000000;
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .readings-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .single-reading {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    
+    .single-reading select {
+        width: 200px;
+    }
+    
+    .reading-label {
+        text-align: center;
+        font-weight: bold;
+        color: #cc0000;
+        margin-bottom: 5px;
+    }
+    
+    .parameter-section {
+        border: 2px solid #ffffff;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .parameter-title {
+        margin: -25px 0 15px 15px;
+        background-color: #111111;
+        display: inline-block;
+        padding: 5px 15px;
+        border: 2px solid #cc0000;
+        border-radius: 5px;
+        font-weight: bold;
+        color: #ffffff;
+    }
+    
+    .range-info {
+        color: #ffd700;
+        font-size: 12px;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .readings-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0 text-center">Edit Subgroup {{ subgroup.subgroup_number }} - Checklist #{{ checklist.id }} (21 Readings)</h5>
+                    <small class="text-center d-block">Original Time: {{ subgroup.timestamp|date:"Y-m-d H:i" }}</small>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="editSubgroupForm">
+                        {% csrf_token %}
+                        
+                        <!-- UV Vacuum Test Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title">UV Vacuum Test (kPa)</h6>
+                            <div class="range-info">Recommended Range: -43 to -35 kPa</div>
+                            
+                            <div class="readings-grid">
+                                <div class="reading-label">Reading 1</div>
+                                <div class="reading-label">Reading 2</div>
+                                <div class="reading-label">Reading 3</div>
+                                <div class="reading-label">Reading 4</div>
+                                <div class="reading-label">Reading 5</div>
+                            </div>
+                            <div class="readings-grid">
+                                {{ form.uv_vacuum_test_1 }}
+                                {{ form.uv_vacuum_test_2 }}
+                                {{ form.uv_vacuum_test_3 }}
+                                {{ form.uv_vacuum_test_4 }}
+                                {{ form.uv_vacuum_test_5 }}
+                            </div>
+                            <div class="warning-message" id="uv_vacuum_warning"></div>
+                        </div>
+                        
+                        <!-- UV Flow Value Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title">UV Flow Value (LPM)</h6>
+                            <div class="range-info">Recommended Range: 30-40 LPM</div>
+                            
+                            <div class="readings-grid">
+                                <div class="reading-label">Reading 1</div>
+                                <div class="reading-label">Reading 2</div>
+                                <div class="reading-label">Reading 3</div>
+                                <div class="reading-label">Reading 4</div>
+                                <div class="reading-label">Reading 5</div>
+                            </div>
+                            <div class="readings-grid">
+                                {{ form.uv_flow_value_1 }}
+                                {{ form.uv_flow_value_2 }}
+                                {{ form.uv_flow_value_3 }}
+                                {{ form.uv_flow_value_4 }}
+                                {{ form.uv_flow_value_5 }}
+                            </div>
+                            <div class="warning-message" id="uv_flow_warning"></div>
+                        </div>
+                        
+                        <!-- Umbrella Valve Assembly Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title">Umbrella Valve Assembly in Retainer</h6>
+                            <div class="range-info">Check umbrella valve assembly in retainer in UV Assy Station - 5 checks</div>
+                            
+                            <div class="readings-grid">
+                                <div class="reading-label">Check 1</div>
+                                <div class="reading-label">Check 2</div>
+                                <div class="reading-label">Check 3</div>
+                                <div class="reading-label">Check 4</div>
+                                <div class="reading-label">Check 5</div>
+                            </div>
+                            <div class="readings-grid">
+                                {{ form.umbrella_valve_assembly_1 }}
+                                {{ form.umbrella_valve_assembly_2 }}
+                                {{ form.umbrella_valve_assembly_3 }}
+                                {{ form.umbrella_valve_assembly_4 }}
+                                {{ form.umbrella_valve_assembly_5 }}
+                            </div>
+                        </div>
+                        
+                        <!-- UV Clip Pressing Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title">UV Clip Pressing</h6>
+                            <div class="range-info">Check UV clip pressing - proper locking of 2 nos snap - 5 checks</div>
+                            
+                            <div class="readings-grid">
+                                <div class="reading-label">Check 1</div>
+                                <div class="reading-label">Check 2</div>
+                                <div class="reading-label">Check 3</div>
+                                <div class="reading-label">Check 4</div>
+                                <div class="reading-label">Check 5</div>
+                            </div>
+                            <div class="readings-grid">
+                                {{ form.uv_clip_pressing_1 }}
+                                {{ form.uv_clip_pressing_2 }}
+                                {{ form.uv_clip_pressing_3 }}
+                                {{ form.uv_clip_pressing_4 }}
+                                {{ form.uv_clip_pressing_5 }}
+                            </div>
+                        </div>
+                        
+                        <!-- Workstation Clean Section - UPDATED TO SINGLE FIELD -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title">Workstation Cleanliness</h6>
+                            <div class="range-info">All workstations are clean (वर्कस्टेशन साफ होना चाहिए) - Single Check</div>
+                            
+                            <div class="single-reading">
+                                {{ form.workstation_clean }}
+                            </div>
+                        </div>
+                        
+                        <!-- Bin Contamination Check Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title">Bin Contamination Check</h6>
+                            <div class="range-info">Station Operator will confirm that every bin feeded on line is free from contamination - 5 checks</div>
+                            <div class="range-info">PTGW_5.3_PC_GUR_03</div>
+                            
+                            <div class="readings-grid">
+                                <div class="reading-label">Check 1</div>
+                                <div class="reading-label">Check 2</div>
+                                <div class="reading-label">Check 3</div>
+                                <div class="reading-label">Check 4</div>
+                                <div class="reading-label">Check 5</div>
+                            </div>
+                            <div class="readings-grid">
+                                {{ form.bin_contamination_check_1 }}
+                                {{ form.bin_contamination_check_2 }}
+                                {{ form.bin_contamination_check_3 }}
+                                {{ form.bin_contamination_check_4 }}
+                                {{ form.bin_contamination_check_5 }}
+                            </div>
+                        </div>
+
+                        <!-- Edit History Section (if any changes exist) -->
+                        {% if edit_history %}
+                        <div class="parameter-section">
+                            <h6 class="parameter-title">Edit History</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Field</th>
+                                            <th>Old Value</th>
+                                            <th>New Value</th>
+                                            <th>Edited By</th>
+                                            <th>When</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for history in edit_history %}
+                                        <tr>
+                                            <td>{{ history.get_field_display_name }}</td>
+                                            <td>{{ history.old_value|default:"—" }}</td>
+                                            <td>{{ history.new_value|default:"—" }}</td>
+                                            <td>{{ history.edited_by.username }}</td>
+                                            <td>{{ history.edited_at|timesince }} ago</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">Update Subgroup (21 Readings)</button>
+                            <a href="{% url 'checklist_detail' checklist.id %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('editSubgroupForm');
+    
+    // Real-time validation and warning display
+    function updateWarnings() {
+        let warningMessages = [];
+        
+        // Clear previous warnings
+        document.getElementById('uv_vacuum_warning').textContent = '';
+        document.getElementById('uv_flow_warning').textContent = '';
+        
+        // Check UV vacuum test readings (5 readings)
+        for (let i = 1; i <= 5; i++) {
+            const uvVacuum = parseFloat(form[`uv_vacuum_test_${i}`].value);
+            if (!isNaN(uvVacuum) && (uvVacuum < -43 || uvVacuum > -35)) {
+                warningMessages.push(`UV Vacuum Reading ${i}: ${uvVacuum} kPa is outside range`);
+            }
+        }
+        
+        // Check UV flow value readings (5 readings)
+        for (let i = 1; i <= 5; i++) {
+            const uvFlow = parseFloat(form[`uv_flow_value_${i}`].value);
+            if (!isNaN(uvFlow) && (uvFlow < 30 || uvFlow > 40)) {
+                warningMessages.push(`UV Flow Reading ${i}: ${uvFlow} LPM is outside range`);
+            }
+        }
+        
+        // Display warnings
+        if (warningMessages.length > 0) {
+            document.getElementById('uv_vacuum_warning').textContent = 
+                warningMessages.filter(msg => msg.includes('UV Vacuum')).join(', ');
+            document.getElementById('uv_flow_warning').textContent = 
+                warningMessages.filter(msg => msg.includes('UV Flow')).join(', ');
+        }
+    }
+
+    // Add real-time warning updates for all measurement fields
+    for (let i = 1; i <= 5; i++) {
+        const uvVacuumField = form[`uv_vacuum_test_${i}`];
+        const uvFlowField = form[`uv_flow_value_${i}`];
+        
+        if (uvVacuumField) {
+            uvVacuumField.addEventListener('input', updateWarnings);
+        }
+        if (uvFlowField) {
+            uvFlowField.addEventListener('input', updateWarnings);
+        }
+    }
+    
+    // Form submission handling
+    form.addEventListener('submit', function(e) {
+        let warningMessages = [];
+        
+        // Check all UV vacuum test readings
+        for (let i = 1; i <= 5; i++) {
+            const uvVacuum = parseFloat(form[`uv_vacuum_test_${i}`].value);
+            if (!isNaN(uvVacuum) && (uvVacuum < -43 || uvVacuum > -35)) {
+                warningMessages.push(`UV Vacuum Test Reading ${i}: ${uvVacuum} kPa is outside recommended range (-43 to -35 kPa)`);
+            }
+        }
+        
+        // Check all UV flow value readings
+        for (let i = 1; i <= 5; i++) {
+            const uvFlow = parseFloat(form[`uv_flow_value_${i}`].value);
+            if (!isNaN(uvFlow) && (uvFlow < 30 || uvFlow > 40)) {
+                warningMessages.push(`UV Flow Value Reading ${i}: ${uvFlow} LPM is outside recommended range (30-40 LPM)`);
+            }
+        }
+
+        // Check for consistency warnings - UPDATED FOR SINGLE WORKSTATION
+        let umbrellaValues = [];
+        let uvClipValues = [];
+        let binValues = [];
+        
+        for (let i = 1; i <= 5; i++) {
+            umbrellaValues.push(form[`umbrella_valve_assembly_${i}`].value);
+            uvClipValues.push(form[`uv_clip_pressing_${i}`].value);
+            binValues.push(form[`bin_contamination_check_${i}`].value);
+        }
+        
+        // Get single workstation value (no consistency check needed)
+        const workstationValue = form['workstation_clean'].value;
+        
+        // Check consistency for multi-reading fields only
+        if (new Set(umbrellaValues.filter(v => v !== '')).size > 1) {
+            warningMessages.push('Warning: Umbrella Valve Assembly readings are not consistent');
+        }
+        if (new Set(uvClipValues.filter(v => v !== '')).size > 1) {
+            warningMessages.push('Warning: UV Clip Pressing readings are not consistent');
+        }
+        if (new Set(binValues.filter(v => v !== '')).size > 1) {
+            warningMessages.push('Warning: Bin Contamination Check readings are not consistent');
+        }
+
+        if (warningMessages.length > 0) {
+            const proceed = confirm(
+                'Warning:\n\n' + 
+                warningMessages.join('\n\n') + 
+                '\n\nDo you want to proceed with these values?'
+            );
+            
+            if (!proceed) {
+                e.preventDefault();
+            }
+        }
+    });
+
+    // Run initial validation
+    updateWarnings();
+});
+</script>
+{% endblock %}

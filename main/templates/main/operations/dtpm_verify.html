@@ -1,0 +1,188 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}Verify DTPM Checklist{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .check-card {
+        background-color: #333;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .check-status-OK {
+        border-left: 4px solid #28a745;
+    }
+    
+    .check-status-NG {
+        border-left: 4px solid #dc3545;
+    }
+    
+    .check-status-empty {
+        border-left: 4px solid #6c757d;
+    }
+    
+    .check-number {
+        background-color: #444;
+        color: white;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 15px;
+    }
+    
+    .check-result {
+        font-weight: bold;
+        padding: 3px 8px;
+        border-radius: 4px;
+    }
+    
+    .result-OK {
+        background-color: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+    }
+    
+    .result-NG {
+        background-color: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+    }
+    
+    .result-empty {
+        background-color: rgba(108, 117, 125, 0.2);
+        color: #ffffff;
+    }
+    
+    .form-control {
+        background-color: #333;
+        border: 1px solid #555;
+        color: #fff;
+    }
+    
+    .form-control:focus {
+        background-color: #444;
+        color: #fff;
+        border-color: #ff0000;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .preview-image {
+        max-height: 100px;
+        border-radius: 4px;
+        border: 1px solid #444;
+        cursor: pointer;
+    }
+    
+    .preview-image:hover {
+        transform: scale(1.05);
+    }
+    
+    .verification-actions {
+        border-top: 1px solid #444;
+        padding-top: 20px;
+        margin-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="fas fa-check-double me-2"></i>
+            Verify DTPM Checklist
+        </h2>
+        <p class="text-muted">Checklist #{{ checklist.id }} for {{ checklist.date }}, {{ checklist.shift.get_shift_type_display }}</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'dtpm_detail' pk=checklist.pk %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Checklist
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="verify-card">
+            <h4 class="mb-3">Review Check Results</h4>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Please review all check results before verifying this checklist. Pay special attention to any NG results.
+            </div>
+            
+            {% for check in check_results %}
+            <div class="check-card {% if check.result == 'OK' %}check-status-OK{% elif check.result == 'NG' %}check-status-NG{% else %}check-status-empty{% endif %}">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="check-number me-3">{{ check.item_number }}</div>
+                    <h5 class="mb-0">{{ check.get_item_number_display }}</h5>
+                    <div class="ms-auto">
+                        <span class="check-result {% if check.result == 'OK' %}result-OK{% elif check.result == 'NG' %}result-NG{% else %}result-empty{% endif %}">
+                            {% if check.result %}{{ check.result }}{% else %}Not Checked{% endif %}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if check.comments %}
+                <div class="mt-2 mb-2">
+                    <small class="text-muted">Comments:</small>
+                    <p class="mb-0 ms-2">{{ check.comments }}</p>
+                </div>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <div class="small text-muted">
+                        Checked by: {{ check.checked_by.username }} at {{ check.checked_at|date:"M d, Y H:i" }}
+                    </div>
+                    
+                    {% if check.image %}
+                    <div>
+                        <img src="{{ check.image.url }}" alt="Check Image" class="preview-image" onclick="window.open('{{ check.image.url }}', '_blank')">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-warning">
+                No check results available. Cannot verify an empty checklist.
+            </div>
+            {% endfor %}
+            
+            <div class="verification-actions">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="verification_comments" class="form-label">Verification Comments (Optional)</label>
+                        <textarea name="comments" id="verification_comments" class="form-control" rows="3" placeholder="Enter any comments about this verification..."></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <button type="submit" name="action" value="reject" class="btn btn-danger">
+                            <i class="fas fa-times-circle me-2"></i>Reject Checklist
+                        </button>
+                        
+                        <button type="submit" name="action" value="verify" class="btn btn-success">
+                            <i class="fas fa-check-circle me-2"></i>Verify Checklist
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

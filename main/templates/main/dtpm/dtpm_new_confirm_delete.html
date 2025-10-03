@@ -1,0 +1,82 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Delete DTPM Checklist{% endblock %}
+
+{% block extra_css %}
+<style>
+    .confirm-card {
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 2px solid #dc3545;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .warning-icon {
+        color: #dc3545;
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="fas fa-trash"></i> Delete DTPM Checklist</h2>
+    </div>
+</div>
+
+<div class="confirm-card text-center">
+    <div class="warning-icon">
+        <i class="fas fa-exclamation-triangle"></i>
+    </div>
+    <h3 class="mb-3">Are you sure you want to delete this checklist?</h3>
+    <p>This will permanently delete the checklist from {{ checklist.date }} - {{ checklist.shift.get_shift_type_display }}.</p>
+    <p>All checkpoint results and issues will be deleted as well.</p>
+    <p><strong>This action cannot be undone.</strong></p>
+    
+    <div class="mt-4">
+        <form method="post">
+            {% csrf_token %}
+            <a href="{% url 'dtpm_new_detail' pk=checklist.id %}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-times"></i> Cancel
+            </a>
+            <button type="submit" class="btn btn-danger btn-lg ms-3">
+                <i class="fas fa-trash"></i> Delete Checklist
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Checklist Info Card -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5><i class="fas fa-info-circle"></i> Checklist Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Date:</strong> {{ checklist.date }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Shift:</strong> {{ checklist.shift.get_shift_type_display }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Operator:</strong> {{ checklist.operator.username }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Status:</strong> {{ checklist.get_status_display }}</p>
+            </div>
+        </div>
+        {% if checklist.notes %}
+        <div class="row mt-2">
+            <div class="col-12">
+                <p><strong>Notes:</strong></p>
+                <p>{{ checklist.notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,446 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Quality Verify DTPM Checklist{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-card {
+        background-color: #222;
+        border: 1px solid #444;
+    }
+    .verify-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+    }
+    .checkpoint-table th {
+        background-color: #333;
+        color: #ff0000;
+        border-color: #444;
+    }
+    .checkpoint-table td {
+        border-color: #444;
+    }
+    .status-ok {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .status-ng {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        font-weight: bold;
+    }
+    .status-na {
+        background-color: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+        font-weight: bold;
+    }
+    .status-pending {
+        background-color: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        font-weight: bold;
+    }
+    .verification-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .btn-verify {
+        background-color: #4CAF50;
+        border-color: #4CAF50;
+        color: white;
+    }
+    .btn-verify:hover {
+        background-color: #45a049;
+        border-color: #45a049;
+    }
+    .btn-reject {
+        background-color: #f44336;
+        border-color: #f44336;
+        color: white;
+    }
+    .btn-reject:hover {
+        background-color: #da190b;
+        border-color: #da190b;
+    }
+    .dtpm-badge {
+        background-color: #9C27B0;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .quality-badge {
+        background-color: #FF9800;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: bold;
+    }
+    .verification-alert {
+        background-color: rgba(255, 152, 0, 0.1);
+        border: 1px solid #FF9800;
+        color: #FF9800;
+    }
+    .completion-stats {
+        background-color: rgba(76, 175, 80, 0.1);
+        border: 1px solid #4CAF50;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .incomplete-warning {
+        background-color: rgba(244, 67, 54, 0.1);
+        border: 1px solid #f44336;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .checkpoint-number {
+        background-color: #444;
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+        min-width: 30px;
+        text-align: center;
+    }
+    .quality-section {
+        background-color: rgba(255, 152, 0, 0.05);
+        border-left: 4px solid #FF9800;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    .approval-history {
+        background-color: rgba(33, 150, 243, 0.05);
+        border: 1px solid #2196F3;
+        border-radius: 8px;
+        padding: 15px;
+    }
+    .approval-badge {
+        background-color: #2196F3;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.75em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3">
+            <i class="fas fa-award me-2"></i>
+            Quality Verification
+            <span class="dtpm-badge ms-2">DTPM FMA-03</span>
+            <span class="quality-badge ms-2">QUALITY</span>
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'dtpm_new_detail' pk=checklist.id %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Detail
+        </a>
+    </div>
+</div>
+
+<!-- Quality Verification Alert -->
+<div class="alert verification-alert mb-4">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-medal me-2"></i>
+        <div>
+            <strong>Quality Final Verification:</strong> Please conduct final quality review of this supervisor-approved DTPM checklist before final certification.
+        </div>
+    </div>
+</div>
+
+<!-- DTPM Checklist Details Card -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Checklist Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Date:</strong> {{ checklist.date|date:"M d, Y" }}</p>
+                <p><strong>Shift:</strong> {{ checklist.get_checklist_shift_display  }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Operator:</strong> {{ checklist.operator.username }}</p>
+                <p><strong>Supervisor:</strong> {{ checklist.supervisor.username }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Created At:</strong> {{ checklist.created_at|date:"M d, Y H:i" }}</p>
+                <p><strong>Current Status:</strong> 
+                    <span class="badge bg-info">{{ checklist.get_status_display }}</span>
+                </p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Model/Line:</strong> {{ checklist.current_model|default:"Not specified" }}</p>
+                <p><strong>Checklist Type:</strong> FMA-03 New</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approval History -->
+<div class="approval-history mb-4">
+    <h6 class="mb-2"><i class="fas fa-history me-2"></i>Approval History</h6>
+    <div class="d-flex align-items-center">
+        <i class="fas fa-check-circle text-success me-2"></i>
+        <span class="me-2">Operator Completed:</span>
+        <span class="approval-badge me-3">{{ checklist.created_at|date:"M d, Y H:i" }}</span>
+        
+        <i class="fas fa-user-check text-primary me-2"></i>
+        <span class="me-2">Supervisor Approved:</span>
+        <span class="approval-badge">{{ checklist.supervisor_approved_at|date:"M d, Y H:i"|default:"Pending" }}</span>
+    </div>
+</div>
+
+<!-- Quality Review Section -->
+
+
+<!-- Completion Statistics -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="completion-stats">
+            <h6 class="mb-2"><i class="fas fa-chart-pie me-2"></i>Quality Metrics</h6>
+            <div class="row text-center">
+                <div class="col-3">
+                    <div class="h4 text-success mb-1">{{ checkpoint_results|length }}</div>
+                    <small>Total Checkpoints</small>
+                </div>
+                <div class="col-3">
+                    <div class="h4 text-success mb-1">
+                        {% with ok_count=0 %}
+                            {% for result in checkpoint_results %}
+                                {% if result.status == 'OK' %}
+                                    {% with ok_count=ok_count|add:1 %}{% endwith %}
+                                {% endif %}
+                            {% endfor %}
+                            {% for result in checkpoint_results %}{% if result.status == 'OK' %}{{ forloop.counter }}{% endif %}{% empty %}0{% endfor %}
+                        {% endwith %}
+                    </div>
+                    <small>Pass (OK)</small>
+                </div>
+                <div class="col-3">
+                    <div class="h4 text-danger mb-1">
+                        {% for result in checkpoint_results %}{% if result.status == 'NG' %}{{ forloop.counter }}{% endif %}{% empty %}0{% endfor %}
+                    </div>
+                    <small>Fail (NG)</small>
+                </div>
+                <div class="col-3">
+                    <div class="h4 text-warning mb-1">
+                        {% for result in checkpoint_results %}{% if result.status == 'N/A' %}{{ forloop.counter }}{% endif %}{% empty %}0{% endfor %}
+                    </div>
+                    <small>N/A</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        {% if incomplete_checks %}
+        <div class="incomplete-warning">
+            <h6 class="mb-2 text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Quality Issues Found</h6>
+            <p class="mb-2">Some quality issues require attention before final certification.</p>
+            <a href="{% url 'dtpm_new_edit_checks' pk=checklist.id %}" class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-edit me-1"></i>Review Issues
+            </a>
+        </div>
+        {% else %}
+        <div class="completion-stats">
+            <h6 class="mb-2 text-success"><i class="fas fa-shield-alt me-2"></i>Quality Standards Met</h6>
+            <p class="mb-0">All quality requirements satisfied and ready for final certification.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Checkpoint Results Table -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Quality Review - Checkpoint Results</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover checkpoint-table mb-0">
+                <thead>
+                    <tr>
+                        <th width="8%">Checkpoint</th>
+                        <th width="12%">Status</th>
+                        <th width="25%">Description</th>
+                        <th width="15%">Result</th>
+                        <th width="20%">Operator Comments</th>
+                        <th width="20%">Quality Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for result in checkpoint_results %}
+                    <tr class="{% if result.status == 'NG' %}table-danger{% endif %}">
+                        <td>
+                            <span class="checkpoint-number">#{{ result.checkpoint_number }}</span>
+                        </td>
+                        <td class="{% if not result.status %}status-pending{% elif result.status == 'OK' %}status-ok{% elif result.status == 'NG' %}status-ng{% elif result.status == 'N/A' %}status-na{% endif %}">
+                            {% if result.status %}
+                                {{ result.status }}
+                                {% if result.status == 'NG' %}
+                                    <i class="fas fa-exclamation-triangle text-danger ms-1" title="Quality Attention Required"></i>
+                                {% endif %}
+                            {% else %}
+                                <i class="fas fa-clock me-1"></i>Pending
+                            {% endif %}
+                        </td>
+<td>
+    <strong>
+        {% if result.checkpoint_number == 1 %}
+            EMERGENCY push button is Working Properly
+        {% elif result.checkpoint_number == 2 %}
+            There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage
+        {% elif result.checkpoint_number == 3 %}
+            All nuts and bolts should not be loose or free
+        {% elif result.checkpoint_number == 4 %}
+            Check all sensors for damage or looseness
+        {% elif result.checkpoint_number == 5 %}
+            Tower lamp & Tube light should be working properly
+        {% elif result.checkpoint_number == 6 %}
+            All indicators & push buttons should be working properly
+        {% elif result.checkpoint_number == 7 %}
+            Check Safety curtain working properly
+        {% else %}
+            Checkpoint {{ result.checkpoint_number }}
+        {% endif %}
+    </strong>
+</td>
+
+                        <td>
+                            {% if result.status %}
+                                {% if result.status == 'OK' %}
+                                    <i class="fas fa-check-circle text-success"></i> Pass
+                                {% elif result.status == 'NG' %}
+                                    <i class="fas fa-times-circle text-danger"></i> Fail
+                                    <br><small class="text-danger">⚠ Quality Review Required</small>
+                                {% elif result.status == 'N/A' %}
+                                    <i class="fas fa-minus-circle text-warning"></i> Not Applicable
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted"><i class="fas fa-hourglass-half me-1"></i>Awaiting Result</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if result.comments %}
+                                <small>{{ result.comments|truncatewords:8 }}</small>
+                            {% else %}
+                                <span class="text-muted">No comments</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {% if result.status == 'NG' %}
+                                    <span class="text-warning">⚠ Requires quality assessment</span>
+                                {% elif result.status == 'OK' %}
+                                    <span class="text-success">✓ Quality approved</span>
+                                {% else %}
+                                    Review pending
+                                {% endif %}
+                            </small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Quality Actions Form -->
+<div class="card verify-card">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-certificate me-2"></i>Quality Actions</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" id="verificationForm">
+            {% csrf_token %}
+            
+            <!-- Quality Comments -->
+            <div class="mb-4">
+                <label for="qualityComments" class="form-label">Quality Comments (Optional)</label>
+                <textarea class="form-control" id="qualityComments" name="quality_comments" rows="3" 
+                          placeholder="Enter any quality observations, recommendations, or notes..."></textarea>
+            </div>
+            
+            {% if incomplete_checks %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Quality Alert:</strong> This checklist has quality issues that need to be addressed before final certification.
+            </div>
+            {% endif %}
+            
+            <div class="verification-actions mt-4">
+                <button type="submit" name="action" value="quality_certify" class="btn btn-verify btn-lg" 
+                        onclick="return confirmAction('quality_certify')" id="certifyBtn">
+                    <i class="fas fa-certificate me-2"></i>Quality Approve
+                </button>
+                <button type="submit" name="action" value="quality_reject" class="btn btn-reject btn-lg" onclick="return confirmAction('quality_reject')">
+                    <i class="fas fa-ban me-2"></i>Quality Reject
+                </button>
+                <a href="{% url 'dtpm_new_detail' pk=checklist.id %}" class="btn btn-secondary btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>Cancel
+                </a>
+            </div>
+            
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Quality approval will mark this checklist as fully approved and compliant. Rejection will send it back to supervisor for review.
+                </small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmAction(action) {
+    let message;
+    if (action === 'quality_certify') {
+        message = 'Are you sure you want to approve this DTPM checklist?\n\nThis will mark the checklist as fully approved and quality compliant.';
+    } else {
+        message = 'Are you sure you want to reject this DTPM checklist?\n\nThis will send the checklist back to supervisor for review and corrections.';
+    }
+    
+    if (confirm(message)) {
+        setTimeout(function() {
+            const form = document.getElementById('verificationForm');
+            const buttons = form.querySelectorAll('button[type="submit"]');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                if (btn.getAttribute('name') === 'action' && btn.value === action) {
+                    if (action === 'quality_certify') {
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Approving...';
+                    } else {
+                        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Rejecting...';
+                    }
+                }
+            });
+        }, 100);
+        return true;
+    }
+    return false;
+}
+
+// Form submission handling
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('verificationForm');
+    
+    form.addEventListener('submit', function(e) {
+        const submittedButton = document.activeElement;
+        if (submittedButton && submittedButton.type === 'submit') {
+            setTimeout(function() {
+                submittedButton.disabled = true;
+                submittedButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+            }, 50);
+        }
+    });
+});
+</script>
+{% endblock %}

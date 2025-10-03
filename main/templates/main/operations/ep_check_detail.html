@@ -1,0 +1,554 @@
+{% extends 'main/base.html' %}
+{% load static %}
+{% load ep_filters %}
+
+{% block title %}EP Check Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-weight: 500;
+        display: inline-block;
+        min-width: 100px;
+        text-align: center;
+    }
+    .status-pending {
+        background-color: #ff9800;
+        color: #000;
+    }
+    .status-supervisor-approved {
+        background-color: #4CAF50;
+        color: #fff;
+    }
+    .status-quality-approved {
+        background-color: #4CAF50;
+        color: #fff;
+    }
+    .status-rejected {
+        background-color: #f44336;
+        color: #fff;
+    }
+    .detail-card {
+        background-color: #222;
+        border: 1px solid #444;
+    }
+    .detail-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+    }
+    
+    /* Change History Styles */
+    .history-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+    }
+    .history-timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    .history-timeline::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: #444;
+    }
+    .history-item {
+        position: relative;
+        margin-bottom: 20px;
+        padding: 15px;
+        background: #2a2a2a;
+        border-radius: 8px;
+        border-left: 3px solid;
+    }
+    .history-item.ep-check-change {
+        border-left-color: #2196F3;
+    }
+    .history-item.mechanism-change {
+        border-left-color: #ff9800;
+    }
+    .history-item.status-change {
+        border-left-color: #4CAF50;
+    }
+    .history-item.created {
+        border-left-color: #9C27B0;
+    }
+    .history-item::before {
+        content: '';
+        position: absolute;
+        left: -18px;
+        top: 20px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #333;
+        border: 3px solid;
+    }
+    .history-item.ep-check-change::before {
+        border-color: #2196F3;
+    }
+    .history-item.mechanism-change::before {
+        border-color: #ff9800;
+    }
+    .history-item.status-change::before {
+        border-color: #4CAF50;
+    }
+    .history-item.created::before {
+        border-color: #9C27B0;
+    }
+    .history-meta {
+        font-size: 0.85rem;
+        color: #aaa;
+        margin-bottom: 5px;
+    }
+    .history-description {
+        font-size: 0.9rem;
+        color: #fff;
+    }
+    .change-highlight {
+        background: rgba(255, 193, 7, 0.2);
+        padding: 2px 4px;
+        border-radius: 3px;
+        color: #ffc107;
+    }
+    .recent-changes-alert {
+        background: rgba(76, 175, 80, 0.1);
+        border: 1px solid rgba(76, 175, 80, 0.3);
+        color: #4CAF50;
+    }
+    
+    /* Table styling with fixed sizing to prevent overlap */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        margin: 0;
+        padding: 0;
+    }
+    
+    .mechanism-table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .mechanism-table th, 
+    .mechanism-table td {
+        padding: 8px 5px;
+        vertical-align: top;
+        line-height: 1.3;
+    }
+    
+    .mechanism-table th {
+        background-color: #333;
+        color: #ff0000;
+        border-color: #444;
+        font-size: 0.9rem;
+        white-space: normal;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .mechanism-table td {
+        border-color: #444;
+        font-size: 0.85rem;
+        color: white !important;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* Column width settings */
+    .mechanism-table th:nth-child(1), 
+    .mechanism-table td:nth-child(1) {
+        width: 4%;
+    }
+    
+    .mechanism-table th:nth-child(2), 
+    .mechanism-table td:nth-child(2) {
+        width: 7%;
+    }
+    
+    .mechanism-table th:nth-child(3), 
+    .mechanism-table td:nth-child(3) {
+        width: 6%;
+    }
+    
+    .mechanism-table th:nth-child(4), 
+    .mechanism-table td:nth-child(4) {
+        width: 16%;
+    }
+    
+    .mechanism-table th:nth-child(5), 
+    .mechanism-table td:nth-child(5) {
+        width: 16%;
+    }
+    
+    .mechanism-table th:nth-child(6), 
+    .mechanism-table td:nth-child(6) {
+        width: 9%;
+    }
+    
+    .mechanism-table th:nth-child(7), 
+    .mechanism-table td:nth-child(7) {
+        width: 8%;
+    }
+    
+    .mechanism-table th:nth-child(8), 
+    .mechanism-table td:nth-child(8) {
+        width: 10%;
+    }
+    
+    .mechanism-table th:nth-child(9), 
+    .mechanism-table td:nth-child(9) {
+        width: 8%;
+    }
+    
+    .mechanism-table th:nth-child(10), 
+    .mechanism-table td:nth-child(10),
+    .mechanism-table th:nth-child(11), 
+    .mechanism-table td:nth-child(11),
+    .mechanism-table th:nth-child(12), 
+    .mechanism-table td:nth-child(12) {
+        width: 4%;
+        text-align: center;
+    }
+    
+    .status-ok {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .status-ng {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        font-weight: bold;
+    }
+    .status-na {
+        background-color: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+        font-weight: bold;
+    }
+    .status-changed {
+        background-color: rgba(255, 193, 7, 0.2);
+        color: #ffc107;
+        font-weight: bold;
+        position: relative;
+    }
+    .status-changed::after {
+        content: '●';
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        color: #ffc107;
+        font-size: 12px;
+    }
+    .table-header-row {
+        background-color: #2a2a2a;
+    }
+    .ep-id-col {
+        font-weight: bold;
+        color: #ff0000;
+    }
+    
+    /* Hindi text styling */
+    .hindi-text {
+        font-style: italic;
+        color: #cccccc;
+        margin-top: 4px;
+        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 1200px) {
+        .mechanism-table th,
+        .mechanism-table td {
+            padding: 6px 4px;
+            font-size: 0.8rem;
+        }
+        
+        .hindi-text {
+            font-size: 0.75rem;
+        }
+    }
+    
+    @media (max-width: 992px) {
+        .table-responsive {
+            overflow-x: scroll;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3">
+            <i class="fas fa-shield-alt me-2"></i>EP Check: {{ ep_check.date }}
+            {% if ep_check.status == 'pending' %}
+            <span class="status-badge status-pending">Pending</span>
+            {% elif ep_check.status == 'supervisor_approved' %}
+            <span class="status-badge status-supervisor-approved">Production Supervisor Approved</span>
+            {% elif ep_check.status == 'quality_approved' %}
+            <span class="status-badge status-quality-approved">Production Quality Approved</span>
+            {% elif ep_check.status == 'rejected' %}
+            <span class="status-badge status-rejected">Rejected</span>
+            {% endif %}
+        </h2>
+
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_list' %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+        <a href="{% url 'export_ep_excel' pk=ep_check.id %}" class="btn btn-success ms-2">
+            <i class="fas fa-file-excel me-2"></i>Export
+        </a>
+    </div>
+</div>
+
+<!-- EP Check Details Card -->
+<div class="card detail-card mb-4">
+    <div class="card-header detail-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Check Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Date:</strong> {{ ep_check.date }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Current Model:</strong> {{ ep_check.current_model }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Shift:</strong> {{ ep_check.get_shift_display }}</p>
+            </div>
+            <div class="col-md-3">
+                <p><strong>Operator:</strong> {{ ep_check.operator.username }}</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3">
+                <p><strong>Production Supervisor:</strong> 
+                    {% if ep_check.supervisor %}
+                        {{ ep_check.supervisor.username }}
+                    {% else %}
+                        Not verified
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-3">
+                <p><strong> Quality Supervisor:</strong> 
+                    {% if ep_check.quality_supervisor %}
+                        {{ ep_check.quality_supervisor.username }}
+                    {% else %}
+                        Not verified
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-6">
+                {% if ep_check.comments %}
+                <p><strong>Comments:</strong> {{ ep_check.comments }}</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row mt-2">
+            <div class="col-12">
+                <!-- Action buttons based on user role and status -->
+                {% if can_edit %}
+                <a href="{% url 'ep_check_edit' pk=ep_check.id %}" class="btn btn-warning">
+                    <i class="fas fa-edit me-2"></i>Edit Check
+                </a>
+
+                {% endif %}
+                
+                {% if can_verify_supervisor %}
+                <a href="{% url 'ep_check_verify_supervisor' pk=ep_check.id %}" class="btn btn-success">
+                    <i class="fas fa-check-double me-2"></i>Supervisor Verification
+                </a>
+                {% endif %}
+                
+                {% if can_verify_quality %}
+                <a href="{% url 'ep_check_verify_quality' pk=ep_check.id %}" class="btn btn-info">
+                    <i class="fas fa-check-circle me-2"></i>Quality Verification
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Change History Card -->
+{% if timeline %}
+<div class="card history-card mb-4">
+    <div class="card-header detail-header">
+        <h5 class="mb-0">
+            <i class="fas fa-history me-2"></i>Change History
+            <small class="text-muted">(Last 10 changes)</small>
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="history-timeline">
+            {% for change in timeline %}
+            <div class="history-item {{ change.type }}-change {% if change.action %}{{ change.action }}{% endif %}">
+                <div class="history-meta">
+                    <i class="fas fa-user me-1"></i>{{ change.user }}
+                    <i class="fas fa-clock ms-3 me-1"></i>{{ change.timestamp|date:"M d, Y H:i" }}
+                    {% if change.type == 'mechanism' %}
+                    <i class="fas fa-cog ms-3 me-1"></i>{{ change.mechanism_id }}
+                    {% endif %}
+                </div>
+                <div class="history-description">
+                    {{ change.description }}
+                    {% if change.details.old_value and change.details.new_value %}
+                    <br><small class="text-muted">
+                        <span class="change-highlight">{{ change.details.old_value }}</span> 
+                        → 
+                        <span class="change-highlight">{{ change.details.new_value }}</span>
+                    </small>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- EP Mechanism Statuses Table -->
+<div class="card detail-card">
+    <div class="card-header detail-header">
+        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Masterlist of Error Prevention</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered mechanism-table mb-0">
+                <thead>
+                    <tr class="table-header-row">
+                        <th>EP #</th>
+                        <th>MODEL</th>
+                        <th>WORK STATION</th>
+                        <th>PURPOSE OF ERROR PROOFING</th>
+                        <th>VERIFICATION METHOD</th>
+                        <th> EP Master</th>
+                        <th>STATUS / PLAN</th>
+                        <th>Alternative Method</th>
+                        <th>A</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for status in mechanism_statuses %}
+                    <tr>
+                        <td class="ep-id-col">EP # {{ forloop.counter|stringformat:"02d" }}</td>
+                        <td>P703 U704 FD SA/Gnome</td>
+                        <td>FMA-03-35</td>
+                        <td>
+                            {% if forloop.counter == 1 %}
+                            Ensure right model selection in respective of Model selection
+                            <div class="hindi-text">मॉडल चयन के संबंध में सही मॉडल चयन सुनिश्चित करें</div>
+                            {% elif forloop.counter == 2 %}
+                            Ensure Umbrella valve presence sensor working on umbrella valve press to retainer operation
+                            <div class="hindi-text">सुनिश्चित करें कि अम्ब्रेला वाल्व उपस्थिति सेंसर काम कर रहा है</div>
+                            {% elif forloop.counter == 3 %}
+                            Ensure Umbrella valve and retainer Assy complete stroke confirmation sensor working on UV press to retainer operation
+                            <div class="hindi-text">सुनिश्चित करें कि अम्ब्रेला वाल्व और रिटेनर असेंबली पूर्ण स्ट्रोक पुष्टिकरण सेंसर काम कर रहा है</div>
+                            {% elif forloop.counter == 4 %}
+                            Ensure UV Clip presence sensor working
+                            <div class="hindi-text">सुनिश्चित करें कि UV क्लिप उपस्थिति सेंसर काम कर रहा है</div>
+                            {% elif forloop.counter == 5 %}
+                            Ensure UV Clip fully snap locked with 2 no's of retainer snap
+                            <div class="hindi-text">सुनिश्चित करें कि यूवी क्लिप दोनों रिटेनर स्नैप के साथ पूरी तरह से लॉक हो</div>
+                            {% elif forloop.counter == 6 %}
+                            Ensure Umbrella valve Flow Test
+                            <div class="hindi-text">अम्ब्रेला वाल्व प्रवाह परीक्षण सुनिश्चित करें</div>
+                            {% elif forloop.counter == 7 %}
+                            Ensure umbrella valve vacuum test
+                            <div class="hindi-text">अम्ब्रेला वाल्व वैक्यूम परीक्षण सुनिश्चित करें</div>
+                            {% elif forloop.counter == 8 %}
+                            Ensure machine LVDT mounting
+                            <div class="hindi-text">मशीन LVDT माउंटिंग Verify करें</div>
+                            {% elif forloop.counter == 9 %}
+                            Ensure top & bottom tool alignment
+                            <div class="hindi-text">top और bottom tool alignment सुनिश्चित करें</div>
+                            {% elif forloop.counter == 10 %}
+                            Ensure complete cycle ok working
+                            <div class="hindi-text">सुनिश्चित करें कि पूरा cycle ठीक से काम कर रहा है</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if forloop.counter == 1 %}
+                            Start the machine by selecting other model then running model on HMI. Machine should not start
+                            <div class="hindi-text">HMI पर चल रहे मॉडल के बाद अन्य मॉडल का चयन करके मशीन शुरू करें। मशीन शुरू नहीं होनी चाहिए</div>
+                            {% elif forloop.counter == 2 %}
+                            Keep the retainer on station without umbrella valve and press manually, vacuum will not start on Top tool.
+                            <div class="hindi-text">रिटेनर को बिना अम्ब्रेला वाल्व के स्टेशन पर रखें और मैन्युअल रूप से दबाएं, टॉप टूल पर वैक्यूम शुरू नहीं होगा।</div>
+                            {% elif forloop.counter == 3 %}
+                            Keep the retainer on station with umbrella valve and press manually, vacuum will start on Top tool.
+                            <div class="hindi-text">अम्ब्रेला वाल्व के साथ स्टेशन पर रिटेनर रखें और मैन्युअल रूप से दबाएं, Top tool पर वैक्यूम शुरू हो जाएगा।</div>
+                            {% elif forloop.counter == 4 %}
+                            Load the master of UV Clip in top tool and check the master Judgement on machine
+                            <div class="hindi-text">यूवी क्लिप के मास्टर को top tool में लोड करें और मशीन पर मास्टर निर्णय की जांच करें</div>
+                            {% elif forloop.counter == 5 %}
+                            Load the Snap NG master, Machine cycle should show NG cycle
+                            <div class="hindi-text">स्नैप एनजी मास्टर लोड करें, मशीन cycle को एनजी cycle दिखाना चाहिए</div>
+                            {% elif forloop.counter == 6 %}
+                            Start the machine with master and judgement will given by machine
+                            <div class="hindi-text">मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा</div>
+                            {% elif forloop.counter == 7 %}
+                            Start the machine with master and judgement will given by machine
+                            <div class="hindi-text">मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा</div>
+                            {% elif forloop.counter == 8 %}
+                            Load LVDT master
+                            <div class="hindi-text">LVDT मास्टर को लोड करें</div>
+                            {% elif forloop.counter == 9 %}
+                            Load alignment master in bottom tool, slide & than lift by hand, Machine show OK if alignment is OK
+                            <div class="hindi-text">अलाइनमेंट मास्टर को नीचे वाले टूल में लोड करें, स्लाइड करें और फिर हाथ से उठाएं, अगर अलाइनमेंट ठीक है तो मशीन ओके दिखाती है</div>
+                            {% elif forloop.counter == 10 %}
+                            Load Ok master in machine lower nest
+                            <div class="hindi-text">मशीन के निचले नेस्ट में ओके मास्टर लोड करें</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {{ status.get_ep_mechanism_id_display }}
+                        </td>
+                        <td>
+                            {{ status.is_working|yesno:"Working,Not Working" }}
+                        </td>
+                        <td>
+                            {{ status.alternative_method|default:"-" }}
+                        </td>
+            
+                        <td class="{% if status.is_not_applicable %}status-na{% elif status.status == 'OK' %}status-ok{% elif status.status == 'NG' %}status-ng{% endif %}{% if status|has_any_changes %} status-changed{% endif %}">
+                            {% if status.is_not_applicable %}
+                                N/A
+                            {% else %}
+                                {{ status.status }}
+                            {% endif %}
+                            {% if status|has_any_changes %}
+                            <small class="d-block text-muted" style="font-size: 0.7rem;">
+                                (Last changed: {{ status|get_last_change_time|date:"M d H:i" }})
+                            </small>
+                            {% endif %}
+                        </td>
+   
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="12" class="text-center py-4">
+                            <i class="fas fa-exclamation-circle me-2 text-warning"></i>
+                            No mechanism statuses found for this check.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

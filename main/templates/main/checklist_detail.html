@@ -1,0 +1,1799 @@
+{% extends 'main/base.html' %}
+{% load custom_tags %}
+
+{% block title %}Checklist Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Reset all margins and paddings */
+    html, body {
+        background-color: black !important;
+        color: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .container-fluid {
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .container {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    .row {
+        margin-left: -4px !important;
+        margin-right: -4px !important;
+        width: 100% !important;
+    }
+    
+    .col, .col-12, .col-md-12, [class*='col-'] {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+    
+    .card {
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+        border: 2px solid #ffffff !important;
+        border-radius: 8px;
+        margin-bottom: 0.5rem !important;
+        background-color: #111 !important;
+        color: white !important;
+        width: 100% !important;
+    }
+    
+    .card-header {
+        border-bottom: 2px solid #ffffff !important;
+        padding: 0.6rem 0.8rem !important;
+    }
+    
+    .card-body {
+        padding: 0.6rem 0.8rem !important;
+    }
+    
+    .btn-success {
+        padding: 6px 15px;
+        font-weight: 500;
+        background-color: #CC0000 !important;
+        border-color: #ffffff !important;
+        border-width: 2px;
+    }
+    
+    .btn-success i {
+        margin-right: 5px;
+    }
+    
+    .btn-success:hover {
+        background-color: #990000 !important;
+        border-color: #ffffff !important;
+        transform: translateY(-2px);
+    }
+
+    .measurement-value {
+        font-family: monospace;
+        padding: 2px 6px;
+        background-color: #222;
+        border-radius: 3px;
+    }
+    
+    .checklist-status {
+        min-width: 120px;
+        text-align: center;
+    }
+    
+    .validation-badge {
+        min-width: 50px;
+        display: inline-block;
+    }
+    
+    .measurement-table th {
+        width: 35%;
+        font-weight: 500;
+    }
+    
+    .timeline-item {
+        padding: 10px;
+        border-left: 3px solid #CC0000;
+        margin-bottom: 8px;
+        background-color: #222;
+    }
+    
+    .timeline-item.warning {
+        border-left-color: #ffc107;
+    }
+    
+    .timeline-item.success {
+        border-left-color: #28a745;
+    }
+    
+    .info-card {
+        transition: transform 0.2s;
+        background: #111 !important;
+        border-radius: 10px;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.8rem;
+    }
+    
+    .metric-icon {
+        font-size: 1.3rem;
+        margin-bottom: 0.4rem;
+    }
+    
+    .progress {
+        height: 10px;
+        border-radius: 5px;
+        background-color: #222;
+    }
+    
+    .metric-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+    
+    .metric-label {
+        color: #aaa;
+        font-size: 0.8rem;
+    }
+    
+    .table {
+        color: white !important;
+        margin-bottom: 0.4rem !important;
+        width: 100% !important;
+    }
+    
+    .table thead th {
+        background-color: #222 !important;
+        font-weight: 600;
+        color: #fff;
+        border-color: #444 !important;
+        padding: 0.4rem !important;
+    }
+    
+    .table td {
+        padding: 0.4rem !important;
+    }
+    
+    .table-bordered td, .table-bordered th {
+        border-color: #444 !important;
+    }
+    
+    .bg-primary {
+        background-color: #CC0000 !important;
+    }
+    
+    .card-header.bg-light {
+        background-color: #222 !important;
+        color: white !important;
+    }
+
+    .form-row td {
+        background-color: rgba(255, 0, 0, 0.1) !important;
+    }
+    
+    .form-row select,
+    .form-row input {
+        width: 100%;
+        background-color: #222;
+        color: white;
+        border: 1px solid #444;
+    }
+    
+    .form-control-sm {
+        height: calc(1.5em + 0.4rem + 2px);
+        padding: 0.2rem 0.4rem;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        border-radius: 0.2rem;
+        background-color: #222 !important;
+        color: white !important;
+        border: 1px solid #444 !important;
+    }
+    
+    .table thead th[colspan] {
+        text-align: center;
+        border-bottom: none;
+    }
+    
+    .table-light {
+        background-color: #222 !important;
+        color: white !important;
+    }
+    
+    .table-light th {
+        color: white !important;
+        border-color: #333 !important;
+    }
+    
+    .progress-bar {
+        background-color: #CC0000;
+    }
+    
+    .progress-bar.bg-success {
+        background-color: #198754 !important;
+    }
+    
+    .badge.bg-success {
+        background-color: #198754 !important;
+    }
+    
+    .badge.bg-danger {
+        background-color: #CC0000 !important;
+    }
+    
+    .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: black !important;
+    }
+    
+    .bg-success-subtle {
+        background-color: rgba(25, 135, 84, 0.2) !important;
+    }
+    
+    .bg-danger-subtle {
+        background-color: rgba(204, 0, 0, 0.2) !important;
+    }
+    
+    .btn-outline-secondary {
+        border-color: white !important;
+        color: white !important;
+    }
+    
+    .btn-outline-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
+    .btn-light {
+        background-color: white !important;
+        color: black !important;
+    }
+    
+    .btn-light:hover {
+        background-color: #e0e0e0 !important;
+    }
+    
+    .btn-outline-primary {
+        border-color: #CC0000 !important;
+        color: white !important;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: #CC0000 !important;
+        color: white !important;
+    }
+    
+    .hindi-text {
+        font-size: 85%;
+        display: block;
+        color: #b0b0b0;
+        margin-top: 2px;
+    }
+    
+    .subgroup-header {
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .subgroup-header .english-text {
+        display: block;
+        margin-bottom: 3px;
+        font-weight: 500;
+    }
+    
+    .subgroup-header .hindi-text {
+        display: block;
+        font-size: 80%;
+        color: #b0b0b0;
+        font-weight: normal;
+    }
+    
+    .subgroup-header .range-text {
+        display: block;
+        font-size: 75%;
+        color: #b0b0b0;
+        margin-top: 3px;
+    }
+    
+    .text-muted {
+        color: #b0b0b0 !important;
+    }
+    
+    select.form-select-sm, input.form-control-sm {
+        background-color: #222;
+        color: white;
+        border: 1px solid white !important;
+        border-radius: 4px;
+    }
+    
+    select.form-select-sm:focus, input.form-control-sm:focus {
+        border-color: #CC0000 !important;
+        box-shadow: 0 0 5px rgba(204, 0, 0, 0.5);
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 0, 0, 0.1) !important;
+    }
+    
+    .card.border-light {
+        border-color: #333 !important;
+    }
+    
+    .border-light .card-body {
+        background-color: #222 !important;
+    }
+    
+    .section-title {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .section-title-hindi {
+        font-size: 80%;
+        color: #ddd;
+        font-weight: normal;
+    }
+    
+    .table-header-with-hindi th {
+        position: relative;
+    }
+    
+    .table-header-with-hindi .hindi-text {
+        font-size: 75%;
+        display: block;
+        margin-top: 2px;
+        font-weight: normal;
+    }
+    
+    .mb-reduced {
+        margin-bottom: 0.3rem !important;
+    }
+    
+    .mt-reduced {
+        margin-top: 0.3rem !important;
+    }
+    
+    h6.border-bottom {
+        padding-bottom: 0.3rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+    
+    .btn-sm {
+        padding: 0.2rem 0.4rem !important;
+        font-size: 0.7rem !important;
+    }
+    
+    body > * {
+        max-width: 100% !important;
+    }
+    
+    .compact-table td, .compact-table th {
+        padding: 0.3rem !important;
+    }
+    
+    .readings-display {
+        font-size: 0.8rem;
+        line-height: 1.2;
+    }
+    
+    .readings-summary {
+        font-weight: bold;
+        margin-bottom: 2px;
+    }
+    
+    .individual-readings {
+        color: #aaa;
+        font-size: 0.7rem;
+    }
+    
+    /* Maintenance tracking styles */
+    .maintenance-indicator {
+        background-color: #FFA500;
+        border-left: 4px solid #FF8C00;
+    }
+    
+    .comment-box {
+        background-color: #1a1a1a;
+        border-left: 3px solid #FFA500;
+        padding: 8px;
+        margin-top: 5px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    
+    .comment-label {
+        color: #FFA500;
+        font-weight: bold;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+    
+    .comment-text {
+        color: #ddd;
+        margin-top: 3px;
+    }
+    
+    .nok-comment {
+         border-left: 3px solid #ff6666;
+        padding: 6px;
+        margin-top: 3px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+    }
+    
+    @media (max-width: 768px) {
+        h4, .h4 {
+            font-size: 1.2rem !important;
+        }
+        
+        h5, .h5 {
+            font-size: 1rem !important;
+        }
+        
+        h6, .h6 {
+            font-size: 0.9rem !important;
+        }
+        
+        .table {
+            font-size: 0.8rem !important;
+        }
+    }
+</style>
+{% endblock %}
+    
+{% block content %}
+<div class="container-fluid" style="padding-left: 15px; padding-right: 15px;">
+    <!-- Header Information -->
+    <div class="card mb-reduced">
+        <div class="card-header bg-primary text-white rounded-top">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0 section-title">
+                        Daily Verification/Inspection Sheet 
+                        <span class="section-title-hindi">दैनिक सत्यापन/निरीक्षण शीट</span>
+                    </h4>
+                    <small class="text-white-50">Generated on {{ checklist.verification_status.shift.date }}</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="px-2 py-1 bg-black bg-opacity-25 rounded" style="border: 1px solid white;">
+                        <i class="fas fa-clipboard-check me-1"></i>
+                        {{ subgroup_metrics.total_count }}/{{ shift_max_subgroups|default:"6" }}
+                        <span class="hindi-text">माप</span>
+                    </div>
+                    <a href="{% url 'export_checklist_excel' checklist.id %}" 
+                       class="px-2 py-1 bg-black bg-opacity-25 rounded text-white hover:bg-opacity-30 text-decoration-none"
+                       style="border: 1px solid white;">
+                        <i class="fas fa-download me-1"></i>
+                        Excel
+                        <span class="hindi-text">निर्यात</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Info Cards -->
+        <div class="card-body p-2">
+            <!-- Operator Row -->
+            <div class="row mb-2">
+                <div class="col-12">
+                    <div class="d-flex align-items-center flex-wrap">
+                        <span class="h6 text-danger me-2 mb-0">Operator<small class="hindi-text">ऑपरेटर</small>:</span>
+                        <span class="h6 mb-0">{{ checklist.verification_status.created_by }}</span>
+                        <span class="mx-2">|</span>
+                        <span class="h6 text-danger me-2 mb-0">Program<small class="hindi-text">प्रोग्राम</small>:</span>
+                        <span class="h6 mb-0">{{ checklist.selected_model }}</span>
+                        <span class="mx-2">|</span>
+                        <span class="h6 text-danger me-2 mb-0">Date<small class="hindi-text">दिनांक</small>:</span>
+                        <span class="h6 mb-0">{{ checklist.verification_status.shift.date }}</span>
+                        <span class="mx-2">|</span>
+                        <span class="h6 text-danger me-2 mb-0">Shift<small class="hindi-text">शिफ्ट</small>:</span>
+                        <span class="h6 mb-0">{{ checklist.get_new_shift_display }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Two-row layout -->
+            <div class="row g-1">
+                <!-- Status & Progress (1st row) -->
+                <div class="col-md-12">
+                    <div class="info-card py-1 px-2 border rounded" style="border-color: white !important; background-color: #111 !important;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-chart-line text-danger me-1"></i>
+                                <span class="text-danger fw-bold">Status & Progress <small class="hindi-text">स्थिति और प्रगति</small></span>
+                            </div>
+                            
+                            <div>
+                                <span class="badge {% if checklist.status == 'quality_approved' %}bg-success{% else %}bg-warning{% endif %} px-2 py-1">
+                                    {{ checklist.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center mt-1">
+                            <div class="progress flex-grow-1 me-2" style="height: 15px;">
+                                <div class="progress-bar {% if subgroup_metrics.completion_percentage == 100 %}bg-success{% endif %}"
+                                     role="progressbar"
+                                     style="width: {{ subgroup_metrics.completion_percentage }}%">
+                                </div>
+                            </div>
+                            <div class="text-nowrap">
+                                <small>{{ total_subgroups }}/{{ shift_max_subgroups|default:"6" }} ({{ subgroup_metrics.completion_percentage|floatformat:0 }}%)</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row g-1 mt-1">
+                <!-- Verification Status (2nd row) -->
+                <div class="col-md-12">
+                    <div class="info-card py-1 px-2 border rounded" style="border-color: white !important; background-color: #111 !important;">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="fas fa-check-double text-danger me-1"></i>
+                                <span class="text-danger fw-bold">Verification Status <small class="hindi-text">सत्यापन स्थिति</small></span>
+                            </div>
+                            
+                            <div class="d-flex align-items-center">
+                                <span class="me-1">Supervisor<small class="hindi-text">सुपरवाइजर</small>:</span>
+                                <span class="badge {% if checklist.status == 'supervisor_approved' or checklist.status == 'quality_approved' %}bg-success{% else %}bg-warning{% endif %} px-1 py-1 me-2">
+                                    {% if checklist.status == 'supervisor_approved' or checklist.status == 'quality_approved' %}Approved{% else %}Pending{% endif %}
+                                </span>
+                                
+                                <span class="me-1">Quality<small class="hindi-text">क्वालिटी</small>:</span>
+                                <span class="badge {% if checklist.status == 'quality_approved' %}bg-success{% else %}bg-warning{% endif %} px-1 py-1">
+                                    {% if checklist.status == 'quality_approved' %}Approved{% else %}Pending{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        
+        <!-- Dynamic Checkpoints Configuration Display -->
+ <div class="row mb-reduced">
+        <div class="col-12">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0 section-title">
+                        Initial Setup & Tooling Measurements
+                        <span class="section-title-hindi">प्रारंभिक सेटअप और टूलिंग माप</span>
+                    </h5>
+                </div>
+                <div class="card-body p-2">
+                    {% if dynamic_values %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle table-sm compact-table">
+                            <thead class="table-light">
+                                <tr class="table-header-with-hindi">
+                                    <th style="width: 35%;">
+                                        Parameter
+                                        <span class="hindi-text">पैरामीटर</span>
+                                    </th>
+                                    <th style="width: 25%;">
+                                        Acceptable Range
+                                        <span class="hindi-text">स्वीकार्य रेंज</span>
+                                    </th>
+                                    <th style="width: 20%;" class="text-center">
+                                        Recorded Value
+                                        <span class="hindi-text">दर्ज मान</span>
+                                    </th>
+                                    <th style="width: 20%;">
+                                        Comment
+                                        <span class="hindi-text">टिप्पणी</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for dv in dynamic_values %}
+                                <tr class="{% if dv.is_out_of_range or dv.is_nok %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+                                    <td>
+                                        <strong>{{ dv.parameter.parameter_name }}</strong>
+                                        {% if dv.parameter.parameter_name_hindi %}
+                                            <div class="hindi-text small">{{ dv.parameter.parameter_name_hindi }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if dv.parameter.measurement_type == 'numeric' %}
+                                            {% if dv.parameter.min_value is not None and dv.parameter.max_value is not None %}
+                                                <strong>{{ dv.parameter.min_value }} to {{ dv.parameter.max_value }}</strong>
+                                                {% if dv.parameter.unit %} {{ dv.parameter.unit }}{% endif %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        {% elif dv.parameter.measurement_type == 'ok_nok' %}
+                                            Must be <strong>OK</strong>
+                                        {% elif dv.parameter.measurement_type == 'yes_no' %}
+                                            Must be <strong>Yes</strong>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if dv.is_out_of_range or dv.is_nok %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                                            {{ dv.value }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if dv.comment %}
+                                            <div class="nok-comment" style="margin-top: 0; padding: 4px;">
+                                                <small>{{ dv.comment }}</small>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">--</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-secondary text-center mb-0">
+                        No initial setup or tooling measurements were recorded for this checklist.
+                        <span class="hindi-text d-block">इस चेकलिस्ट के लिए कोई प्रारंभिक सेटअप या टूलिंग माप दर्ज नहीं किया गया।</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+        
+    <!-- Initial Quality Control Card -->
+    <div class="row mb-reduced">
+        <div class="col-12">
+            <div class="card shadow-lg">
+                <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                    <div>
+                        <h5 class="mb-0 section-title">
+                            Initial Quality Control Measurements
+                            <span class="section-title-hindi">प्रारंभिक गुणवत्ता नियंत्रण माप</span>
+                        </h5>
+                    </div>
+                    <h6 class="text-white-40">
+                        Running Model: {{ checklist.selected_model }}
+                        <span class="hindi-text">चल रहा मॉडल</span>
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Measurements Section -->
+                    <div class="mb-reduced">
+                        <h6 class="border-bottom pb-1 mb-2 text-danger">
+                            Process Measurements
+                            <span class="hindi-text">प्रक्रिया माप</span>
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle table-header-with-hindi">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40%">
+                                            Parameter
+                                            <span class="hindi-text">पैरामीटर</span>
+                                        </th>
+                                        <th style="width: 20%">
+                                            Value
+                                            <span class="hindi-text">मान</span>
+                                        </th>
+                                        <th style="width: 40%">
+                                            Recommended Range
+                                            <span class="hindi-text">अनुशंसित रेंज</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            Line Pressure
+                                            <span class="hindi-text">लाइन प्रेशर</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="validation-badge badge {% if measurement_validation.base_measurements.line_pressure_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ checklist.line_pressure }} bar
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">4.5 - 5.5 bar</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            UV Flow Input Test Pressure
+                                            <span class="hindi-text">यूवी फ्लो इनपुट टेस्ट प्रेशर</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="validation-badge badge {% if measurement_validation.base_measurements.uv_flow_input_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ checklist.uv_flow_input_pressure }} kPa
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">11 - 15 kPa</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Test Pressure for Vacuum Generation
+                                            <span class="hindi-text">वैक्यूम जनरेशन के लिए टेस्ट प्रेशर</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="validation-badge badge {% if measurement_validation.base_measurements.test_pressure_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                                {{ checklist.test_pressure_vacuum }} MPa
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">0.25 - 0.3 MPa</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Quality Checks Section -->
+                    <div class="mb-reduced">
+                        <h6 class="border-bottom pb-1 mb-2 text-danger">
+                            Quality Checks
+                            <span class="hindi-text">गुणवत्ता जांच</span>
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle table-header-with-hindi">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 40%">
+                                            Check Parameter
+                                            <span class="hindi-text">जांच पैरामीटर</span>
+                                        </th>
+                                        <th style="width: 20%">
+                                            Status
+                                            <span class="hindi-text">स्थिति</span>
+                                        </th>
+                                        <th style="width: 40%">
+                                            Recommendation
+                                            <span class="hindi-text">अनुशंसा</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            Current Model Running
+                                            <span class="hindi-text">वर्तमान चल रहा मॉडल</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="metric-value text-fa-bold">{{ checklist.selected_model }}</div>
+                                        </td>
+                                        <td class="text-muted">Program selection on HMI</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            O-ring Condition
+                                            <span class="hindi-text">O-ring सील की स्थिति</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if checklist.oring_condition == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                                {{ checklist.oring_condition }}
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">No damage / wear out</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Master Verification for LVDT
+                                            <span class="hindi-text">LVDT वेरिफिकेशन</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if checklist.master_verification_lvdt == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                                {{ checklist.master_verification_lvdt }}
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">In specified range</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Good/Bad Master Verification
+                                            <span class="hindi-text">गुड/बैड मास्टर</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if checklist.good_bad_master_verification == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                                {{ checklist.good_bad_master_verification }}
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">Machine judgement</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Tool Alignment
+                                            <span class="hindi-text">टूल अलाइनमेंट</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if checklist.tool_alignment == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                                {{ checklist.tool_alignment }}
+                                            </span>
+                                        </td>
+                                        <td class="text-muted">Should be OK</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tool IDs and Part Numbers Section -->
+                    <div>
+                        <h6 class="border-bottom pb-1 mb-2 text-danger">
+                            Tool IDs and Part Numbers
+                            <span class="hindi-text">टूल आईडी और पार्ट नंबर</span>
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle table-header-with-hindi">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 30%">
+                                            Component
+                                            <span class="hindi-text">कंपोनेंट</span>
+                                        </th>
+                                        <th style="width: 70%">
+                                            Identification
+                                            <span class="hindi-text">पहचान</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            Top Tool ID
+                                            <span class="hindi-text">टॉप टूल</span>
+                                        </td>
+                                        <td>
+                                            {{ checklist.top_tool_id }}
+                                            <span class="badge {% if checklist.top_tool_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                                {{ checklist.top_tool_id_status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Bottom Tool ID
+                                            <span class="hindi-text">बॉटम टूल</span>
+                                        </td>
+                                        <td>
+                                            {{ checklist.bottom_tool_id }}
+                                            <span class="badge {% if checklist.bottom_tool_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                                {{ checklist.bottom_tool_id_status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            UV Assy Stage ID
+                                            <span class="hindi-text">यूवी असेंबली</span>
+                                        </td>
+                                        <td>
+                                            {{ checklist.uv_assy_stage_id }}
+                                            <span class="badge {% if checklist.uv_assy_stage_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                                {{ checklist.uv_assy_stage_id_status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Retainer Part No
+                                            <span class="hindi-text">रिटेनर पार्ट</span>
+                                        </td>
+                                        <td>
+                                            {{ checklist.retainer_part_no }}
+                                            <span class="badge {% if checklist.retainer_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                                {{ checklist.retainer_part_no_status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            UV Clip Part No
+                                            <span class="hindi-text">यूवी क्लिप</span>
+                                        </td>
+                                        <td>
+                                            {{ checklist.uv_clip_part_no }}
+                                            <span class="badge {% if checklist.uv_clip_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                                {{ checklist.uv_clip_part_no_status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Umbrella Part No
+                                            <span class="hindi-text">अम्ब्रेला पार्ट</span>
+                                        </td>
+                                        <td>
+                                            {{ checklist.umbrella_part_no }}
+                                            <span class="badge {% if checklist.umbrella_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                                {{ checklist.umbrella_part_no_status }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Retainer ID Lubrication
+                                            <span class="hindi-text">रिटेनर लुब्रिकेशन</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if checklist.retainer_id_lubrication == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                                {{ checklist.retainer_id_lubrication }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Error Proofing Verification
+                                            <span class="hindi-text">एरर प्रूफिंग</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge {% if checklist.error_proofing_verification == 'Yes' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                                {{ checklist.error_proofing_verification }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subgroup Measurements -->
+    <div class="row mb-reduced">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                    <div>
+                        <h5 class="mb-0 section-title">
+                            Periodic Measurement Records (21 Total Readings)
+                            <span class="section-title-hindi">आवधिक माप रिकॉर्ड (कुल 21 रीडिंग)</span>
+                        </h5>
+                        <small class="text-white-50">
+                            {% if frequency_hours %}{{ frequency_hours }}-Hour{% else %}2-Hour{% endif %} Interval Measurements
+                            <span class="hindi-text">{% if frequency_hours %}{{ frequency_hours }}{% else %}2{% endif %} घंटे के अंतराल पर माप</span>
+                        </small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Subgroup Measurements Table View -->
+                    <div class="table-responsive mb-2">
+                        <table class="table table-bordered table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 5%" rowspan="2" class="text-center">
+                                        S No.
+                                        <span class="hindi-text">क्र.सं.</span>
+                                    </th>
+                                    <th style="width: 8%" rowspan="2" class="text-center">
+                                        Time
+                                        <span class="hindi-text">समय</span>
+                                    </th>
+                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
+                                        <span class="english-text">UV Vacuum Test</span>
+                                        <span class="hindi-text">यूवी वैक्यूम टेस्ट</span>
+                                        <span class="range-text">(-43 to -35 kPa)</span>
+                                        <span class="range-text">Avg / Individual</span>
+                                    </th>
+                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
+                                        <span class="english-text">UV Flow Value</span>
+                                        <span class="hindi-text">यूवी फ्लो वैल्यू</span>
+                                        <span class="range-text">(30-40 LPM)</span>
+                                        <span class="range-text">Avg / Individual</span>
+                                    </th>
+                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
+                                        <span class="english-text">Umbrella Valve</span>
+                                        <span class="hindi-text">अम्ब्रेला वाल्व</span>
+                                        <span class="range-text">OK Count/5</span>
+                                    </th>
+                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
+                                        <span class="english-text">UV Clip Pressing</span>
+                                        <span class="hindi-text">यूवी क्लिप प्रेसिंग</span>
+                                        <span class="range-text">OK Count/5</span>
+                                    </th>
+                                    <th style="width: 19%" colspan="2" class="text-center">
+                                        <span class="english-text">Cleanliness</span>
+                                        <span class="hindi-text">स्वच्छता</span>
+                                    </th>
+                                    <th style="width: 15%" rowspan="2" class="subgroup-header">
+                                        <span class="english-text">Verification</span>
+                                        <span class="hindi-text">सत्यापन</span>
+                                    </th>
+                                    <th style="width: 7%" rowspan="2" class="subgroup-header">
+                                        <span class="english-text">Actions</span>
+                                        <span class="hindi-text">कार्यवाही</span>
+                                    </th>
+                                </tr>
+                                <tr>
+                                    <th class="subgroup-header">
+                                        <span class="english-text">Work Station</span>
+                                        <span class="hindi-text">वर्कस्टेशन</span>
+                                        <span class="range-text">Single Check</span>
+                                    </th>
+                                    <th class="subgroup-header">
+                                        <span class="english-text">Bin</span>
+                                        <span class="hindi-text">बिन</span>
+                                        <span class="range-text">Yes Count/5</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for subgroup in subgroups %}
+                                <tr {% if subgroup.has_been_edited %}style="border-left: 4px solid orange;"{% endif %} 
+                                    {% if subgroup.is_after_maintenance %}class="maintenance-indicator"{% endif %}>
+                                    <!-- Serial Number with indicators -->
+                                    <td class="text-center text-light fw-bold">
+                                        {{ subgroup.subgroup_number }}
+                                        {% if subgroup.is_after_maintenance %}
+                                            <i class="fas fa-tools" style="color: #FFA500;" title="After Maintenance"></i>
+                                        {% endif %}
+                                        {% if subgroup.has_been_edited %}
+                                            <i class="fas fa-edit" style="color: orange;" title="Edited"></i>
+                                        {% endif %}
+                                    </td>
+                                    
+                                    <!-- Time -->
+                                    <td class="text-light">
+                                        {{ subgroup.timestamp|time:"H:i" }}
+                                        {% if subgroup.has_been_edited %}
+                                            <br><small style="color: orange;">Edited</small>
+                                        {% endif %}
+                                        {% if subgroup.is_after_maintenance %}
+                                            <br><small style="color: #FFA500;">Post-Maint.</small>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- UV Vacuum Test -->
+                                    <td class="text-center {% if subgroup.validation_status.uv_vacuum_test_ok %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+                                        <div class="readings-display">
+                                            <div class="readings-summary">
+                                                <span class="badge {% if subgroup.validation_status.uv_vacuum_test_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                                    Avg: {{ subgroup.uv_vacuum_average|floatformat:1 }} kPa
+                                                </span>
+                                            </div>
+                                            <div class="individual-readings">
+                                                {{ subgroup.uv_vacuum_test_1|floatformat:1 }}, 
+                                                {{ subgroup.uv_vacuum_test_2|floatformat:1 }}, 
+                                                {{ subgroup.uv_vacuum_test_3|floatformat:1 }}, 
+                                                {{ subgroup.uv_vacuum_test_4|floatformat:1 }}, 
+                                                {{ subgroup.uv_vacuum_test_5|floatformat:1 }}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Show comment if exists -->
+                                        {% if subgroup.uv_vacuum_comment %}
+                                            <div class="nok-comment">
+                                                <small><strong>Comment:</strong> {{ subgroup.uv_vacuum_comment }}</small>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- UV Flow Value -->
+                                    <td class="text-center {% if subgroup.validation_status.uv_flow_value_ok %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+                                        <div class="readings-display">
+                                            <div class="readings-summary">
+                                                <span class="badge {% if subgroup.validation_status.uv_flow_value_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                                    Avg: {{ subgroup.uv_flow_average|floatformat:1 }} LPM
+                                                </span>
+                                            </div>
+                                            <div class="individual-readings">
+                                                {{ subgroup.uv_flow_value_1|floatformat:1 }}, 
+                                                {{ subgroup.uv_flow_value_2|floatformat:1 }}, 
+                                                {{ subgroup.uv_flow_value_3|floatformat:1 }}, 
+                                                {{ subgroup.uv_flow_value_4|floatformat:1 }}, 
+                                                {{ subgroup.uv_flow_value_5|floatformat:1 }}
+                                            </div>
+                                        </div>
+                                        
+                                        {% if subgroup.uv_flow_comment %}
+                                            <div class="nok-comment">
+                                                <small><strong>Comment:</strong> {{ subgroup.uv_flow_comment }}</small>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Umbrella Valve Assembly -->
+                                    <td class="text-center {% if subgroup.umbrella_valve_ok_count == 5 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+                                        <div class="readings-display">
+                                            <div class="readings-summary">
+                                                <span class="badge {% if subgroup.umbrella_valve_ok_count == 5 %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {{ subgroup.umbrella_valve_ok_count }}/5 OK
+                                                </span>
+                                            </div>
+                                            <div class="individual-readings">
+                                                {{ subgroup.umbrella_valve_assembly_1 }}, 
+                                                {{ subgroup.umbrella_valve_assembly_2 }}, 
+                                                {{ subgroup.umbrella_valve_assembly_3 }}, 
+                                                {{ subgroup.umbrella_valve_assembly_4 }}, 
+                                                {{ subgroup.umbrella_valve_assembly_5 }}
+                                            </div>
+                                        </div>
+                                        
+                                        {% if subgroup.umbrella_valve_comment %}
+                                            <div class="nok-comment">
+                                                <small><strong>Comment:</strong> {{ subgroup.umbrella_valve_comment }}</small>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- UV Clip Pressing -->
+                                    <td class="text-center {% if subgroup.uv_clip_ok_count == 5 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+                                        <div class="readings-display">
+                                            <div class="readings-summary">
+                                                <span class="badge {% if subgroup.uv_clip_ok_count == 5 %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {{ subgroup.uv_clip_ok_count }}/5 OK
+                                                </span>
+                                            </div>
+                                            <div class="individual-readings">
+                                                {{ subgroup.uv_clip_pressing_1 }}, 
+                                                {{ subgroup.uv_clip_pressing_2 }}, 
+                                                {{ subgroup.uv_clip_pressing_3 }}, 
+                                                {{ subgroup.uv_clip_pressing_4 }}, 
+                                                {{ subgroup.uv_clip_pressing_5 }}
+                                            </div>
+                                        </div>
+                                        
+                                        {% if subgroup.uv_clip_comment %}
+                                            <div class="nok-comment">
+                                                <small><strong>Comment:</strong> {{ subgroup.uv_clip_comment }}</small>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Workstation Clean -->
+                                    <td class="text-center {% if subgroup.workstation_status == 'Yes' %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+                                        <div class="readings-display">
+                                            <div class="readings-summary">
+                                                <span class="badge {% if subgroup.workstation_status == 'Yes' %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {{ subgroup.workstation_status|default:"—" }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        {% if subgroup.workstation_comment %}
+                                            <div class="nok-comment">
+                                                <small><strong>Comment:</strong> {{ subgroup.workstation_comment }}</small>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Bin Contamination Check -->
+                                    <td class="text-center {% if subgroup.bin_contamination_yes_count == 5 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
+                                        <div class="readings-display">
+                                            <div class="readings-summary">
+                                                <span class="badge {% if subgroup.bin_contamination_yes_count == 5 %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {{ subgroup.bin_contamination_yes_count }}/5 Yes
+                                                </span>
+                                            </div>
+                                            <div class="individual-readings">
+                                                {{ subgroup.bin_contamination_check_1 }}, 
+                                                {{ subgroup.bin_contamination_check_2 }}, 
+                                                {{ subgroup.bin_contamination_check_3 }}, 
+                                                {{ subgroup.bin_contamination_check_4 }}, 
+                                                {{ subgroup.bin_contamination_check_5 }}
+                                            </div>
+                                        </div>
+                                        
+                                        {% if subgroup.bin_comment %}
+                                            <div class="nok-comment">
+                                                <small><strong>Comment:</strong> {{ subgroup.bin_comment }}</small>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+
+                                    <!-- Verification Status -->
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            <!-- Supervisor Verification -->
+                                            <div class="card border-light mb-1">
+                                                <div class="card-body p-1">
+                                                    <div class="d-flex align-items-center gap-1 mb-1">
+                                                        <small class="text-muted">
+                                                            <span class="hindi-text">सुपरवाइजर</span>Supervisor:
+                                                        </small>
+                                                        {% if subgroup.supervisor_verification %}
+                                                            {% if subgroup.supervisor_verification.status == 'rejected' %}
+                                                                <span class="badge bg-danger">Rejected</span>
+                                                            {% else %}
+                                                                <span class="badge bg-success">Approved</span>
+                                                            {% endif %}
+                                                            <small class="text-muted ms-1">
+                                                                {{ subgroup.supervisor_verification.verified_at|timesince }} ago
+                                                            </small>
+                                                            {% if subgroup.supervisor_verification.comments %}
+                                                                <div class="small text-muted mt-1">
+                                                                    <strong>Comment:</strong> {{ subgroup.supervisor_verification.comments }}
+                                                                </div>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            <span class="badge bg-warning">Pending</span>
+                                                            {% if user.user_type == 'shift_supervisor' %}
+                                                                <button type="button" class="btn btn-sm btn-outline-primary mt-1 toggle-verification-form" 
+                                                                        data-subgroup-id="{{ subgroup.id }}" data-verifier-type="supervisor">
+                                                                    Verify
+                                                                </button>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                    
+                                            <!-- Quality Verification -->
+                                            <div class="card border-light">
+                                                <div class="card-body p-1">
+                                                    <div class="d-flex align-items-center gap-1 mb-1">
+                                                        <small class="text-muted">
+                                                            <span class="hindi-text">क्वालिटी</span>Quality:
+                                                        </small>
+                                                        {% if subgroup.quality_verification %}
+                                                            {% if subgroup.quality_verification.status == 'rejected' %}
+                                                                <span class="badge bg-danger">Rejected</span>
+                                                            {% else %}
+                                                                <span class="badge bg-success">Approved</span>
+                                                            {% endif %}
+                                                            <small class="text-muted ms-1">
+                                                                {{ subgroup.quality_verification.verified_at|timesince }} ago
+                                                            </small>
+                                                            {% if subgroup.quality_verification.comments %}
+                                                                <div class="small text-muted mt-1">
+                                                                    <strong>Comment:</strong> {{ subgroup.quality_verification.comments }}
+                                                                </div>
+                                                            {% endif %}
+                                                        {% else %}
+                                                            {% if subgroup.supervisor_verification %}
+                                                                {% if subgroup.supervisor_verification.status == 'rejected' %}
+                                                                    <span class="badge bg-secondary">Waiting</span>
+                                                                {% else %}
+                                                                    <span class="badge bg-warning">Pending</span>
+                                                                    {% if user.user_type == 'quality_supervisor' %}
+                                                                        <button type="button" class="btn btn-sm btn-outline-primary mt-1 toggle-verification-form" 
+                                                                                data-subgroup-id="{{ subgroup.id }}" data-verifier-type="quality">
+                                                                            Verify
+                                                                        </button>
+                                                                    {% endif %}
+                                                                {% endif %}
+                                                            {% else %}
+                                                                <span class="badge bg-secondary">Waiting</span>
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Inline Verification Form -->
+                                            <div id="verification-form-{{ subgroup.id }}" class="verification-form mt-1" style="display: none;">
+                                                <div class="card border-light bg-dark">
+                                                    <div class="card-body p-1">
+                                                        <form id="inline-verification-form-{{ subgroup.id }}" class="inline-verification-form" 
+                                                              action="{% url 'verify_subgroup_measurement' subgroup.id %}" method="post">
+                                                            {% csrf_token %}
+                                                            <input type="hidden" name="from_ajax" value="1">
+                                                            <input type="hidden" name="verifier_type" id="verifier-type-{{ subgroup.id }}" value="">
+                                                            
+                                                            <div class="mb-1">
+                                                                <label class="form-label small text-muted">
+                                                                    Status <span class="hindi-text">स्थिति</span>
+                                                                </label>
+                                                                <select name="status" class="form-select form-select-sm">
+                                                                    <option value="supervisor_verified">Approved</option>
+                                                                    <option value="rejected">Rejected</option>
+                                                                </select>
+                                                            </div>
+                                                            
+                                                            <div class="mb-1">
+                                                                <label class="form-label small text-muted">
+                                                                    Comments <span class="hindi-text">टिप्पणियां</span>
+                                                                </label>
+                                                                <textarea name="comments" class="form-control form-control-sm" rows="2" 
+                                                                          placeholder="Optional comments"></textarea>
+                                                            </div>
+                                                            
+                                                            <div class="d-flex gap-1 mt-1">
+                                                                <button type="submit" class="btn btn-sm btn-success">
+                                                                    <i class="fas fa-check"></i> Submit
+                                                                </button>
+                                                                <button type="button" class="btn btn-sm btn-secondary cancel-verification">
+                                                                    <i class="fas fa-times"></i> Cancel
+                                                                </button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <!-- Actions -->
+                                    <td class="text-center">
+                                        <a href="{% url 'edit_subgroup' checklist.id subgroup.id %}" 
+                                           class="btn btn-sm   {% if user.user_type != 'operator' or checklist.status != 'pending' %}disabled{% endif %}">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        
+                                        {% if subgroup.has_been_edited %}
+                                            <br>
+                                            <small style="color: orange;">
+                                                <i class="fas fa-user"></i> {{ subgroup.edited_by.username }}<br>
+                                                <i class="fas fa-clock"></i> {{ subgroup.last_edited_at|timesince }} ago
+                                            </small>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                
+                                <!-- Show maintenance comment row if exists -->
+                                {% if subgroup.is_after_maintenance %}
+                                <tr class="maintenance-indicator">
+                                    <td colspan="10">
+                                        <div class="comment-box">
+                                            <div class="comment-label">
+                                                <i class="fas fa-tools me-1"></i>Maintenance Activity
+                                                <span class="hindi-text">रखरखाव गतिविधि</span>
+                                            </div>
+                                            <div class="comment-text">
+                                                {{ subgroup.maintenance_comment|default:"No description provided" }}
+                                            </div>
+                                            {% if subgroup.effectiveness_comment %}
+                                            <div class="comment-label mt-2">
+                                                <i class="fas fa-check-circle me-1"></i>Effectiveness Assessment
+                                                <span class="hindi-text">प्रभावशीलता मूल्यांकन</span>
+                                            </div>
+                                            <div class="comment-text">
+                                                {{ subgroup.effectiveness_comment }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                
+                                {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center py-3 text-muted">
+                                        <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
+                                        No measurements recorded yet
+                                        <span class="hindi-text">अभी तक कोई माप दर्ज नहीं किया गया है</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                
+                                <!-- Add Subgroup Button -->
+                                {% if can_add_subgroup and total_subgroups < shift_max_subgroups and user.user_type == 'operator' and checklist.status == 'pending' %}
+                                <tr class="table-info">
+                                    <td class="text-center fw-bold">{{ total_subgroups|add:1 }}</td>
+                                    <td colspan="9" class="text-center py-3">
+                                        <a href="{% url 'add_subgroup' checklist.id %}" class="btn btn-success btn-lg">
+                                            <i class="fas fa-plus-circle me-2"></i>
+                                            Add Next Subgroup (21 Readings)
+                                            <span class="hindi-text d-block">अगला सबग्रुप जोड़ें (21 रीडिंग)</span>
+                                        </a>
+                                        <br>
+                                        <small class="text-muted mt-2">
+                                            Record: 5 UV vacuum, 5 UV flow, 5 umbrella valve, 5 UV clip, 1 workstation, 5 bin checks
+                                            <span class="hindi-text">रिकॉर्ड: 5 यूवी वैक्यूम, 5 यूवी फ्लो, 5 अम्ब्रेला वाल्व, 5 यूवी क्लिप, 1 वर्कस्टेशन, 5 बिन चेक</span>
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endif %}
+                                
+                                <!-- Future subgroup slots -->
+                                {% if remaining_subgroups > 0 %}
+                                    {% for i in "123456"|make_list %}
+                                        {% with slot_num=forloop.counter|add:total_subgroups %}
+                                            {% if slot_num <= shift_max_subgroups and slot_num > total_subgroups %}
+                                                <tr class="table-light text-muted">
+                                                    <td class="text-center fw-bold">{{ slot_num }}</td>
+                                                    <td colspan="9" class="text-center py-2">
+                                                        <i class="fas fa-clock me-1"></i>
+                                                        Scheduled for later
+                                                        <span class="hindi-text">बाद के लिए निर्धारित</span>
+                                                    </td>
+                                                </tr>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endfor %}
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Maintenance & Quality Tracking Summary -->
+                    {% if maintenance_subgroups or nok_approval_subgroups %}
+                    <div class="mt-3 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-tools me-2"></i>Maintenance & Quality Tracking Summary
+                                    <span class="hindi-text">रखरखाव और गुणवत्ता ट्रैकिंग सारांश</span>
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if maintenance_subgroups %}
+                                <div class="mb-3">
+                                    <h6 class="text-warning">
+                                        <i class="fas fa-wrench me-1"></i>After Maintenance/ME Activity
+                                        <span class="hindi-text">रखरखाव/एमई गतिविधि के बाद</span>
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th style="width: 8%">Subgroup</th>
+                                                    <th style="width: 12%">Time</th>
+                                                    <th style="width: 35%">Maintenance Activity</th>
+                                                    <th style="width: 35%">Effectiveness Comment</th>
+                                                    <th style="width: 10%">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for subgroup in maintenance_subgroups %}
+                                                <tr class="{% if subgroup.all_checks_passed %}table-success{% else %}table-warning{% endif %}">
+                                                    <td class="text-center fw-bold">#{{ subgroup.subgroup_number }}</td>
+                                                    <td class="text-center">{{ subgroup.timestamp|time:"H:i" }}</td>
+                                                    <td>
+                                                        <strong>Activity:</strong> {{ subgroup.maintenance_comment|default:"No description provided" }}
+                                                    </td>
+                                                    <td>
+                                                        {% if subgroup.effectiveness_comment %}
+                                                            <strong>Effectiveness:</strong> {{ subgroup.effectiveness_comment }}
+                                                        {% else %}
+                                                            <span class="text-muted fst-italic">No effectiveness comment yet</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        {% if subgroup.all_checks_passed %}
+                                                            <span class="badge bg-success">All OK</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark">Has Issues</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endif %}
+
+                                {% if nok_approval_subgroups %}
+                                <div>
+                                    <h6 class="text-danger">
+                                        <i class="fas fa-exclamation-circle me-1"></i>Subgroups Requiring NOK Approval
+                                        <span class="hindi-text">NOK अनुमोदन की आवश्यकता वाले सबग्रुप</span>
+                                    </h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm">
+                                            <thead class="table-dark">
+                                                <tr>
+                                                    <th style="width: 10%">Subgroup</th>
+                                                    <th style="width: 15%">Time</th>
+                                                    <th style="width: 75%">NOK Values & Comments</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for subgroup in nok_approval_subgroups %}
+                                                <tr class="table-danger">
+                                                    <td class="text-center fw-bold">#{{ subgroup.subgroup_number }}</td>
+                                                    <td class="text-center">{{ subgroup.timestamp|time:"H:i" }}</td>
+                                                    <td>
+                                                        {% if not subgroup.validation_status.uv_vacuum_test_ok and subgroup.uv_vacuum_comment %}
+                                                            <div class="mb-2">
+                                                                <strong class="text-danger">UV Vacuum:</strong> 
+                                                                Avg {{ subgroup.uv_vacuum_average|floatformat:1 }} kPa (Out of range)<br>
+                                                                <small><strong>Comment:</strong> {{ subgroup.uv_vacuum_comment }}</small>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if not subgroup.validation_status.uv_flow_value_ok and subgroup.uv_flow_comment %}
+                                                            <div class="mb-2">
+                                                                <strong class="text-danger">UV Flow:</strong> 
+                                                                Avg {{ subgroup.uv_flow_average|floatformat:1 }} LPM (Out of range)<br>
+                                                                <small><strong>Comment:</strong> {{ subgroup.uv_flow_comment }}</small>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if subgroup.umbrella_valve_ok_count < 5 and subgroup.umbrella_valve_comment %}
+                                                            <div class="mb-2">
+                                                                <strong class="text-danger">Umbrella Valve:</strong> 
+                                                                {{ subgroup.umbrella_valve_ok_count }}/5 OK<br>
+                                                                <small><strong>Comment:</strong> {{ subgroup.umbrella_valve_comment }}</small>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if subgroup.uv_clip_ok_count < 5 and subgroup.uv_clip_comment %}
+                                                            <div class="mb-2">
+                                                                <strong class="text-danger">UV Clip:</strong> 
+                                                                {{ subgroup.uv_clip_ok_count }}/5 OK<br>
+                                                                <small><strong>Comment:</strong> {{ subgroup.uv_clip_comment }}</small>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if subgroup.workstation_status != 'Yes' and subgroup.workstation_comment %}
+                                                            <div class="mb-2">
+                                                                <strong class="text-danger">Workstation:</strong> 
+                                                                {{ subgroup.workstation_status }}<br>
+                                                                <small><strong>Comment:</strong> {{ subgroup.workstation_comment }}</small>
+                                                            </div>
+                                                        {% endif %}
+                                                        
+                                                        {% if subgroup.bin_contamination_yes_count < 5 and subgroup.bin_comment %}
+                                                            <div class="mb-2">
+                                                                <strong class="text-danger">Bin Contamination:</strong> 
+                                                                {{ subgroup.bin_contamination_yes_count }}/5 Yes<br>
+                                                                <small><strong>Comment:</strong> {{ subgroup.bin_comment }}</small>
+                                                            </div>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Measurement Progress -->
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0 text-danger">
+                                Measurement Progress
+                                <span class="hindi-text">माप प्रगति</span>
+                            </h6>
+                            <small class="text-muted">
+                                Target: {{ shift_max_subgroups|default:"6" }} measurements ({{ shift_max_subgroups|default:"6"|multiply:21 }} total readings)
+                                <span class="hindi-text">लक्ष्य: {{ shift_max_subgroups|default:"6" }} माप (कुल {{ shift_max_subgroups|default:"6"|multiply:21 }} रीडिंग)</span>
+                            </small>
+                        </div>
+                        
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar" 
+                                 role="progressbar" 
+                                 style="width: {% if shift_max_subgroups %}{{ total_subgroups|multiply:100|divide:shift_max_subgroups }}{% else %}0{% endif %}%">
+                                {{ total_subgroups }}/{{ shift_max_subgroups|default:"6" }} Complete 
+                                ({{ total_subgroups|multiply:21 }}/{{ shift_max_subgroups|default:"6"|multiply:21 }} readings)
+                            </div>
+                        </div>
+
+                        {% if timing_info.schedule %}
+                        <div class="mt-2">
+                            <h6>Shift Schedule ({{ timing_info.shift_display }}):</h6>
+                            <div class="row">
+                                {% for schedule_item in timing_info.schedule %}
+                                <div class="col-md-2 mb-1">
+                                    <small class="badge {% if schedule_item.is_completed %}bg-success{% elif schedule_item.is_available %}bg-warning{% else %}bg-secondary{% endif %}">
+                                        {{ schedule_item.subgroup_number }}: {{ schedule_item.time_display }}
+                                        {% if schedule_item.is_completed %}✓{% elif schedule_item.is_available %}○{% else %}—{% endif %}
+                                    </small>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Concerns Section -->
+    <div class="mb-1 mt-2">
+        <div class="card shadow-lg">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <h5 class="mb-0 section-title">
+                    Quality Concerns and Actions
+                    <span class="section-title-hindi">गुणवत्ता चिंताएं और कार्यवाही</span>
+                </h5>
+                {% if checklist.status != 'quality_approved' %}
+                <a href="{% url 'add_concern' checklist.id %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Report Concern
+                    <span class="hindi-text">समस्या रिपोर्ट करें</span>
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if concerns %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle table-header-with-hindi">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 30%">
+                                    Concern
+                                    <span class="hindi-text">समस्या</span>
+                                </th>
+                                <th style="width: 30%">
+                                    Cause
+                                    <span class="hindi-text">कारण</span>
+                                </th>
+                                <th style="width: 25%">
+                                    Action Taken
+                                    <span class="hindi-text">की गई कार्यवाही</span>
+                                </th>
+                                <th style="width: 10%">
+                                    Date
+                                    <span class="hindi-text">दिनांक</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for concern in concerns %}
+                            <tr>
+                                <td class="text-center align-middle text-dark fw-bold">{{ forloop.counter }}</td>
+                                <td class="text-dark">{{ concern.concern.concern_identified }}</td>
+                                <td class="text-dark">{{ concern.concern.cause_if_known|default:"—" }}</td>
+                                <td class="text-dark">{{ concern.concern.action_taken|default:"Pending" }}</td>
+                                <td class="text-center align-middle">
+                                    <div class="small text-black-50">
+                                        {{ concern.concern.created_at|date:"Y-m-d H:i" }}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-3">
+                    <p class="text-muted mb-2">
+                        No quality concerns reported
+                        <span class="hindi-text">कोई गुणवत्ता चिंता रिपोर्ट नहीं की गई</span>
+                    </p>
+                    {% if checklist.status != 'quality_approved' %}
+                    <a href="{% url 'add_concern' checklist.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-plus-circle me-1"></i>Report New Concern
+                        <span class="hindi-text">नई समस्या रिपोर्ट करें</span>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Toggle Verification Form
+    const toggleButtons = document.querySelectorAll('.toggle-verification-form');
+    const cancelButtons = document.querySelectorAll('.cancel-verification');
+    
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const subgroupId = this.getAttribute('data-subgroup-id');
+            const verifierType = this.getAttribute('data-verifier-type');
+            const formContainer = document.getElementById('verification-form-' + subgroupId);
+            
+            // Set the verifier type in the hidden field
+            document.getElementById('verifier-type-' + subgroupId).value = verifierType;
+            
+            // Show the form
+            formContainer.style.display = 'block';
+            
+            // Hide the button
+            this.style.display = 'none';
+        });
+    });
+    
+    cancelButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const formContainer = this.closest('.verification-form');
+            const subgroupId = formContainer.id.split('-').pop();
+            
+            // Hide the form
+            formContainer.style.display = 'none';
+            
+            // Show the appropriate toggle button again
+            const verifierTypeInput = document.getElementById('verifier-type-' + subgroupId);
+            const verifierType = verifierTypeInput ? verifierTypeInput.value : '';
+            const toggleButtons = document.querySelectorAll('.toggle-verification-form[data-subgroup-id="' + subgroupId + '"][data-verifier-type="' + verifierType + '"]');
+            toggleButtons.forEach(btn => {
+                btn.style.display = '';
+            });
+        });
+    });
+    
+    // Handle inline verification form submission
+    const verificationForms = document.querySelectorAll('.inline-verification-form');
+    
+    verificationForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const formAction = this.getAttribute('action');
+            const csrftoken = getCookie('csrftoken');
+            
+            // Get the submit button
+            const submitBtn = this.querySelector('button[type="submit"]');
+            let originalBtnText = submitBtn.innerHTML;
+            
+            // Show loading indicator
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            submitBtn.disabled = true;
+            
+            fetch(formAction, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrftoken
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || 'Server error');
+                    }).catch(err => {
+                        throw new Error(`Server error: ${response.status}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    alert(data.message || 'Verification successful');
+                    // Reload the page to show updated verification status
+                    window.location.reload();
+                } else {
+                    alert(data.message || 'Verification failed');
+                    // Reset button
+                    submitBtn.innerHTML = originalBtnText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error: ' + error.message);
+                
+                // Reset button
+                submitBtn.innerHTML = originalBtnText;
+                submitBtn.disabled = false;
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

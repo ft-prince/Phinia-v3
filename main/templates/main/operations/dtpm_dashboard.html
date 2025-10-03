@@ -1,0 +1,362 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        transition: transform 0.3s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(255, 0, 0, 0.2);
+    }
+    
+    .dashboard-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    
+    .chart-container {
+        height: 300px;
+        position: relative;
+    }
+    
+    .issue-card {
+        background-color: #2d2d2d;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        transition: transform 0.2s;
+    }
+    
+    .issue-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+    }
+    
+    .badge-priority-high {
+        background-color: #dc3545;
+    }
+    
+    .badge-priority-medium {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .badge-priority-low {
+        background-color: #17a2b8;
+    }
+    
+    .badge-status-open {
+        background-color: #dc3545;
+    }
+    
+    .badge-status-in_progress {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .filter-bar {
+        background-color: #333;
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>
+            <i class="fas fa-chart-line me-2"></i>
+            {{ title }}
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'dtpm_list' %}" class="btn btn-outline-light">
+            <i class="fas fa-clipboard-list me-2"></i>View All Checklists
+        </a>
+    </div>
+</div>
+
+<div class="filter-bar">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label">Date Range</label>
+            <select name="days" class="form-select bg-dark text-white" onchange="this.form.submit()">
+                <option value="7" {% if days == 7 %}selected{% endif %}>Last 7 Days</option>
+                <option value="30" {% if days == 30 %}selected{% endif %}>Last 30 Days</option>
+                <option value="90" {% if days == 90 %}selected{% endif %}>Last 90 Days</option>
+            </select>
+        </div>
+        <div class="col-md-8 text-end">
+            <span class="text-muted">Showing data from {{ start_date|date:"M d, Y" }} to {{ end_date|date:"M d, Y" }}</span>
+        </div>
+    </form>
+</div>
+
+<!-- Stats Row -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="stats-card h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Total Checklists</h6>
+                    <h3 class="m-0">{{ stats.total_checklists }}</h3>
+                </div>
+                <div class="stat-icon text-danger">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Verified</h6>
+                    <h3 class="m-0">{{ stats.verified_count }}</h3>
+                </div>
+                <div class="stat-icon text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Rejected</h6>
+                    <h3 class="m-0">{{ stats.rejected_count }}</h3>
+                </div>
+                <div class="stat-icon text-warning">
+                    <i class="fas fa-times-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="stats-card h-100">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="text-muted mb-1">Completion Rate</h6>
+                    <h3 class="m-0">{{ stats.completion_rate|floatformat:1 }}%</h3>
+                </div>
+                <div class="stat-icon text-info">
+                    <i class="fas fa-percentage"></i>
+                    <div class="stat-icon text-info">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <!-- Check Items Performance Chart -->
+        <div class="col-md-8 mb-3">
+            <div class="dashboard-card">
+                <h5 class="mb-3">Check Items Performance</h5>
+                <div class="chart-container">
+                    <canvas id="checkPerformanceChart"></canvas>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Success Rate Card -->
+        <div class="col-md-4 mb-3">
+            <div class="dashboard-card h-100">
+                <h5 class="mb-3">Success Rate</h5>
+                <div class="text-center py-4">
+                    <div class="display-1 mb-3">{{ stats.success_rate|floatformat:1 }}%</div>
+                    <p class="mb-0 text-muted">of completed checklists were verified successfully</p>
+                </div>
+                <div class="d-flex justify-content-around mt-3">
+                    <div class="text-center">
+                        <div class="h4 mb-0">{{ stats.verified_count }}</div>
+                        <small class="text-success">Verified</small>
+                    </div>
+                    <div class="text-center">
+                        <div class="h4 mb-0">{{ stats.rejected_count }}</div>
+                        <small class="text-danger">Rejected</small>
+                    </div>
+                    <div class="text-center">
+                        <div class="h4 mb-0">{{ stats.pending_count }}</div>
+                        <small class="text-warning">Pending</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Item-wise Performance -->
+        <div class="col-md-7 mb-3">
+            <div class="dashboard-card">
+                <h5 class="mb-3">Check Items Details</h5>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover">
+                        <thead>
+                            <tr>
+                                <th>Check #</th>
+                                <th>Description</th>
+                                <th>OK Rate</th>
+                                <th>OK/NG</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item_no, item in check_items.items %}
+                            <tr>
+                                <td>{{ item_no }}</td>
+                                <td title="{{ item.description }}">{{ item.description|truncatechars:40 }}</td>
+                                <td>
+                                    <div class="progress bg-dark">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ item.ok_rate }}%">
+                                            {{ item.ok_rate|floatformat:1 }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ item.ok_count }}/{{ item.ng_count }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    
+        <!-- Open Issues -->
+        <div class="col-md-5 mb-3">
+            <div class="dashboard-card">
+                <h5 class="mb-3">Open Issues</h5>
+                
+                {% if open_issues %}
+                    {% for issue in open_issues|slice:":5" %}
+                    <div class="issue-card">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge badge-priority-{{ issue.priority }}">{{ issue.get_priority_display }}</span>
+                                <span class="badge badge-status-{{ issue.status }}">{{ issue.get_status_display }}</span>
+                            </div>
+                            <small class="text-muted">{{ issue.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        
+                        <p class="mb-2">{{ issue.description|truncatechars:100 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                Check #{{ issue.check_result.item_number }} - By {{ issue.reported_by.username }}
+                            </small>
+                            
+                            <a href="{% url 'dtpm_resolve_issue' issue_id=issue.id %}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-check-circle"></i> Resolve
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if open_issues.count > 5 %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'dtpm_list' %}" class="btn btn-sm btn-outline-light">
+                            View All {{ open_issues.count }} Issues
+                        </a>
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                        <p class="mt-3 mb-0">No open issues!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check Performance Chart
+            const checkPerformanceCtx = document.getElementById('checkPerformanceChart').getContext('2d');
+            
+            const checkLabels = {{ chart_data.labels|safe }};
+            const checkDescriptions = {{ chart_data.item_descriptions|safe }};
+            const okRates = {{ chart_data.ok_rates|safe }};
+            
+            const checkPerformanceChart = new Chart(checkPerformanceCtx, {
+                type: 'bar',
+                data: {
+                    labels: checkLabels,
+                    datasets: [{
+                        label: 'OK Rate (%)',
+                        data: okRates,
+                        backgroundColor: 'rgba(40, 167, 69, 0.6)',
+                        borderColor: 'rgba(40, 167, 69, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            },
+                            ticks: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    const index = context[0].dataIndex;
+                                    return `Check #${checkLabels[index]}: ${checkDescriptions[index]}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+    {% endblock %}

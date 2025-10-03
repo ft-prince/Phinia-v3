@@ -1,0 +1,146 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-container {
+        min-height: calc(100vh - 100px);
+        display: flex;
+        align-items: center;
+    }
+    
+    .card {
+        background-color: #111111 !important;
+        border: 2px solid #ff0000 !important;
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+    }
+    
+    .card-header {
+        background-color: #cc0000 !important;
+        color: #ffffff !important;
+        border-bottom: 2px solid #ffffff;
+    }
+    
+    .form-label {
+        color: #ffffff;
+    }
+    
+    .form-control {
+        background-color: #000000;
+        color: #ffffff;
+        border: 1px solid #ff0000;
+    }
+    
+    .form-control:focus {
+        background-color: #000000;
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .btn-primary {
+        background-color: #ff0000 !important;
+        border-color: #ffffff !important;
+    }
+    
+    .btn-primary:hover {
+        background-color: #cc0000 !important;
+    }
+    
+    .text-center a {
+        color: #ff0000;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+    
+    .text-center a:hover {
+        color: #ffffff;
+        text-decoration: underline;
+    }
+    
+    .alert-danger {
+        background-color: rgba(255, 0, 0, 0.1);
+        color: #ffffff;
+        border: 2px solid #ff0000;
+    }
+    
+    /* Styling for the dropdown */
+    .form-select {
+        background-color: #000000;
+        color: #ffffff;
+        border: 1px solid #ff0000;
+    }
+    
+    .form-select:focus {
+        background-color: #000000;
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container login-container">
+    <div class="row justify-content-center w-100">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0 text-center">Login</h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    {% if form.errors %}
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" name="username" id="username" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" name="password" id="password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="user_type" class="form-label">Login As</label>
+                            <select name="user_type" id="user_type" class="form-select" required>
+                                <option value="operator">Operator</option>
+                                <option value="shift_supervisor">Shift Supervisor</option>
+                                <option value="quality_supervisor">Quality Supervisor</option>
+                                <option value="admin">Admin (Superuser)</option>
+                            </select>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Login</button>
+                        </div>
+                    </form>
+                    
+                    <hr class="border-white">
+                    <div class="text-center">
+                        <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

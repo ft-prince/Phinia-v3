@@ -1,0 +1,113 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Add Concern - Checklist #{{ checklist.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .add-concern-container {
+        min-height: calc(100vh - 100px);
+        display: flex;
+        align-items: center;
+    }
+    
+    .card {
+        background-color: #111111 !important;
+        border: 2px solid #ff0000 !important;
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+    }
+    
+    .card-header {
+        background-color: #cc0000 !important;
+        color: #ffffff !important;
+        border-bottom: 2px solid #ffffff;
+    }
+    
+    .form-label {
+        color: #ffffff;
+    }
+    
+    .form-control {
+        background-color: #000000;
+        color: #ffffff;
+        border: 1px solid #ff0000;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .form-control:hover {
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.1);
+    }
+    
+    .form-control:focus {
+        background-color: #000000;
+        color: #ffffff;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+        outline: none;
+    }
+    
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .btn-primary {
+        background-color: #ff0000 !important;
+        border-color: #ffffff !important;
+        color: #ffffff !important;
+    }
+    
+    .btn-primary:hover {
+        background-color: #cc0000 !important;
+    }
+    
+    .btn-outline-secondary {
+        color: #ffffff;
+        border-color: #ff0000;
+        background-color: transparent;
+    }
+    
+    .btn-outline-secondary:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+        border-color: #ffffff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container add-concern-container my-5">
+    <div class="row justify-content-center w-100">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0 text-center">Add Concern - Checklist #{{ checklist.id }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label for="concern_identified" class="form-label fw-bold">Concern Identified *</label>
+                            <input type="text" name="concern_identified" id="concern_identified" class="form-control" value="{{ form.concern_identified.value }}" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="cause_if_known" class="form-label fw-bold">Cause (if known)</label>
+                            <input type="text" name="cause_if_known" id="cause_if_known" class="form-control" value="{{ form.cause_if_known.value }}">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="action_taken" class="form-label fw-bold">Action Taken *</label>
+                            <input type="text" name="action_taken" id="action_taken" class="form-control" value="{{ form.action_taken.value }}" required>
+                        </div>
+
+                        <div class="d-grid gap-3">
+                            <button type="submit" class="btn btn-primary btn-lg">Submit Concern</button>
+                            <a href="{% url 'checklist_detail' checklist.id %}" class="btn btn-outline-secondary btn-lg">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

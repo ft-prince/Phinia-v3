@@ -1,0 +1,119 @@
+{% extends 'main/base.html' %}
+{% load custom_tags %}
+
+{% block title %}Daily Report - {{ date|date:"Y-m-d" }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Daily Report</h5>
+                    <div>
+                        <form method="get" class="d-flex align-items-center">
+                            <input type="date" name="date" value="{{ date|date:'Y-m-d' }}" class="form-control me-2">
+                            <button type="submit" class="btn btn-light btn-sm">Go</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Summary Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-2">
+                            <div class="card bg-info text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ summary.total }}</h3>
+                                    <p class="mb-0">Total Checklists</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center">
+                                    <h3>{{ summary.pending }}</h3>
+                                    <p class="mb-0">Pending</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ summary.supervisor_approved }}</h3>
+                                    <p class="mb-0">Supervisor Approved</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ summary.quality_approved }}</h3>
+                                    <p class="mb-0">Quality Approved</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h3>{{ summary.rejected }}</h3>
+                                    <p class="mb-0">Rejected</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed List -->
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Shift</th>
+                                    <th>Operator</th>
+                                    <th>Model</th>
+                                    <th>Subgroups</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for checklist in checklists %}
+                                <tr>
+                                    <td>{{ checklist.created_at|time:"H:i" }}</td>
+                                    <td>{{ checklist.shift.get_shift_type_display }}</td>
+                                    <td>{{ checklist.shift.operator.username }}</td>
+                                    <td>{{ checklist.selected_model }}</td>
+                                    <td>{{ checklist.subgroup_entries.count }}/6</td>
+                                    <td>
+                                        <span class="badge {% if checklist.status == 'quality_approved' %}bg-success
+                                                     {% elif checklist.status == 'supervisor_approved' %}bg-primary
+                                                     {% elif checklist.status == 'rejected' %}bg-danger
+                                                     {% else %}bg-warning{% endif %}">
+                                            {{ checklist.status|title }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'checklist_detail' checklist_id=checklist.id %}" 
+                                           class="btn btn-sm btn-info">View</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Enable tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+</script>
+{% endblock %}

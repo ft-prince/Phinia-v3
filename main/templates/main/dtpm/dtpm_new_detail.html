@@ -1,0 +1,420 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}DTPM Checklist Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    .checkpoint-card {
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 10px;
+        margin-bottom: 30px;
+        transition: all 0.3s;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    .checkpoint-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 12px rgba(255, 0, 0, 0.3);
+    }
+    .checkpoint-header {
+        background-color: #222;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+        border-bottom: 1px solid #444;
+    }
+    .checkpoint-number {
+        background-color: #CC0000;
+        color: white;
+        padding: 4px 10px;
+        border-radius: 50%;
+        margin-right: 10px;
+        font-weight: bold;
+    }
+    .hindi-text {
+        color: #CCC;
+        font-style: italic;
+        margin-top: 5px;
+        font-size: 0.9rem;
+    }
+    .status-ok {
+        background-color: rgba(40, 167, 69, 0.1);
+        border: 2px solid #28a745;
+    }
+    .status-ng {
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 2px solid #dc3545;
+    }
+    .status-badge {
+        font-size: 16px;
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    .badge-ok {
+        background-color: #28a745;
+    }
+    .badge-ng {
+        background-color: #dc3545;
+    }
+    .badge-empty {
+        background-color: #6c757d;
+    }
+    .issue-card {
+        background-color: rgba(220, 53, 69, 0.1);
+        border: 1px solid #dc3545;
+        border-radius: 8px;
+        margin-top: 10px;
+        box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+    }
+    .reference-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        border: 2px solid #555;
+        transition: transform 0.3s;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    }
+    .reference-image:hover {
+        transform: scale(1.02);
+    }
+    .reference-image-container {
+        text-align: center;
+        margin: 15px 0;
+        background-color: #000;
+        padding: 10px;
+        border-radius: 10px;
+    }
+    .page-title {
+        color: #CC0000;
+        border-bottom: 2px solid #CC0000;
+        padding-bottom: 10px;
+        margin-bottom: 30px;
+    }
+    .info-card {
+        background-color: #222;
+        border: 1px solid #444;
+        border-radius: 10px;
+    }
+    .info-card-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+        padding: 15px;
+        border-radius: 10px 10px 0 0;
+    }
+    .info-label {
+        color: #AAA;
+        font-weight: bold;
+    }
+    .info-value {
+        color: white;
+    }
+    .edit-history-card {
+        background-color: #1a1a1a;
+        border: 1px solid #444;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    .edit-history-header {
+        background-color: #2a2a2a;
+        border-bottom: 1px solid #444;
+        padding: 12px 15px;
+        border-radius: 10px 10px 0 0;
+        display: flex;
+        justify-content: between;
+        align-items: center;
+    }
+    .modified-indicator {
+        background-color: #ffc107;
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-left: 10px;
+    }
+    .timestamp {
+        color: #888;
+        font-size: 0.85rem;
+    }
+    .edit-info {
+        background-color: rgba(255, 193, 7, 0.1);
+        border: 1px solid #ffc107;
+        border-radius: 5px;
+        padding: 8px 12px;
+        margin-top: 10px;
+    }
+    .collapse-toggle {
+        cursor: pointer;
+        color: #ffc107;
+        text-decoration: none;
+    }
+    .collapse-toggle:hover {
+        color: #ffcd39;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="page-title">
+            <i class="fas fa-clipboard-check me-2"></i> DTPM Checklist - {{ checklist.date }}
+      <span class="badge bg-{% if checklist.status == 'supervisor_approved' or checklist.status == 'quality_certified' %}success{% elif checklist.status == 'rejected' %}danger{% else %}warning{% endif %}">
+    {{ checklist.get_status_display }}
+</span>
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="btn-group">
+            {% if can_edit %}
+            <a href="{% url 'dtpm_new_edit_checks' pk=checklist.id %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Edit
+            </a>
+            {% endif %}
+            
+            {% if not ftq_record.verified_by and user.user_type in 'shift_supervisor,quality_supervisor' %}
+            <a href="{% url 'dtpm_new_verify' pk=checklist.id %}" class="btn btn-success">
+                <i class="fas fa-check-double"></i> Verify
+            </a>
+            {% endif %}
+            
+            <a href="{% url 'dtpm_new_list' %}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Checklist Info Card -->
+<div class="info-card mb-4">
+    <div class="info-card-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i> Checklist Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <p><span class="info-label">Date:</span> <span class="info-value">{{ checklist.date }}</span></p>
+            </div>
+            <div class="col-md-3">
+                <p><span class="info-label">Shift:</span> <span class="info-value">{{ checklist.get_checklist_shift_display }}</span></p>
+            </div>
+            <div class="col-md-3">
+                <p><span class="info-label">Operator:</span> <span class="info-value">{{ checklist.operator.username }}</span></p>
+            </div>
+            <div class="col-md-3">
+                <p><span class="info-label">Model Running:</span> <span class="info-value">{{ checklist.current_model }}</span></p>
+            </div>
+        </div>
+        
+        <!-- Show supervisor info -->
+        {% if checklist.supervisor %}
+        <div class="row mt-2">
+            <div class="col-md-6">
+                <p><span class="info-label">Production Supervisor:</span> <span class="info-value">{{ checklist.supervisor.get_full_name|default:checklist.supervisor.username }}</span></p>
+            </div>
+            {% if checklist.supervisor_approved_at %}
+            <div class="col-md-6">
+                <p><span class="info-label">Approved At:</span> <span class="info-value">{{ checklist.supervisor_approved_at|date:"M d, Y H:i" }}</span></p>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        {% if checklist.notes %}
+        <div class="row mt-2">
+            <div class="col-12">
+                <p><span class="info-label">Notes:</span></p>
+                <p class="info-value">{{ checklist.notes }}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+        <!-- Edit History Summary -->
+        {% if has_modifications %}
+        <div class="edit-history-card">
+            <div class="edit-history-header">
+                <div>
+                    <h6 class="mb-0">
+                        <i class="fas fa-history me-2"></i> Edit History
+                        <span class="modified-indicator">MODIFIED</span>
+                    </h6>
+                </div>
+                <a class="collapse-toggle" data-bs-toggle="collapse" href="#editHistoryDetails" role="button" aria-expanded="false">
+                    <i class="fas fa-chevron-down"></i> View Details
+                </a>
+            </div>
+            <div class="collapse" id="editHistoryDetails">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-dark table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Checkpoint</th>
+                                    <th>Description</th>
+                                    <th>Current Status</th>
+                                    <th>Last Modified</th>
+                                    <th>Comments</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for modification in modifications %}
+                                <tr>
+                                    <td>#{{ modification.checkpoint_number }}</td>
+                                    <td>{{ modification.checkpoint_title }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if modification.current_status == 'OK' %}success{% else %}danger{% endif %}">
+                                            {{ modification.current_status }}
+                                        </span>
+                                    </td>
+                                    <td>{{ modification.last_modified|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if modification.has_comments %}
+                                            <i class="fas fa-check text-success"></i> Yes
+                                        {% else %}
+                                            <i class="fas fa-times text-muted"></i> No
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+<!-- Checkpoint Results -->
+<h3 class="mb-3 text-danger"><i class="fas fa-tasks me-2"></i> Checkpoint Results</h3>
+
+{% for check in checkpoint_results %}
+<div class="checkpoint-card {% if check.status == 'OK' %}status-ok{% elif check.status == 'NG' %}status-ng{% endif %}">
+    <div class="checkpoint-header d-flex justify-content-between align-items-center">
+        <div>
+            <h5 class="mb-0">
+                <span class="checkpoint-number">{{ check.checkpoint_number }}</span>
+                {% if check.checkpoint_number == 1 %}
+                    EMERGENCY push button is Working Properly
+                {% elif check.checkpoint_number == 2 %}
+                    There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage
+                {% elif check.checkpoint_number == 3 %}
+                    All nuts and bolts should not be loose or free
+                {% elif check.checkpoint_number == 4 %}
+                    Check all sensors for damage or looseness
+                {% elif check.checkpoint_number == 5 %}
+                    Tower lamp & Tube light should be working properly
+                {% elif check.checkpoint_number == 6 %}
+                    All indicators & push buttons should be working properly
+                {% elif check.checkpoint_number == 7 %}
+                    Check Safety curtain working properly
+                {% endif %}
+            </h5>
+            <div class="hindi-text">
+                {% if check.checkpoint_number == 1 %}
+                    आपातकालीन पुश बटन ठीक से काम कर रहा है
+                {% elif check.checkpoint_number == 2 %}
+                    कोई हवा का रिसाव नहीं होना चाहिए और लुब्रिकेशन यूनिट माउंटिंग ढीली नहीं होनी चाहिए और तेल का रिसाव नहीं होना चाहिए
+                {% elif check.checkpoint_number == 3 %}
+                    सभी नट और बोल्ट ढीले या स्वतंत्र नहीं होने चाहिए
+                {% elif check.checkpoint_number == 4 %}
+                    सभी सेंसरों को क्षति या ढीलेपन के लिए जांचें
+                {% elif check.checkpoint_number == 5 %}
+                    टॉवर लैंप और ट्यूब लाइट ठीक से काम करनी चाहिए
+                {% elif check.checkpoint_number == 6 %}
+                    सभी संकेतक और पुश बटन ठीक से काम करने चाहिए
+                {% elif check.checkpoint_number == 7 %}
+                    सुरक्षा पर्दे का ठीक से काम करना जांचें
+                {% endif %}
+            </div>
+        </div>
+        <span class="status-badge badge-{% if check.status == 'OK' %}ok{% elif check.status == 'NG' %}ng{% else %}empty{% endif %}">
+            {{ check.status|default:"Not Set" }}
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                {% if check.comments %}
+                <p><strong>Comments:</strong> {{ check.comments }}</p>
+                {% endif %}
+                
+                <!-- Show edit information if actually modified (more than 1 minute difference) -->
+                {% if check.is_really_modified %}
+                <div class="edit-info">
+                    <small>
+                        <i class="fas fa-edit me-1"></i>
+                        <strong>Last modified:</strong> {{ check.updated_at|date:"M d, Y H:i" }}
+                        <br>
+                        <i class="fas fa-clock me-1"></i>
+                        <strong>Originally checked:</strong> {{ check.checked_at|date:"M d, Y H:i" }}
+                    </small>
+                </div>
+                {% endif %}
+                
+                <!-- Issues for this checkpoint -->
+                {% for issue in check.issues.all %}
+                <div class="issue-card p-3">
+                    <div class="d-flex justify-content-between">
+                        <h6><i class="fas fa-exclamation-triangle me-2"></i> Issue: {{ issue.get_priority_display }}</h6>
+                        <span class="badge bg-{% if issue.status == 'open' %}warning{% elif issue.status == 'in_progress' %}info{% else %}success{% endif %}">
+                            {{ issue.get_status_display }}
+                        </span>
+                    </div>
+                    <p>{{ issue.description }}</p>
+                    {% if issue.action_taken %}
+                    <div class="mt-2">
+                        <p><strong>Action Taken:</strong> {{ issue.action_taken }}</p>
+                    </div>
+                    {% endif %}
+                    <div class="mt-2 text-end">
+                        <small>Reported by {{ issue.reported_by.username }} on {{ issue.created_at|date:"M d, Y" }}</small>
+                        {% if issue.status != 'resolved' and request.user.user_type in 'shift_supervisor,quality_supervisor' %}
+                        <a href="{% url 'dtpm_new_resolve_issue' issue_id=issue.id %}" class="btn btn-sm btn-primary ms-2">
+                            <i class="fas fa-wrench"></i> Resolve
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+        
+            </div>
+            <div class="col-md-4">
+                <!-- Reference Image -->
+                <div class="reference-image-container">
+                    <img src="/dtpm-images/{{ check.checkpoint_number }}/" alt="Reference Image" class="reference-image">
+                    <p class="text-center mt-2 text-light">Reference Image</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-collapse/expand edit history based on modifications
+    const editHistoryToggle = document.querySelector('.collapse-toggle');
+    if (editHistoryToggle) {
+        editHistoryToggle.addEventListener('click', function() {
+            const icon = this.querySelector('i');
+            setTimeout(() => {
+                if (document.getElementById('editHistoryDetails').classList.contains('show')) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                } else {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }, 150);
+        });
+    }
+});
+</script>
+{% endblock %}

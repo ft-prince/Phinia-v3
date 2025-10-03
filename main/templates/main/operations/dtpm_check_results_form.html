@@ -1,0 +1,273 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .check-table th {
+        background-color: #333;
+        color: #ffffff;
+        border-color: #444;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+    .check-table td {
+        border-color: #444;
+        font-size: 0.9rem;
+        vertical-align: middle;
+    }
+    .table-header-row {
+        background-color: #2a2a2a;
+    }
+    .result-options {
+        display: flex;
+        gap: 10px;
+    }
+    .result-option {
+        padding: 6px 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        text-align: center;
+    }
+    .result-option.ok {
+        border-color: #28a745;
+        color: #28a745;
+    }
+    .result-option.ok.selected {
+        background-color: #28a745;
+        color: white;
+    }
+    .result-option.ng {
+        border-color: #dc3545;
+        color: #dc3545;
+    }
+    .result-option.ng.selected {
+        background-color: #dc3545;
+        color: white;
+    }
+    .image-upload-container {
+        width: 120px;
+        height: 120px;
+        border: 2px dashed #ccc;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        margin: 0 auto;
+    }
+    .image-preview {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+    .custom-file-input {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        z-index: 10;
+    }
+    .upload-icon {
+        font-size: 24px;
+        color: #888;
+    }
+    .image-upload-label {
+        font-size: 12px;
+        color: #888;
+        text-align: center;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3"><i class="fas fa-clipboard-check me-2"></i>{{ title }}</h2>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Checklist Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <p><strong>Date:</strong> {{ checklist.date }}</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Shift:</strong> {{ checklist.shift.get_shift_type_display }}</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Operator:</strong> {{ checklist.operator.username }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ formset.management_form }}
+    
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Daily Tracking and Performance Monitoring Checklist</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered check-table mb-0">
+                    <thead>
+                        <tr class="table-header-row">
+                            <th width="5%">#</th>
+                            <th width="35%">Check Description</th>
+                            <th width="15%">Result</th>
+                            <th width="20%">Image</th>
+                            <th width="25%">Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        <tr>
+                            {% for hidden in form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            
+                            <td class="align-middle">{{ forloop.counter }}</td>
+                            <td class="align-middle">{{ form.instance.get_item_number_display }}</td>
+                            <td class="align-middle">
+                                <div class="result-options">
+                                    <div class="result-option ok {% if form.instance.result == 'OK' %}selected{% endif %}" 
+                                         onclick="selectResult(this, '{{ form.prefix }}-result', 'OK')">
+                                        OK
+                                    </div>
+                                    <div class="result-option ng {% if form.instance.result == 'NG' %}selected{% endif %}" 
+                                         onclick="selectResult(this, '{{ form.prefix }}-result', 'NG')">
+                                        NG
+                                    </div>
+                                </div>
+                                <input type="hidden" id="{{ form.prefix }}-result" name="{{ form.prefix }}-result" 
+                                       value="{{ form.instance.result }}">
+                            </td>
+                            <td class="align-middle">
+                                <div class="image-upload-container">
+                                    {% if form.instance.image %}
+                                        <img src="{{ form.instance.image.url }}" class="image-preview" alt="Check Image">
+                                    {% else %}
+                                        <i class="fas fa-camera upload-icon"></i>
+                                        <span class="image-upload-label">Upload Image</span>
+                                    {% endif %}
+                                    <input type="file" class="custom-file-input" 
+                                           id="{{ form.prefix }}-image" 
+                                           name="{{ form.prefix }}-image" 
+                                           accept="image/*" onchange="previewImage(this)">
+                                </div>
+                                <!-- Add a hidden input for the original image path -->
+                                <input type="hidden" name="{{ form.prefix }}-original_image" 
+                                       value="{% if form.instance.image %}{{ form.instance.image.url }}{% endif %}">
+                            </td>
+                            <td class="align-middle">
+                                <textarea class="form-control" 
+                                          id="{{ form.prefix }}-comments" 
+                                          name="{{ form.prefix }}-comments" 
+                                          rows="3">{{ form.instance.comments }}</textarea>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4 mb-4">
+        <a href="{% url 'dtpm_detail' pk=checklist.pk %}" class="btn btn-secondary me-2">
+            <i class="fas fa-arrow-left me-2"></i>Back
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Save All Changes
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Function to select OK/NG result
+    function selectResult(element, inputId, value) {
+        // Remove selected class from siblings
+        const siblings = element.parentElement.children;
+        for (let i = 0; i < siblings.length; i++) {
+            if (siblings[i].classList.contains('result-option')) {
+                siblings[i].classList.remove('selected');
+            }
+        }
+        
+        // Add selected class to clicked element
+        element.classList.add('selected');
+        
+        // Set the value in hidden input
+        document.getElementById(inputId).value = value;
+    }
+    
+    // Function to preview image before upload
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            const imageBox = input.parentElement;
+            
+            reader.onload = function(e) {
+                // Remove upload icon and label if they exist
+                const iconElements = imageBox.getElementsByClassName('upload-icon');
+                const labelElements = imageBox.getElementsByClassName('image-upload-label');
+                
+                if (iconElements.length > 0) {
+                    for (let i = 0; i < iconElements.length; i++) {
+                        iconElements[i].remove();
+                    }
+                }
+                
+                if (labelElements.length > 0) {
+                    for (let i = 0; i < labelElements.length; i++) {
+                        labelElements[i].remove();
+                    }
+                }
+                
+                // Check if there's already an image preview
+                let imagePreview = imageBox.getElementsByClassName('image-preview')[0];
+                
+                if (!imagePreview) {
+                    // Create a new image element if it doesn't exist
+                    imagePreview = document.createElement('img');
+                    imagePreview.className = 'image-preview';
+                    imageBox.appendChild(imagePreview);
+                }
+                
+                // Set the source to the loaded file
+                imagePreview.src = e.target.result;
+            }
+            
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ensure all image containers are properly set up
+        document.querySelectorAll('.image-upload-container').forEach(function(container) {
+            const preview = container.querySelector('.image-preview');
+            if (preview && preview.src) {
+                // If there's an image, make sure the upload icon is hidden
+                const icons = container.querySelectorAll('.upload-icon, .image-upload-label');
+                icons.forEach(icon => icon.style.display = 'none');
+            }
+        });
+    });
+</script>
+{% endblock %}

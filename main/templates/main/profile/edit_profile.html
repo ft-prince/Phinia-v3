@@ -1,0 +1,135 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Edit Profile</h5>
+                    <a href="{% url 'user_profile' %}" class="btn btn-light btn-sm">Back to Profile</a>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Personal Information -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Personal Information</h6>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                <div class="text-danger">
+                                    {{ form.first_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                <div class="text-danger">
+                                    {{ form.last_name.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                <div class="text-danger">
+                                    {{ form.email.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Password Change Section -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Change Password</h6>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.old_password.id_for_label }}" class="form-label">Current Password</label>
+                                {{ form.old_password }}
+                                {% if form.old_password.errors %}
+                                <div class="text-danger">
+                                    {{ form.old_password.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.new_password1.id_for_label }}" class="form-label">New Password</label>
+                                {{ form.new_password1 }}
+                                {% if form.new_password1.errors %}
+                                <div class="text-danger">
+                                    {{ form.new_password1.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.new_password2.id_for_label }}" class="form-label">Confirm New Password</label>
+                                {{ form.new_password2 }}
+                                {% if form.new_password2.errors %}
+                                <div class="text-danger">
+                                    {{ form.new_password2.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Notification Settings -->
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2">Notification Settings</h6>
+                            
+                            <div class="form-check mb-2">
+                                {{ form.email_notifications }}
+                                <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+                                    Receive email notifications
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <a href="{% url 'user_profile' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password validation
+    const password1 = document.getElementById('{{ form.new_password1.id_for_label }}');
+    const password2 = document.getElementById('{{ form.new_password2.id_for_label }}');
+    
+    function validatePasswords() {
+        if (password1.value && password2.value) {
+            if (password1.value !== password2.value) {
+                password2.setCustomValidity("Passwords don't match");
+            } else {
+                password2.setCustomValidity('');
+            }
+        }
+    }
+
+    if (password1 && password2) {
+        password1.addEventListener('change', validatePasswords);
+        password2.addEventListener('keyup', validatePasswords);
+    }
+});
+</script>
+{% endblock %}

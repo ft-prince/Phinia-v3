@@ -1,0 +1,159 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}Verify EP Check{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-card {
+        background-color: #222;
+        border: 1px solid #444;
+    }
+    .verify-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+    }
+    .mechanism-table th {
+        background-color: #333;
+        color: #ff0000;
+        border-color: #444;
+    }
+    .mechanism-table td {
+        border-color: #444;
+    }
+    .status-ok {
+        background-color: rgba(76, 175, 80, 0.2);
+        color: #4CAF50;
+        font-weight: bold;
+    }
+    .status-ng {
+        background-color: rgba(244, 67, 54, 0.2);
+        color: #f44336;
+        font-weight: bold;
+    }
+    .status-na {
+        background-color: rgba(255, 152, 0, 0.2);
+        color: #ff9800;
+        font-weight: bold;
+    }
+    .verification-actions {
+        display: flex;
+        gap: 10px;
+    }
+    .btn-approve {
+        background-color: #4CAF50;
+        border-color: #4CAF50;
+    }
+    .btn-reject {
+        background-color: #f44336;
+        border-color: #f44336;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3">
+            <i class="fas fa-check-double me-2"></i>
+            {{ title }}
+        </h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_detail' pk=ep_check.id %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Detail
+        </a>
+    </div>
+</div>
+
+<!-- EP Check Details Card -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Check Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <p><strong>Date:</strong> {{ ep_check.date }}</p>
+                <p><strong>Current Model:</strong> {{ ep_check.current_model }}</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Shift:</strong> {{ ep_check.get_shift_display  }}</p>
+                <p><strong>Operator:</strong> {{ ep_check.operator.username }}</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Created At:</strong> {{ ep_check.created_at|date:"M d, Y H:i" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- EP Mechanism Statuses Table -->
+<div class="card verify-card mb-4">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Mechanism Status Review</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mechanism-table mb-0">
+                <thead>
+                    <tr>
+                        <th width="25%">Mechanism ID</th>
+                        <th width="10%">Status</th>
+                        <th width="10%">Working</th>
+                        <th width="10%">N/A</th>
+                        <th width="20%">Alternative Method</th>
+                        <th width="25%">Operator Comments</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for status in mechanism_statuses %}
+                    <tr>
+                        <td>{{ status.get_ep_mechanism_id_display }}</td>
+                        <td class="{% if status.is_not_applicable %}status-na{% elif status.status == 'OK' %}status-ok{% elif status.status == 'NG' %}status-ng{% endif %}">
+                            {% if status.is_not_applicable %}
+                                N/A
+                            {% else %}
+                                {{ status.status }}
+                            {% endif %}
+                        </td>
+                        <td>{{ status.is_working|yesno:"Yes,No" }}</td>
+                        <td>{{ status.is_not_applicable|yesno:"Yes,No" }}</td>
+                        <td>{{ status.alternative_method }}</td>
+                        <td>{{ status.comments }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Verification Form -->
+<div class="card verify-card">
+    <div class="card-header verify-header">
+        <h5 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Verification Decision</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group mb-4">
+                <label for="comments" class="form-label">Verification Comments:</label>
+                <textarea class="form-control" id="comments" name="comments" rows="3" placeholder="Enter your comments regarding this verification..."></textarea>
+            </div>
+            
+            <div class="verification-actions mt-4">
+                <button type="submit" name="action" value="approve" class="btn btn-approve btn-lg">
+                    <i class="fas fa-check me-2"></i>Approve
+                </button>
+                <button type="submit" name="action" value="reject" class="btn btn-reject btn-lg">
+                    <i class="fas fa-times me-2"></i>Reject
+                </button>
+                <a href="{% url 'ep_check_detail' pk=ep_check.id %}" class="btn btn-secondary btn-lg">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

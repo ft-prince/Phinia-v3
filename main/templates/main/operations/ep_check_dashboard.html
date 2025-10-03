@@ -1,0 +1,508 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block title %}EP Check Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-card {
+        background-color: #222;
+        border: 1px solid #444;
+    }
+    .dashboard-header {
+        background-color: #333;
+        border-bottom: 1px solid #444;
+    }
+    .stats-card {
+        background-color: #333;
+        border-left: 4px solid #ff0000;
+        transition: transform 0.3s;
+    }
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    .filter-form {
+        background-color: #222;
+        border: 1px solid #444;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 20px;
+    }
+    .mechanism-stat-row {
+        transition: background-color 0.3s;
+        border-left: 3px solid transparent;
+    }
+    .mechanism-stat-row:hover {
+        background-color: #2a2a2a;
+        border-left: 3px solid #ff0000;
+    }
+    .progress {
+        height: 10px;
+        background-color: #444;
+    }
+    .progress-bar-success {
+        background-color: #4CAF50;
+    }
+    .progress-bar-danger {
+        background-color: #f44336;
+    }
+    .date-filter-inputs {
+        display: flex;
+        align-items: center;
+    }
+    .date-filter-inputs .date-separator {
+        margin: 0 10px;
+        color: #fff;
+    }
+    .trends-chart-container {
+        height: 300px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="mb-3"><i class="fas fa-chart-line me-2"></i>EP Check Dashboard</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'ep_check_list' %}" class="btn btn-outline-light">
+            <i class="fas fa-list me-2"></i>View All Checks
+        </a>
+        <a href="{% url 'ep_check_create' %}" class="btn btn-primary ms-2">
+            <i class="fas fa-plus me-2"></i>New Check
+        </a>
+    </div>
+</div>
+
+<!-- Date Range Filter -->
+<div class="filter-form">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Quick Date Range:</label>
+            <div class="btn-group" role="group">
+                <a href="?days=7" class="btn btn-outline-light {% if days == 7 %}active{% endif %}">7 Days</a>
+                <a href="?days=30" class="btn btn-outline-light {% if days == 30 %}active{% endif %}">30 Days</a>
+                <a href="?days=90" class="btn btn-outline-light {% if days == 90 %}active{% endif %}">90 Days</a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Custom Date Range:</label>
+            <div class="date-filter-inputs">
+                <input type="date" name="custom_start_date" class="form-control" value="{{ custom_start_date|date:'Y-m-d' }}" 
+                       max="{{ today|date:'Y-m-d' }}">
+                <span class="date-separator">to</span>
+                <input type="date" name="custom_end_date" class="form-control" value="{{ custom_end_date|date:'Y-m-d' }}" 
+                       max="{{ today|date:'Y-m-d' }}">
+                <button type="submit" class="btn btn-primary ms-2">Apply</button>
+            </div>
+        </div>
+        <div class="col-md-3 text-end">
+            <label class="form-label">Current Range:</label>
+            <p class="text-light mb-0">{{ start_date|date:"M d, Y" }} - {{ end_date|date:"M d, Y" }}</p>
+            <a href="{% url 'ep_check_dashboard' %}" class="btn btn-outline-light mt-2">
+                <i class="fas fa-sync-alt me-1"></i> Reset
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Summary Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-clipboard-list me-2"></i>Total Checks</h5>
+                <h2 class="text-white">{{ stats.total_checks }}</h2>
+                <p class="text-muted mb-0">{{ start_date|date:"M d" }} to {{ end_date|date:"M d, Y" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-check-circle me-2"></i>Approved</h5>
+                <h2 class="text-white">{{ stats.approved_count }}</h2>
+                <p class="text-muted mb-0">{{ stats.success_rate|floatformat:1 }}% success rate</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-times-circle me-2"></i>Rejected</h5>
+                <h2 class="text-white">{{ stats.rejected_count }}</h2>
+                <p class="text-muted mb-0">{{ stats.rejection_rate|floatformat:1 }}% rejection rate</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stats-card">
+            <div class="card-body">
+                <h5 class="card-title text-white"><i class="fas fa-hourglass-half me-2"></i>Completion</h5>
+                <h2 class="text-white">{{ stats.completion_rate|floatformat:1 }}%</h2>
+                <p class="text-muted mb-0">Overall completion rate</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Time Series Trend -->
+<div class="card dashboard-card mb-4">
+    <div class="card-header dashboard-header">
+        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>EP Check Trends</h5>
+    </div>
+    <div class="card-body">
+        <div class="trends-chart-container">
+            <canvas id="trendsChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <!-- Mechanism Performance Chart -->
+    <div class="col-md-8">
+        <div class="card dashboard-card mb-4">
+            <div class="card-header dashboard-header">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Mechanism Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="mechanismChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Status Distribution -->
+    <div class="col-md-4">
+        <div class="card dashboard-card mb-4">
+            <div class="card-header dashboard-header">
+                <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Approved</span>
+                        <span>{{ stats.approved_count }} ({{ stats.success_rate|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-success" role="progressbar" 
+                             style="width: {{ stats.success_rate }}%"></div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Rejected</span>
+                        <span>{{ stats.rejected_count }} ({{ stats.rejection_rate|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-danger" role="progressbar" 
+                             style="width: {{ stats.rejection_rate }}%"></div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Pending</span>
+                        <span>{{ stats.pending_count }} ({{ stats.pending_percentage|floatformat:1 }}%)</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar bg-warning" role="progressbar" 
+                             style="width: {{ stats.pending_percentage }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mechanism Statistics Table -->
+<div class="card dashboard-card">
+    <div class="card-header dashboard-header">
+        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Mechanism Statistics</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Mechanism</th>
+                        <th>Total Checks</th>
+                        <th>OK Rate</th>
+                        <th>NG Rate</th>
+                        <th>N/A Count</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m_id, m_stats in mechanism_stats.items %}
+                    <tr class="mechanism-stat-row">
+                        <td>{{ m_stats.name }}</td>
+                        <td>{{ m_stats.total }}</td>
+                        <td>{{ m_stats.ok_count }} ({{ m_stats.ok_rate|floatformat:1 }}%)</td>
+                        <td>{{ m_stats.ng_count }} ({{ m_stats.ng_rate|floatformat:1 }}%)</td>
+                        <td>{{ m_stats.na_count }}</td>
+                        <td>
+                            <div class="progress">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ m_stats.ok_rate }}%"></div>
+                                <div class="progress-bar bg-danger" role="progressbar" 
+                                     style="width: {{ m_stats.ng_rate }}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Parse chart data from server
+    const chartData = {{ chart_data|safe }};
+    const trendsData = {{ trends_data|safe }};
+    
+    // Time Series Trend Chart
+    const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+    const trendsChart = new Chart(trendsCtx, {
+        type: 'line',
+        data: {
+            labels: trendsData.dates,
+            datasets: [
+                {
+                    label: 'Total Checks',
+                    data: trendsData.total_counts,
+                    backgroundColor: 'rgba(33, 150, 243, 0.2)',
+                    borderColor: 'rgba(33, 150, 243, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    fill: true
+                },
+                {
+                    label: 'Approved',
+                    data: trendsData.approved_counts,
+                    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                },
+                {
+                    label: 'Rejected',
+                    data: trendsData.rejected_counts,
+                    backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                    borderColor: 'rgba(244, 67, 54, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Checks',
+                        color: '#ffffff'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#ffffff'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#ffffff'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff'
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            }
+        }
+    });
+    
+    // Mechanism Performance Chart
+    const mechanismCtx = document.getElementById('mechanismChart').getContext('2d');
+    const mechanismChart = new Chart(mechanismCtx, {
+        type: 'bar',
+        data: {
+            labels: chartData.labels,
+            datasets: [
+                {
+                    label: 'OK Rate (%)',
+                    data: chartData.ok_rates,
+                    backgroundColor: 'rgba(76, 175, 80, 0.8)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 1,
+                    order: 2
+                },
+                {
+                    label: 'NG Count',
+                    data: chartData.ng_counts,
+                    backgroundColor: 'rgba(244, 67, 54, 0.8)',
+                    borderColor: 'rgba(244, 67, 54, 1)',
+                    borderWidth: 1,
+                    type: 'line',
+                    yAxisID: 'y1',
+                    order: 1
+                },
+                {
+                    label: 'OK Count',
+                    data: chartData.ok_counts,
+                    backgroundColor: 'rgba(46, 125, 50, 0.8)',
+                    borderColor: 'rgba(46, 125, 50, 1)',
+                    borderWidth: 1,
+                    type: 'line',
+                    yAxisID: 'y1',
+                    order: 0
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'OK Rate (%)',
+                        color: '#ffffff'
+                    },
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#ffffff'
+                    }
+                },
+                y1: {
+                    beginAtZero: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Count',
+                        color: '#ffffff'
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    ticks: {
+                        color: '#ffffff'
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: '#ffffff',
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (context.dataset.label === 'OK Rate (%)') {
+                                return context.dataset.label + ': ' + context.raw.toFixed(1) + '%';
+                            } else {
+                                return context.dataset.label + ': ' + context.raw;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Status Distribution Chart
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    const statusChart = new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Approved', 'Rejected', 'Pending'],
+            datasets: [{
+                data: [
+                    {{ stats.approved_count }}, 
+                    {{ stats.rejected_count }}, 
+                    {{ stats.pending_count }}
+                ],
+                backgroundColor: [
+                    'rgba(76, 175, 80, 0.8)',
+                    'rgba(244, 67, 54, 0.8)',
+                    'rgba(255, 152, 0, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(76, 175, 80, 1)',
+                    'rgba(244, 67, 54, 1)',
+                    'rgba(255, 152, 0, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#ffffff',
+                        padding: 20
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

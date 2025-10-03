@@ -1,0 +1,359 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}FTQ Record Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .detail-card .card-title {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 10px;
+    }
+    
+    .detail-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    
+    .detail-list li {
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+    }
+    
+    .detail-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 500;
+    }
+    
+    .detail-value {
+        color: #ffffff;
+        font-weight: 600;
+    }
+    
+    .ftq-badge {
+        font-size: 1.2rem;
+        font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 20px;
+    }
+    
+    .ftq-high {
+        background-color: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+    }
+    
+    .ftq-medium {
+        background-color: rgba(255, 165, 0, 0.2);
+        color: #ffa500;
+    }
+    
+    .ftq-low {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ff0000;
+    }
+    
+    .defect-table {
+        width: 100%;
+        margin-bottom: 0;
+        color: #ffffff;
+    }
+    
+    .defect-table thead th {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ffffff;
+        font-weight: 600;
+        padding: 10px;
+        border-bottom: 2px solid #ff0000;
+    }
+    
+    .defect-table tbody tr:nth-child(odd) {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .defect-table tbody tr:nth-child(even) {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    
+    .defect-table tbody tr:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .defect-table td {
+        padding: 10px;
+        vertical-align: middle;
+    }
+    
+    .defect-count {
+        background-color: #ff0000;
+        color: #ffffff;
+        font-weight: 600;
+        padding: 4px 10px;
+        border-radius: 15px;
+        display: inline-block;
+        min-width: 40px;
+        text-align: center;
+    }
+    
+    .status-badge {
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 20px;
+    }
+    
+    .status-verified {
+        background-color: rgba(0, 255, 0, 0.2);
+        color: #00ff00;
+    }
+    
+    .status-pending {
+        background-color: rgba(255, 165, 0, 0.2);
+        color: #ffa500;
+    }
+    
+    .action-button {
+        transition: all 0.3s;
+        border-width: 2px;
+        font-weight: 500;
+    }
+    
+    .action-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="fas fa-clipboard-check me-2"></i>FTQ Record Details</h2>
+        <div>
+            <a href="{% url 'ftq_list' %}" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-1"></i> Back to List
+            </a>
+            <a href="{% url 'ftq_record_edit' pk=ftq_record.id %}" class="btn btn-primary ms-2">
+                <i class="fas fa-edit me-1"></i> Edit Record
+            </a>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Main Info Card -->
+        <div class="col-md-4">
+            <div class="detail-card">
+                <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Record Information</h5>
+                <ul class="detail-list">
+                    <li>
+                        <span class="detail-label">Date:</span>
+                        <span class="detail-value">{{ ftq_record.date|date:"F d, Y" }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Shift:</span>
+                        <span class="detail-value">{{ ftq_record.get_shift_type_display }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Model:</span>
+                        <span class="detail-value">{{ ftq_record.get_model_name_display }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Julian Date:</span>
+                        <span class="detail-value">{{ ftq_record.julian_date|date:"Y-m-d" }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Production/Day:</span>
+                        <span class="detail-value">{{ ftq_record.total_inspected }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Production/Shift:</span>
+                        <span class="detail-value">{{ ftq_record.production_per_shift }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Created By:</span>
+                        <span class="detail-value">{{ ftq_record.created_by.get_full_name|default:ftq_record.created_by.username }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Created At:</span>
+                        <span class="detail-value">{{ ftq_record.created_at|date:"F d, Y H:i" }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Verified By:</span>
+                        <span class="detail-value">
+                            {% if ftq_record.verified_by %}
+                                {{ ftq_record.verified_by.get_full_name|default:ftq_record.verified_by.username }}
+                            {% else %}
+                                <span class="text-warning">Not verified</span>
+                            {% endif %}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Quality Stats Card -->
+            <div class="detail-card">
+                <h5 class="card-title"><i class="fas fa-chart-pie me-2"></i>Quality Metrics</h5>
+                <div class="text-center mb-3">
+                    <span class="ftq-badge 
+                        {% if ftq_percentage >= 99 %}ftq-high{% elif ftq_percentage >= 95 %}ftq-medium{% else %}ftq-low{% endif %}">
+                        {{ ftq_percentage|floatformat:2 }}%
+                    </span>
+                    <p class="mt-2 text-white">First Time Quality</p>
+                </div>
+                
+                <ul class="detail-list mt-3">
+                    <li>
+                        <span class="detail-label">Total Production:</span>
+                        <span class="detail-value">{{ ftq_record.total_inspected }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Total Defects:</span>
+                        <span class="detail-value">{{ ftq_record.total_defects }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Good Units:</span>
+                        <span class="detail-value">{{ ftq_record.total_inspected|add:"-"|add:ftq_record.total_defects }}</span>
+                    </li>
+                    <li>
+                        <span class="detail-label">Defect Rate:</span>
+                        <span class="detail-value">
+                            {% if ftq_record.total_inspected > 0 %}
+                                {{ ftq_record.total_defects|divisibleby:ftq_record.total_inspected|floatformat:2 }}%
+                            {% else %}
+                                0.00%
+                            {% endif %}
+                        </span>
+                    </li>
+                </ul>
+                
+                <!-- Verification Status -->
+                <div class="text-center mt-4">
+                    <span class="status-badge {% if ftq_record.verified_by %}status-verified{% else %}status-pending{% endif %}">
+                        {% if ftq_record.verified_by %}
+                            <i class="fas fa-check-circle me-1"></i> Verified
+                        {% else %}
+                            <i class="fas fa-clock me-1"></i> Pending Verification
+                        {% endif %}
+                    </span>
+                    
+                    {% if not ftq_record.verified_by and user.user_type in 'shift_supervisor,quality_supervisor' %}
+                    <div class="mt-3">
+                        <a href="{% url 'ftq_record_verify' pk=ftq_record.id %}" class="btn btn-success action-button">
+                            <i class="fas fa-check-circle me-1"></i> Verify Record
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Defect Lists -->
+        <div class="col-md-8">
+            <!-- Default Defects Card -->
+            <div class="detail-card">
+                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Default Defects</h5>
+                {% if default_defects %}
+                <div class="table-responsive">
+                    <table class="defect-table">
+                        <thead>
+                            <tr>
+                                <th width="10%">S.No.</th>
+                                <th width="65%">Defect Description</th>
+                                <th width="25%" class="text-center">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for defect in default_defects %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    {{ defect.defect_type.name }}
+                                    {% if defect.defect_type.is_critical %}
+                                    <span class="badge bg-danger ms-2">Critical</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="defect-count">{{ defect.count }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No default defects recorded
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Custom Defects Card -->
+            <div class="detail-card">
+                <h5 class="card-title"><i class="fas fa-plus-circle me-2"></i>Additional Defects</h5>
+                {% if custom_defects %}
+                <div class="table-responsive">
+                    <table class="defect-table">
+                        <thead>
+                            <tr>
+                                <th width="10%">S.No.</th>
+                                <th width="65%">Defect Description</th>
+                                <th width="25%" class="text-center">Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for defect in custom_defects %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ defect.defect_type_custom.name }}</td>
+                                <td class="text-center">
+                                    <span class="defect-count">{{ defect.count }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-info-circle me-2"></i> No additional defects recorded
+                </div>
+                {% endif %}
+            </div>
+            {% if user.user_type in 'shift_supervisor,quality_supervisor' or user.is_superuser %}
+>
+{% endif %}
+            <!-- Action Buttons -->
+            <div class="text-end mt-3">
+                <a href="{% url 'ftq_record_edit' pk=ftq_record.id %}" class="btn btn-primary action-button">
+                    <i class="fas fa-edit me-1"></i> Edit Record
+                </a>
+                
+                {% if user.is_superuser or user == ftq_record.created_by %}
+                <a href="{% url 'ftq_record_delete' pk=ftq_record.id %}" class="btn btn-danger action-button ms-2">
+                    <i class="fas fa-trash me-1"></i> Delete Record
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

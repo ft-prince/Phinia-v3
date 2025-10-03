@@ -1,0 +1,426 @@
+{% extends "main/base.html" %}
+{% load static %}
+
+{% block title %}Edit FTQ Record{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background-color: #111111;
+        border: 2px solid #ffffff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
+    }
+    
+    .form-card .card-title {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 10px;
+    }
+    
+    .form-label {
+        color: #ffffff;
+        font-weight: 500;
+    }
+    
+    .form-control, .form-select {
+        background-color: #111111;
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #111111;
+        color: #ffffff;
+        border-color: #ff0000;
+        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
+    }
+    
+    .defect-table {
+        width: 100%;
+        margin-bottom: 0;
+        color: #ffffff;
+    }
+    
+    .defect-table thead th {
+        background-color: rgba(255, 0, 0, 0.2);
+        color: #ffffff;
+        font-weight: 600;
+        padding: 12px 15px;
+        border-bottom: 2px solid #ff0000;
+        text-align: left;
+    }
+    
+    .defect-table tbody tr:nth-child(odd) {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .defect-table tbody tr:nth-child(even) {
+        background-color: rgba(0, 0, 0, 0.3);
+    }
+    
+    .defect-table tbody tr:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .defect-table td {
+        padding: 12px 15px;
+        vertical-align: middle;
+    }
+    
+    .custom-defect-row {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 10px;
+    }
+    
+    .custom-defect-row:hover {
+        background-color: rgba(255, 0, 0, 0.1);
+    }
+    
+    .btn-add-custom {
+        background-color: transparent;
+        border: 2px solid #ffffff;
+        color: #ffffff;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .btn-add-custom:hover {
+        background-color: rgba(255, 0, 0, 0.5);
+        border-color: #ffffff;
+        color: #ffffff;
+        transform: translateY(-2px);
+    }
+    
+    .btn-remove-custom {
+        background-color: transparent;
+        border: 2px solid #ff0000;
+        color: #ff0000;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .btn-remove-custom:hover {
+        background-color: rgba(255, 0, 0, 0.5);
+        border-color: #ffffff;
+        color: #ffffff;
+    }
+    
+    .form-section-heading {
+        color: #ff0000;
+        font-weight: 600;
+        font-size: 1.1rem;
+        margin: 20px 0 15px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding-bottom: 8px;
+    }
+    
+    .action-btn {
+        font-weight: 500;
+        transition: all 0.3s;
+        border-width: 2px;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-white"><i class="fas fa-edit me-2"></i>Edit FTQ Record</h2>
+        <div>
+            <a href="{% url 'ftq_record_detail' pk=ftq_record.id %}" class="btn btn-outline-light">
+                <i class="fas fa-arrow-left me-1"></i> Back to Detail
+            </a>
+            <a href="{% url 'ftq_list' %}" class="btn btn-outline-light ms-2">
+                <i class="fas fa-list me-1"></i> All Records
+            </a>
+        </div>
+    </div>
+    
+    <form method="post" id="ftqForm">
+        {% csrf_token %}
+        
+        <!-- Main Information Card -->
+        <div class="form-card">
+            <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Record Information</h5>
+            
+            <div class="row g-3">
+                <!-- Date field -->
+                <div class="col-md-3">
+                    <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                    {{ form.date }}
+                    {% if form.date.errors %}
+                        <div class="text-danger mt-1">{{ form.date.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Shift Type field -->
+                <div class="col-md-3">
+                    <label for="{{ form.shift_type.id_for_label }}" class="form-label">Shift</label>
+                    {{ form.shift_type }}
+                    {% if form.shift_type.errors %}
+                        <div class="text-danger mt-1">{{ form.shift_type.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Model Name field -->
+                <div class="col-md-3">
+                    <label for="{{ form.model_name.id_for_label }}" class="form-label">Model</label>
+                    {{ form.model_name }}
+                    {% if form.model_name.errors %}
+                        <div class="text-danger mt-1">{{ form.model_name.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Julian Date field -->
+                <div class="col-md-3">
+                    <label for="{{ form.julian_date.id_for_label }}" class="form-label">Julian Date</label>
+                    {{ form.julian_date }}
+                    {% if form.julian_date.errors %}
+                        <div class="text-danger mt-1">{{ form.julian_date.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row g-3 mt-3">
+                <!-- Total Inspected field -->
+                <div class="col-md-6">
+                    <label for="{{ form.total_inspected.id_for_label }}" class="form-label">Production/Day</label>
+                    {{ form.total_inspected }}
+                    {% if form.total_inspected.errors %}
+                        <div class="text-danger mt-1">{{ form.total_inspected.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <!-- Production per Shift field -->
+                <div class="col-md-6">
+                    <label for="{{ form.production_per_shift.id_for_label }}" class="form-label">Production Data/Shift</label>
+                    {{ form.production_per_shift }}
+                    {% if form.production_per_shift.errors %}
+                        <div class="text-danger mt-1">{{ form.production_per_shift.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Default Defects Card -->
+        <div class="form-card">
+            <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Default Defects</h5>
+            
+            <div class="table-responsive">
+                <table class="defect-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">S.No.</th>
+                            <th width="65%">Issues/Defects</th>
+                            <th width="25%">Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for defect in default_defects %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                {{ defect.name }}
+                                {% if defect.is_critical %}
+                                <span class="badge bg-danger ms-2">Critical</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <input type="number" class="form-control defect-count" 
+                                       name="defect_{{ defect.id }}" min="0" 
+                                       value="{{ defect.current_count }}">
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4">
+                                <div class="text-muted">
+                                    <i class="fas fa-info-circle me-2"></i> No default defect types available
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Custom Defects Card -->
+        <div class="form-card">
+            <h5 class="card-title"><i class="fas fa-plus-circle me-2"></i>Additional Defects</h5>
+            
+            <div id="customDefectsContainer">
+                <!-- Existing custom defects -->
+                {% for custom_record in custom_defect_records %}
+                <div class="custom-defect-row existing-custom-defect" data-id="{{ custom_record.custom_defect.id }}">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-7">
+                            <label class="form-label">Defect Description</label>
+                            <input type="text" class="form-control custom-defect-name" 
+                                   name="custom_defect_name_existing_{{ custom_record.custom_defect.id }}" 
+                                   value="{{ custom_record.custom_defect.name }}" readonly>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Count</label>
+                            <input type="number" class="form-control custom-defect-count" 
+                                   name="custom_defect_{{ custom_record.custom_defect.id }}" 
+                                   min="0" value="{{ custom_record.count }}">
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="button" class="btn btn-remove-custom w-100 remove-custom-defect"
+                                    data-id="{{ custom_record.custom_defect.id }}">
+                                <i class="fas fa-trash me-1"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <!-- New custom defects will be added here -->
+                <div id="customDefectRows"></div>
+                
+                <input type="hidden" id="customDefectCount" name="custom_defect_count" value="0">
+                
+                <div class="text-center mt-3">
+                    <button type="button" id="addCustomDefect" class="btn btn-add-custom">
+                        <i class="fas fa-plus me-1"></i> Add Custom Defect
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Action Buttons -->
+        <div class="text-center mt-4 mb-5">
+            <button type="submit" class="btn btn-primary action-btn px-4">
+                <i class="fas fa-save me-1"></i> Update Record
+            </button>
+            <a href="{% url 'ftq_record_detail' pk=ftq_record.id %}" class="btn btn-outline-light action-btn ms-3">
+                <i class="fas fa-times me-1"></i> Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Custom defect counter
+    let customDefectIndex = 0;
+    
+    // Add Custom Defect button click handler
+    document.getElementById('addCustomDefect').addEventListener('click', function() {
+        const container = document.getElementById('customDefectRows');
+        
+        const row = document.createElement('div');
+        row.className = 'custom-defect-row';
+        row.innerHTML = `
+            <div class="row g-3 align-items-center">
+                <div class="col-md-7">
+                    <label class="form-label">Defect Description</label>
+                    <input type="text" class="form-control custom-defect-name" 
+                           name="custom_defect_name_${customDefectIndex}" 
+                           placeholder="Enter defect description" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Count</label>
+                    <input type="number" class="form-control custom-defect-count" 
+                           name="custom_defect_count_${customDefectIndex}" 
+                           min="0" value="0" required>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-remove-custom w-100 remove-custom-defect">
+                        <i class="fas fa-trash me-1"></i> Remove
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(row);
+        
+        // Update counter
+        customDefectIndex++;
+        document.getElementById('customDefectCount').value = customDefectIndex;
+        
+        // Add event listener to the new remove button
+        row.querySelector('.remove-custom-defect').addEventListener('click', function() {
+            row.remove();
+            
+            // Recount custom defects
+            updateCustomDefectCount();
+        });
+    });
+    
+    // Add event listeners to existing remove buttons
+    document.querySelectorAll('.existing-custom-defect .remove-custom-defect').forEach(button => {
+        button.addEventListener('click', function() {
+            const defectId = this.dataset.id;
+            const row = this.closest('.custom-defect-row');
+            
+            // Create a hidden input to mark this custom defect for deletion
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = `delete_custom_defect_${defectId}`;
+            hiddenInput.value = '1';
+            document.getElementById('ftqForm').appendChild(hiddenInput);
+            
+            // Hide the row
+            row.style.display = 'none';
+        });
+    });
+    
+    // Function to update custom defect count
+    function updateCustomDefectCount() {
+        const newCustomRows = document.querySelectorAll('#customDefectRows .custom-defect-row');
+        document.getElementById('customDefectCount').value = newCustomRows.length;
+    }
+    
+    // Form validation
+    document.getElementById('ftqForm').addEventListener('submit', function(event) {
+        const totalInspected = parseInt(document.getElementById('id_total_inspected').value) || 0;
+        
+        // Calculate total defects
+        let totalDefects = 0;
+        
+        // Count standard defects
+        document.querySelectorAll('.defect-count').forEach(input => {
+            totalDefects += parseInt(input.value) || 0;
+        });
+        
+        // Count existing custom defects (that aren't marked for deletion)
+        document.querySelectorAll('.existing-custom-defect').forEach(row => {
+            if (row.style.display !== 'none') {
+                const countInput = row.querySelector('.custom-defect-count');
+                totalDefects += parseInt(countInput.value) || 0;
+            }
+        });
+        
+        // Count new custom defects
+        document.querySelectorAll('#customDefectRows .custom-defect-count').forEach(input => {
+            totalDefects += parseInt(input.value) || 0;
+        });
+        
+        // Validate that total defects doesn't exceed total inspected
+        if (totalDefects > totalInspected) {
+            event.preventDefault();
+            alert('Total defects cannot exceed total production. Please check your numbers.');
+        }
+    });
+});
+</script>
+{% endblock %}

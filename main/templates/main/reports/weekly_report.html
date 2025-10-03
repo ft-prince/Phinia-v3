@@ -1,0 +1,105 @@
+{% extends 'main/base.html' %}
+{% load custom_tags %}
+
+{% block title %}Weekly Report{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Weekly Report ({{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }})</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Weekly Chart -->
+                    <div class="mb-4">
+                        <canvas id="weeklyChart"></canvas>
+                    </div>
+
+                    <!-- Daily Stats Table -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Total Checklists</th>
+                                    <th>Approved</th>
+                                    <th>Rejected</th>
+                                    <th>Approval Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for date, stats in daily_stats.items %}
+                                <tr>
+                                    <td>{{ date|date:"Y-m-d" }}</td>
+                                    <td>{{ stats.total }}</td>
+                                    <td>{{ stats.approved }}</td>
+                                    <td>{{ stats.rejected }}</td>
+                                    <td>
+                                        {% if stats.total > 0 %}
+                                            {{ stats.approved|divisibleby:stats.total|multiply:100|floatformat:1 }}%
+                                        {% else %}
+                                            N/A
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('weeklyChart').getContext('2d');
+    const dates = [{% for date, stats in daily_stats.items %}'{{ date|date:"m/d" }}',{% endfor %}];
+    const totals = [{% for date, stats in daily_stats.items %}{{ stats.total }},{% endfor %}];
+    const approved = [{% for date, stats in daily_stats.items %}{{ stats.approved }},{% endfor %}];
+    const rejected = [{% for date, stats in daily_stats.items %}{{ stats.rejected }},{% endfor %}];
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Total Checklists',
+                data: totals,
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Approved',
+                data: approved,
+                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Rejected',
+                data: rejected,
+                backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Checklists'
+                    }
+                }
+            }
+        }
+    });
+});
