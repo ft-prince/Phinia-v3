@@ -195,11 +195,11 @@
                             <a href="{% url 'ep_check_detail' pk=check.id %}" class="btn btn-sm btn-info">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            {% if check.status == 'pending' and user == check.operator %}
+                            {% comment %} {% if check.status == 'pending' and user == check.operator %}
                             <a href="{% url 'ep_check_edit_statuses' pk=check.id %}" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i>
                             </a>
-                            {% endif %}
+                            {% endif %} {% endcomment %}
                             {% if user.is_superuser %}
                             <a href="{% url 'ep_check_delete' pk=check.id %}" class="btn btn-sm btn-danger">
                                 <i class="fas fa-trash"></i>

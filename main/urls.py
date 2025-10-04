@@ -139,18 +139,18 @@ path('verify-subgroup-ajax/', views.verify_subgroup_ajax, name='verify_subgroup_
     
     
 # DTPM URLs
-path('dtpm-new/', views.dtpm_new_list, name='dtpm_new_list'),
-path('dtpm-new/create/', views.dtpm_checklist_create, name='dtpm_checklist_create'),
-path('dtpm-new/<int:pk>/', views.dtpm_new_detail, name='dtpm_new_detail'),
-path('dtpm-new/<int:pk>/edit-checks/', views.dtpm_new_edit_checks, name='dtpm_new_edit_checks'),
-path('dtpm-new/<int:pk>/verify/', views.dtpm_new_verify, name='dtpm_new_verify'),
-path('dtpm-new/<int:pk>/delete/', views.dtpm_new_delete, name='dtpm_new_delete'),
-path('dtpm-new/report-issue/<int:check_id>/', views.dtpm_new_report_issue, name='dtpm_new_report_issue'),
-path('dtpm-new/resolve-issue/<int:issue_id>/', views.dtpm_new_resolve_issue, name='dtpm_new_resolve_issue'),
-path('dtpm-new/dashboard/', views.dtpm_new_dashboard, name='dtpm_new_dashboard'),
-path('reference-image/<int:checkpoint_id>/', views.serve_reference_image, name='serve_reference_image'),
-path('checkpoint-image/<int:checkpoint_id>/', views.serve_checkpoint_image, name='serve_checkpoint_image'),
-path('dtpm-images/<int:image_id>/', views.dtpm_image_view, name='dtpm_image_view'),
+    path('dtpm-new/', views.dtpm_new_list, name='dtpm_new_list'),
+    path('dtpm-new/create/', views.dtpm_checklist_create, name='dtpm_checklist_create'),
+    path('dtpm-new/<int:pk>/', views.dtpm_new_detail, name='dtpm_new_detail'),
+    path('dtpm-new/<int:pk>/edit-checks/', views.dtpm_new_edit_checks, name='dtpm_new_edit_checks'),
+    path('dtpm-new/<int:pk>/verify/', views.dtpm_new_verify, name='dtpm_new_verify'),
+    path('dtpm-new/<int:pk>/delete/', views.dtpm_new_delete, name='dtpm_new_delete'),
+    path('dtpm-new/report-issue/<int:check_id>/', views.dtpm_new_report_issue, name='dtpm_new_report_issue'),
+    path('dtpm-new/resolve-issue/<int:issue_id>/', views.dtpm_new_resolve_issue, name='dtpm_new_resolve_issue'),
+    path('dtpm-new/dashboard/', views.dtpm_new_dashboard, name='dtpm_new_dashboard'),
+    path('reference-image/<int:checkpoint_id>/', views.serve_reference_image, name='serve_reference_image'),
+    path('checkpoint-image/<int:checkpoint_id>/', views.serve_checkpoint_image, name='serve_checkpoint_image'),
+    path('dtpm-images/<int:image_id>/', views.dtpm_image_view, name='dtpm_image_view'),
 
     # DTPM Verification URLs
     path('dtpm/new/<int:pk>/verify/', views.dtpm_new_verify, name='dtpm_new_verify'),

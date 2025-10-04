@@ -1,9 +1,7 @@
 {% extends 'main/base.html' %}
 {% load static %}
 
-{% block title %}
-Edit DTPM Checklist
-{% endblock %}
+{% block title %}Edit DTPM Checklist{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -127,6 +125,14 @@ Edit DTPM Checklist
         font-size: 0.8rem;
         margin-left: 10px;
     }
+    .no-image-placeholder {
+        background-color: #2a2a2a;
+        border: 2px dashed #555;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        color: #999;
+    }
 </style>
 {% endblock %}
 
@@ -167,52 +173,33 @@ Edit DTPM Checklist
     {% csrf_token %}
     
     {% for check_result in checkpoint_results %}
-    <!-- Checkpoint {{ check_result.checkpoint_number }} -->
     <div class="checkpoint-card">
         <div class="checkpoint-header">
             <h5>
-                <span class="checkpoint-number">{{ check_result.checkpoint_number }}</span>
-                {% if check_result.checkpoint_number == 1 %}
-                    EMERGENCY push button is Working Properly
-                {% elif check_result.checkpoint_number == 2 %}
-                    There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage
-                {% elif check_result.checkpoint_number == 3 %}
-                    All nuts and bolts should not be loose or free
-                {% elif check_result.checkpoint_number == 4 %}
-                    Check all sensors for damage or looseness
-                {% elif check_result.checkpoint_number == 5 %}
-                    Tower lamp & Tube light should be working properly
-                {% elif check_result.checkpoint_number == 6 %}
-                    All indicators & push buttons should be working properly
-                {% elif check_result.checkpoint_number == 7 %}
-                    Check Safety curtain working properly
-                {% endif %}
+                <span class="checkpoint-number">{{ check_result.checkpoint.checkpoint_number }}</span>
+                {{ check_result.checkpoint.title_english }}
             </h5>
-            <div class="hindi-text">
-                {% if check_result.checkpoint_number == 1 %}
-                    आपातकालीन पुश बटन ठीक से काम कर रहा है
-                {% elif check_result.checkpoint_number == 2 %}
-                    कोई हवा का रिसाव नहीं होना चाहिए और लुब्रिकेशन यूनिट माउंटिंग ढीली नहीं होनी चाहिए और तेल का रिसाव नहीं होना चाहिए
-                {% elif check_result.checkpoint_number == 3 %}
-                    सभी नट और बोल्ट ढीले या स्वतंत्र नहीं होने चाहिए
-                {% elif check_result.checkpoint_number == 4 %}
-                    सभी सेंसरों को क्षति या ढीलेपन के लिए जांचें
-                {% elif check_result.checkpoint_number == 5 %}
-                    टॉवर लैंप और ट्यूब लाइट ठीक से काम करनी चाहिए
-                {% elif check_result.checkpoint_number == 6 %}
-                    सभी संकेतक और पुश बटन ठीक से काम करने चाहिए
-                {% elif check_result.checkpoint_number == 7 %}
-                    सुरक्षा पर्दे का ठीक से काम करना जांचें
-                {% endif %}
-            </div>
+            {% if check_result.checkpoint.title_hindi %}
+            <div class="hindi-text">{{ check_result.checkpoint.title_hindi }}</div>
+            {% endif %}
+            {% if check_result.checkpoint.description %}
+            <small class="text-muted d-block mt-2">{{ check_result.checkpoint.description }}</small>
+            {% endif %}
         </div>
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-md-6">
                     <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=check_result.checkpoint_number %}" 
-                             alt="Reference Image for Checkpoint {{ check_result.checkpoint_number }}" 
+                        {% if check_result.checkpoint.reference_image and check_result.checkpoint.reference_image.name %}
+                        <img src="{{ check_result.checkpoint.reference_image.url }}" 
+                             alt="Reference Image for {{ check_result.checkpoint.title_english }}" 
                              class="reference-image">
+                        {% else %}
+                        <div class="no-image-placeholder">
+                            <i class="fas fa-image fa-3x mb-2"></i>
+                            <p>No reference image available</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -223,8 +210,8 @@ Edit DTPM Checklist
                                 <span class="changed-indicator">MODIFIED</span>
                             {% endif %}
                         </div>
-                        <select name="{{ checklist.id }}-status_{{ check_result.checkpoint_number }}" 
-                                id="status_{{ check_result.checkpoint_number }}" 
+                        <select name="status_{{ check_result.checkpoint.id }}" 
+                                id="status_{{ check_result.checkpoint.id }}" 
                                 class="form-select status-select {% if check_result.status == 'OK' %}status-ok{% elif check_result.status == 'NG' %}status-ng{% endif %}"
                                 data-original-value="{{ check_result.status }}">
                             <option value="">-- Select Status --</option>
@@ -233,14 +220,14 @@ Edit DTPM Checklist
                         </select>
                         
                         <div class="mt-3">
-                            <label class="status-label" for="comments_{{ check_result.checkpoint_number }}">
+                            <label class="status-label" for="comments_{{ check_result.checkpoint.id }}">
                                 Comments / टिप्पणियाँ:
                             </label>
-                            <textarea name="{{ checklist.id }}-comments_{{ check_result.checkpoint_number }}" 
-                                    id="comments_{{ check_result.checkpoint_number }}"
+                            <textarea name="comments_{{ check_result.checkpoint.id }}" 
+                                    id="comments_{{ check_result.checkpoint.id }}"
                                     class="form-control comments-textarea"
                                     placeholder="Enter any comments or observations..."
-                                    data-original-value="{{ check_result.comments }}">{{ check_result.comments }}</textarea>
+                                    data-original-value="{{ check_result.comments|default:'' }}">{{ check_result.comments }}</textarea>
                         </div>
                         
                         {% if check_result.updated_at != check_result.checked_at %}
@@ -277,25 +264,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const saveBtn = document.getElementById('saveBtn');
     let hasChanges = false;
 
-    // Function to check if there are changes
     function checkForChanges() {
         hasChanges = false;
         
-        // Check status selects
         statusSelects.forEach(select => {
             if (select.value !== select.dataset.originalValue) {
                 hasChanges = true;
             }
         });
         
-        // Check textareas
         textareas.forEach(textarea => {
-            if (textarea.value !== textarea.dataset.originalValue) {
+            const originalValue = textarea.dataset.originalValue || '';
+            if (textarea.value !== originalValue) {
                 hasChanges = true;
             }
         });
         
-        // Update save button
         if (hasChanges) {
             saveBtn.classList.remove('btn-warning');
             saveBtn.classList.add('btn-success');
@@ -307,13 +291,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Style the status dropdown options and add change detection
     statusSelects.forEach(select => {
         select.addEventListener('change', function() {
-            // Reset the select style
             this.classList.remove('status-ok', 'status-ng');
             
-            // Apply the appropriate class based on selected value
             if (this.value === 'OK') {
                 this.classList.add('status-ok');
             } else if (this.value === 'NG') {
@@ -324,12 +305,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add change detection to textareas
     textareas.forEach(textarea => {
         textarea.addEventListener('input', checkForChanges);
     });
 
-    // Warn user about unsaved changes
     window.addEventListener('beforeunload', function(e) {
         if (hasChanges) {
             e.preventDefault();
@@ -337,7 +316,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Don't warn when submitting the form
     document.querySelector('form').addEventListener('submit', function() {
         window.removeEventListener('beforeunload', arguments.callee);
     });

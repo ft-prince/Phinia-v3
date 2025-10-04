@@ -1337,18 +1337,6 @@ class ErrorPreventionCheck(models.Model):
 
     # Status choices
     OK_NG_CHOICES = [('OK', 'OK'), ('NG', 'NG')]
-    
-    # EP Mechanism ID choices - these are the 10 checkpoints
-    EP_MECHANISM_CHOICES = [
-        ('FMA-03-35-M01_T6', 'FMA-03-35-M01(T6) / FMA-03-35-M09(Gnome)'),
-        ('FMA-03-35-M02', 'FMA-03-35-M02 (T6/Gnome)'),
-        ('FMA-03-35-M03', 'FMA-03-35-M03 (T6) / FMA-03-35-M10 (Gnome)'),
-        ('FMA-03-35-M04', 'FMA-03-35-M04 (T6) / FMA-03-35-M11 (Gnome)'),
-        ('FMA-03-35-M05', 'FMA-03-35-M05 (T6) / FMA-03-35-M12 (Gnome)'),
-        ('FMA-03-35-M06', 'FMA-03-35-M06 (T6/Gnome)'),
-        ('FMA-03-35-M07', 'FMA-03-35-M07 (T6/Gnome)'),
-        ('FMA-03-35-M08', 'FMA-03-35-M08 (T6) / FMA-03-35-M13(Gnome)'),
-    ]
 
     STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -1357,7 +1345,7 @@ class ErrorPreventionCheck(models.Model):
         ('rejected', 'Rejected'),
     )
 
-    # Link to verification status instead of directly to shift
+    # Link to verification status
     verification_status = models.ForeignKey(
         'DailyVerificationStatus', 
         on_delete=models.CASCADE, 
@@ -1392,20 +1380,31 @@ class ErrorPreventionCheck(models.Model):
     # Current running model - will be auto-populated from ChecklistBase
     current_model = models.CharField(
         max_length=10, 
-        choices=[('P703', 'P703'),
-        ('U704', 'U704'),
-        ('FD', 'FD'),
-        ('SA', 'SA'),
-        ('Gnome', 'Gnome'),],
+        choices=[
+            ('P703', 'P703'),
+            ('U704', 'U704'),
+            ('FD', 'FD'),
+            ('SA', 'SA'),
+            ('Gnome', 'Gnome'),
+        ],
         verbose_name="Current Running Model",
         blank=True,
         null=True
     )
     
-    # Shift - will be auto-populated from ChecklistBase
+    # Shift choices
+    SHIFTS = [
+        ('S1', 'S1 - 6:30 AM to 6:30 PM'),
+        ('A', 'A - 6:30 AM to 3:00 PM'),
+        ('G', 'G - 8:30 AM to 5:00 PM'),
+        ('B', 'B - 3:00 PM to 11:30 PM'),
+        ('C', 'C - 11:30 PM to 6:30 AM'),
+        ('S2', 'S2 - 6:30 PM to 6:30 AM'),
+    ]
+    
     shift = models.CharField(
         max_length=10,
-        choices=ChecklistBase.SHIFTS,
+        choices=SHIFTS,
         verbose_name="Shift",
         blank=True,
         null=True
@@ -1416,12 +1415,7 @@ class ErrorPreventionCheck(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     def save(self, *args, **kwargs):
-        """Auto-populate model and shift from related ChecklistBase and track changes"""
-        # Store original values for history tracking
-        original_instance = None
-        if self.pk:
-            original_instance = ErrorPreventionCheck.objects.get(pk=self.pk)
-        
+        """Auto-populate model and shift from related ChecklistBase"""
         # Auto-populate model and shift from checklist
         if self.verification_status:
             checklist = self.verification_status.checklists.first()
@@ -1432,11 +1426,6 @@ class ErrorPreventionCheck(models.Model):
                     self.shift = checklist.shift
         
         super().save(*args, **kwargs)
-        
-        # Create history entry if this is an update
-        if original_instance:
-            from .history_utils import track_ep_check_changes
-            track_ep_check_changes(original_instance, self, kwargs.get('user'))
     
     @property
     def get_model_from_checklist(self):
@@ -1455,15 +1444,24 @@ class ErrorPreventionCheck(models.Model):
         return None
     
     @property
-    def latest_changes(self):
-        """Get the most recent 5 changes"""
-        return self.history.all()[:5]
+    def ok_count(self):
+        """Count of OK mechanisms"""
+        return self.mechanism_statuses.filter(status='OK', is_not_applicable=False).count()
     
     @property
-    def has_changes_today(self):
-        """Check if there were any changes today"""
-        today = timezone.now().date()
-        return self.history.filter(timestamp__date=today).exists()
+    def ng_count(self):
+        """Count of NG mechanisms"""
+        return self.mechanism_statuses.filter(status='NG', is_not_applicable=False).count()
+    
+    @property
+    def na_count(self):
+        """Count of N/A mechanisms"""
+        return self.mechanism_statuses.filter(is_not_applicable=True).count()
+    
+    @property
+    def total_mechanisms(self):
+        """Total number of mechanisms"""
+        return self.mechanism_statuses.count()
     
     class Meta:
         ordering = ['-date', '-created_at']
@@ -1476,8 +1474,74 @@ class ErrorPreventionCheck(models.Model):
             shift_display = self.verification_status.shift.get_shift_type_display()
         return f"EP Check - {self.date} - {shift_display}"
 
+
+class ErrorPreventionMechanism(models.Model):
+    """Master list of Error Prevention mechanisms - Admin controlled"""
+    
+    # EP Mechanism ID
+    mechanism_id = models.CharField(
+        max_length=50, 
+        unique=True,
+        verbose_name="EP Mechanism ID"
+    )
+    
+    # Description
+    description = models.TextField(
+        verbose_name="Mechanism Description",
+        help_text="Full description of the EP mechanism"
+    )
+    
+    # Applicable models
+    applicable_models = models.CharField(
+        max_length=100,
+        help_text="Comma-separated list of models (e.g., P703,U704,SA,FD or Gnome)",
+        verbose_name="Applicable Models"
+    )
+    
+    # Working status - ADMIN CONTROLLED
+    is_currently_working = models.BooleanField(
+        default=True,
+        verbose_name="Currently Working",
+        help_text="Admin-controlled: Is this mechanism currently functional?"
+    )
+    
+    # Default alternative method when not working
+    default_alternative_method = models.CharField(
+        max_length=200,
+        default="100% Inspection By Operator",
+        verbose_name="Default Alternative Method"
+    )
+    
+    # Display order
+    display_order = models.IntegerField(
+        default=0,
+        verbose_name="Display Order",
+        help_text="Order in which to display this mechanism"
+    )
+    
+    # Active status
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active",
+        help_text="Is this mechanism currently in use?"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['display_order', 'mechanism_id']
+        verbose_name = "Error Prevention Mechanism (Master)"
+        verbose_name_plural = "Error Prevention Mechanisms (Master)"
+    
+    def __str__(self):
+        status = "✓" if self.is_currently_working else "✗"
+        return f"{status} {self.mechanism_id} - {self.applicable_models}"
+
+
 class ErrorPreventionMechanismStatus(models.Model):
-    """Status for each EP mechanism in a daily check"""
+    """Status for each EP mechanism in a daily check - Operator fills this"""
     
     OK_NG_CHOICES = [('OK', 'OK'), ('NG', 'NG')]
     
@@ -1488,68 +1552,109 @@ class ErrorPreventionMechanismStatus(models.Model):
         related_name='mechanism_statuses'
     )
     
-    # EP Mechanism details
+    # Link to master mechanism
+    mechanism = models.ForeignKey(
+        ErrorPreventionMechanism,
+        on_delete=models.CASCADE,
+        related_name='daily_statuses',
+        verbose_name="EP Mechanism",
+          null=True,
+                  blank=True,
+
+     )
+    
+    # Legacy field for backward compatibility
     ep_mechanism_id = models.CharField(
-        max_length=50, 
-        choices=ErrorPreventionCheck.EP_MECHANISM_CHOICES,
-        verbose_name="EP Mechanism ID"
+        max_length=50,
+        verbose_name="EP Mechanism ID (Legacy)",
+        blank=True,
+        null=True,
+        editable=False
     )
     
-    # Status fields
-    is_working = models.BooleanField(default=True, verbose_name="Working")
-    alternative_method = models.CharField(
-        max_length=100, 
-        default="100% Inspection By Operator",
-        verbose_name="Alternative Method"
+    # Working status - COPIED FROM MASTER, NOT EDITABLE BY OPERATOR
+    is_working = models.BooleanField(
+        default=True, 
+        verbose_name="Working",
+        help_text="Admin-controlled via master mechanism"
     )
+    
+    # Alternative method - COPIED FROM MASTER
+    alternative_method = models.CharField(
+        max_length=200, 
+        default="100% Inspection By Operator",
+        verbose_name="Alternative Method",
+        help_text="Admin-controlled via master mechanism"
+    )
+    
+    # Operator-editable fields
     status = models.CharField(
         max_length=2, 
         choices=OK_NG_CHOICES, 
-        verbose_name="Status"
+        verbose_name="Status",
+        help_text="Operator selects OK or NG"
     )
-    is_not_applicable = models.BooleanField(default=False, verbose_name="N/A")
     
-    # Comments
-    comments = models.TextField(blank=True, null=True)
+    is_not_applicable = models.BooleanField(
+        default=False, 
+        verbose_name="N/A",
+        help_text="Check if not applicable for this model"
+    )
+    
+    # Comments - operator can add notes
+    comments = models.TextField(
+        blank=True, 
+        null=True,
+        verbose_name="Operator Comments"
+    )
+    
+    # Edit tracking
+    last_edited_by = models.ForeignKey(
+        'User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='edited_mechanism_statuses'
+    )
+    last_edited_at = models.DateTimeField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
-        """Track changes when mechanism status is updated"""
-        # Extract user from kwargs for history tracking
-        user = kwargs.pop('user', None)
+        # Sync from master mechanism
+        if self.mechanism:
+            self.is_working = self.mechanism.is_currently_working
+            self.alternative_method = self.mechanism.default_alternative_method
+            self.ep_mechanism_id = self.mechanism.mechanism_id
         
-        # Store original values for history tracking (only for existing records)
-        original_instance = None
-        is_new_record = not self.pk
-        
-        if self.pk:  # Only track changes for existing records, not new ones
-            original_instance = ErrorPreventionMechanismStatus.objects.get(pk=self.pk)
+        # Track edits
+        if self.pk:
+            self.last_edited_at = timezone.now()
         
         super().save(*args, **kwargs)
-        
-        # Create history entries for changes only if:
-        # 1. User is provided
-        # 2. This is not a new record (original_instance exists)
-        # 3. There are actual changes
-        if original_instance and user and not is_new_record:
-            from .history_utils import track_mechanism_changes
-            track_mechanism_changes(original_instance, self, user)
     
     @property
-    def status_display_with_history(self):
-        """Get status with change indicator"""
-        recent_changes = self.history.filter(field_name='status')[:1]
-        if recent_changes:
-            latest_change = recent_changes[0]
-            if latest_change.old_value != latest_change.new_value:
-                return f"{self.status} (was {latest_change.old_value})"
+    def can_operator_edit_status(self):
+        """Check if operator can edit the status field"""
+        # If mechanism is not working, operator cannot change status
+        # They can only see it and the alternative method
+        return self.is_working
+    
+    @property
+    def display_status(self):
+        """Get display status with working indicator"""
+        if not self.is_working:
+            return f"{self.status} (Not Working - {self.alternative_method})"
         return self.status
     
     class Meta:
-        ordering = ['ep_mechanism_id']
+        ordering = ['mechanism__display_order', 'mechanism__mechanism_id']
+        verbose_name = "Mechanism Status"
+        verbose_name_plural = "Mechanism Statuses"
     
     def __str__(self):
-        return f"{self.ep_mechanism_id} - {self.ep_check.date} - {self.status}"    
-    
+        mech_id = self.mechanism.mechanism_id if self.mechanism else self.ep_mechanism_id
+        return f"{mech_id} - {self.ep_check.date} - {self.status}"
+
+
 class ErrorPreventionCheckHistory(models.Model):
     """Track changes made to EP checks"""
     
@@ -1568,28 +1673,18 @@ class ErrorPreventionCheckHistory(models.Model):
         related_name='history'
     )
     
-    # Who made the change
     changed_by = models.ForeignKey(
         'User',
         on_delete=models.CASCADE,
         related_name='ep_check_changes'
     )
     
-    # What type of change
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
-    
-    # Field-specific changes
     field_name = models.CharField(max_length=100, blank=True, null=True)
     old_value = models.TextField(blank=True, null=True)
     new_value = models.TextField(blank=True, null=True)
-    
-    # General change description
     description = models.TextField(blank=True, null=True)
-    
-    # Additional data (JSON field for complex changes)
     additional_data = models.JSONField(default=dict, blank=True)
-    
-    # Timestamp
     timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -1598,7 +1693,8 @@ class ErrorPreventionCheckHistory(models.Model):
         verbose_name_plural = "EP Check Histories"
     
     def __str__(self):
-        return f"{self.ep_check} - {self.action} by {self.changed_by.username} at {self.timestamp}"
+        return f"{self.ep_check} - {self.action} by {self.changed_by.username}"
+
 
 class ErrorPreventionMechanismHistory(models.Model):
     """Track changes made to individual mechanism statuses"""
@@ -1609,19 +1705,15 @@ class ErrorPreventionMechanismHistory(models.Model):
         related_name='history'
     )
     
-    # Who made the change
     changed_by = models.ForeignKey(
         'User',
         on_delete=models.CASCADE,
         related_name='mechanism_changes'
     )
     
-    # What changed
-    field_name = models.CharField(max_length=50)  # 'status', 'is_working', 'comments', etc.
+    field_name = models.CharField(max_length=50)
     old_value = models.TextField(blank=True, null=True)
     new_value = models.TextField(blank=True, null=True)
-    
-    # Timestamp
     timestamp = models.DateTimeField(auto_now_add=True)
     
     class Meta:
@@ -1630,8 +1722,9 @@ class ErrorPreventionMechanismHistory(models.Model):
         verbose_name_plural = "Mechanism Status Histories"
     
     def __str__(self):
-        return f"{self.mechanism_status.ep_mechanism_id} - {self.field_name} changed by {self.changed_by.username}"
-
+        mech_id = self.mechanism_status.mechanism.mechanism_id if self.mechanism_status.mechanism else "Unknown"
+        return f"{mech_id} - {self.field_name} changed by {self.changed_by.username}"
+     
 # Utility function to create history entries
 def create_ep_check_history(ep_check, user, action, field_name=None, old_value=None, new_value=None, description=None):
     """Helper function to create history entries"""
@@ -1662,28 +1755,75 @@ from django.db import models
 from django.core.validators import FileExtensionValidator
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.utils import timezone
+
+class DTPMCheckpoint(models.Model):
+    """Master table for DTPM checkpoints - fully editable in admin"""
+    
+    checkpoint_number = models.PositiveSmallIntegerField(
+        unique=True,
+        verbose_name="Checkpoint Number"
+    )
+    
+    title_english = models.CharField(
+        max_length=500,
+        verbose_name="Title (English)"
+    )
+    
+    title_hindi = models.CharField(
+        max_length=500,
+        verbose_name="Title (Hindi)",
+        blank=True,
+        null=True
+    )
+    
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Description"
+    )
+    
+    reference_image = models.ImageField(
+        upload_to='dtpm_checkpoints/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(['png', 'jpg', 'jpeg', 'gif'])],
+        verbose_name="Reference Image"
+    )
+    
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Active",
+        help_text="Uncheck to disable this checkpoint"
+    )
+    
+    order = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name="Display Order",
+        help_text="Order in which to display this checkpoint"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['order', 'checkpoint_number']
+        verbose_name = "DTPM Checkpoint"
+        verbose_name_plural = "DTPM Checkpoints"
+    
+    def __str__(self):
+        return f"#{self.checkpoint_number} - {self.title_english}"
+
 
 class DTPMChecklistFMA03New(models.Model):
     """Daily Tracking and Performance Monitoring Checklist for FMA03 Operation 35"""
     
-    # Status choices
-    OK_NG_CHOICES = [('OK', 'OK'), ('NG', 'NG')]
-    
-    # Checkpoint choices - these are the 7 fixed checkpoints
-    CHECKPOINT_CHOICES = [
-        (1, "EMERGENCY push button is Working Properly"),
-        (2, "There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage"),
-        (3, "All nuts and bolts should not be loose or free"),
-        (4, "Check all sensors for damage or looseness"),
-        (5, "Tower lamp & Tube light should be working properly"),
-        (6, "All indicators & push buttons should be working properly"),
-        (7, "Check Safety curtain working properly"),
-    ]
-    
     STATUS_CHOICES = (
         ('pending', 'Pending'),
-        ('verified', 'Verified'),
+        ('supervisor_approved', 'Supervisor Approved'),
+        ('quality_certified', 'Quality Certified'),
         ('rejected', 'Rejected'),
+        ('quality_rejected', 'Quality Rejected'),
     )
     
     # Basic information
@@ -1718,11 +1858,13 @@ class DTPMChecklistFMA03New(models.Model):
     # Auto-populated fields from ChecklistBase
     current_model = models.CharField(
         max_length=10, 
-        choices=[('P703', 'P703'),
-        ('U704', 'U704'),
-        ('FD', 'FD'),
-        ('SA', 'SA'),
-        ('Gnome', 'Gnome'),],
+        choices=[
+            ('P703', 'P703'),
+            ('U704', 'U704'),
+            ('FD', 'FD'),
+            ('SA', 'SA'),
+            ('Gnome', 'Gnome'),
+        ],
         verbose_name="Current Running Model",
         blank=True,
         null=True
@@ -1731,7 +1873,14 @@ class DTPMChecklistFMA03New(models.Model):
     # Shift from checklist - will be auto-populated from ChecklistBase
     checklist_shift = models.CharField(
         max_length=10,
-        choices=ChecklistBase.SHIFTS,
+        choices=[
+            ('S1', 'S1 - 6:30 AM to 6:30 PM'),
+            ('A', 'A - 6:30 AM to 3:00 PM'),
+            ('G', 'G - 8:30 AM to 5:00 PM'),
+            ('B', 'B - 3:00 PM to 11:30 PM'),
+            ('C', 'C - 11:30 PM to 6:30 AM'),
+            ('S2', 'S2 - 6:30 PM to 6:30 AM'),
+        ],
         verbose_name="Shift from Checklist",
         blank=True,
         null=True
@@ -1741,7 +1890,7 @@ class DTPMChecklistFMA03New(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # New fields for two-stage verification
+    # Verification fields
     supervisor_approved_at = models.DateTimeField(null=True, blank=True)
     supervisor_approved_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, 
                                               related_name='dtpm_supervisor_approvals')
@@ -1791,7 +1940,6 @@ class DTPMChecklistFMA03New(models.Model):
 
     class Meta:
         ordering = ['-date']
-        unique_together = ['date', 'shift']
         verbose_name = "DTPM Checklist"
         verbose_name_plural = "DTPM Checklists"
     
@@ -1800,17 +1948,6 @@ class DTPMChecklistFMA03New(models.Model):
         if self.shift:
             shift_display = self.shift.get_shift_type_display()
         return f"DTPM Checklist - {self.date} - {shift_display}"
-    
-    def get_status_display_with_icon(self):
-        """Return status with appropriate icon for templates"""
-        status_icons = {
-            'pending': '<i class="fas fa-clock text-warning"></i>',
-            'supervisor_approved': '<i class="fas fa-user-check text-info"></i>',
-            'quality_certified': '<i class="fas fa-certificate text-success"></i>',
-            'rejected': '<i class="fas fa-times-circle text-danger"></i>',
-            'quality_rejected': '<i class="fas fa-ban text-danger"></i>',
-        }
-        return f"{status_icons.get(self.status, '')} {self.get_status_display()}"
     
     @property
     def is_fully_completed(self):
@@ -1823,33 +1960,8 @@ class DTPMChecklistFMA03New(models.Model):
         return self.status in ['supervisor_approved', 'quality_certified']
 
 
-   
-class DTPMVerificationHistory(models.Model):
-    VERIFICATION_TYPES = [
-        ('supervisor_approve', 'Supervisor Approved'),
-        ('supervisor_reject', 'Supervisor Rejected'),
-        ('quality_certify', 'Quality Certified'),
-        ('quality_reject', 'Quality Rejected'),
-    ]
-    
-    checklist = models.ForeignKey(DTPMChecklistFMA03New, on_delete=models.CASCADE, 
-                                 related_name='verification_history')
-    verification_type = models.CharField(max_length=20, choices=VERIFICATION_TYPES)
-    verified_by = models.ForeignKey('User', on_delete=models.CASCADE)
-    verified_at = models.DateTimeField(auto_now_add=True)
-    comments = models.TextField(blank=True, null=True)
-    
-    class Meta:
-        db_table = 'dtpm_verification_history'
-        ordering = ['-verified_at']
-    
-    def __str__(self):
-        return f"{self.get_verification_type_display()} - {self.verified_by.username} - {self.verified_at}"
-
-
-
 class DTPMCheckResultNew(models.Model):
-    """Results for each checkpoint in a DTPM checklist"""
+    """Results for each checkpoint in a DTPM checklist - now linked to DTPMCheckpoint"""
     
     OK_NG_CHOICES = [('OK', 'OK'), ('NG', 'NG')]
     
@@ -1860,10 +1972,13 @@ class DTPMCheckResultNew(models.Model):
         related_name='check_results'
     )
     
-    # Checkpoint details - using the fixed list from parent model
-    checkpoint_number = models.PositiveSmallIntegerField(
-        choices=DTPMChecklistFMA03New.CHECKPOINT_CHOICES,
-        verbose_name="Checkpoint"
+    # Link to checkpoint master
+    checkpoint = models.ForeignKey(
+        DTPMCheckpoint,
+        on_delete=models.CASCADE,
+        related_name='check_results',
+        verbose_name="Checkpoint",
+        blank=True, null=True
     )
     
     # Status - only field operators can change
@@ -1871,7 +1986,7 @@ class DTPMCheckResultNew(models.Model):
         max_length=2, 
         choices=OK_NG_CHOICES, 
         verbose_name="Status",
-        default='NG'  # Set default to NG
+        default='NG'
     )
     
     # Comments
@@ -1882,11 +1997,11 @@ class DTPMCheckResultNew(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        unique_together = ['checklist', 'checkpoint_number']
-        ordering = ['checkpoint_number']
+        unique_together = ['checklist', 'checkpoint']
+        ordering = ['checkpoint__order', 'checkpoint__checkpoint_number']
     
     def __str__(self):
-        return f"{self.checklist} - Checkpoint #{self.checkpoint_number}: {self.status}"
+        return f"{self.checklist} - {self.checkpoint.checkpoint_number}: {self.status}"
 
 
 class DTPMIssueNew(models.Model):
@@ -1943,17 +2058,50 @@ class DTPMIssueNew(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"Issue: Checkpoint #{self.check_result.checkpoint_number} - {self.status}"
+        return f"Issue: {self.check_result.checkpoint.checkpoint_number} - {self.status}"
+
+
+class DTPMVerificationHistory(models.Model):
+    """Track all verification actions on DTPM checklists"""
+    
+    VERIFICATION_TYPES = [
+        ('supervisor_approve', 'Supervisor Approved'),
+        ('supervisor_reject', 'Supervisor Rejected'),
+        ('quality_certify', 'Quality Certified'),
+        ('quality_reject', 'Quality Rejected'),
+    ]
+    
+    checklist = models.ForeignKey(
+        DTPMChecklistFMA03New, 
+        on_delete=models.CASCADE, 
+        related_name='verification_history'
+    )
+    verification_type = models.CharField(max_length=20, choices=VERIFICATION_TYPES)
+    verified_by = models.ForeignKey('User', on_delete=models.CASCADE)
+    verified_at = models.DateTimeField(auto_now_add=True)
+    comments = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-verified_at']
+        verbose_name = "DTPM Verification History"
+        verbose_name_plural = "DTPM Verification Histories"
+    
+    def __str__(self):
+        return f"{self.get_verification_type_display()} - {self.verified_by.username} - {self.verified_at}"
+
 
 # Signal to automatically create checkpoint results when a new DTPM checklist is created
 @receiver(post_save, sender=DTPMChecklistFMA03New)
 def create_check_results(sender, instance, created, **kwargs):
-    """Create the 7 standard check results when a new checklist is created"""
+    """Create check results for all active checkpoints when a new checklist is created"""
     if created:
-        # Create a check result for each of the 7 fixed checkpoints
-        for checkpoint_number, _ in DTPMChecklistFMA03New.CHECKPOINT_CHOICES:
+        # Get all active checkpoints
+        active_checkpoints = DTPMCheckpoint.objects.filter(is_active=True).order_by('order', 'checkpoint_number')
+        
+        # Create a check result for each active checkpoint
+        for checkpoint in active_checkpoints:
             DTPMCheckResultNew.objects.create(
                 checklist=instance,
-                checkpoint_number=checkpoint_number,
+                checkpoint=checkpoint,
                 status='NG'  # Default status
             )

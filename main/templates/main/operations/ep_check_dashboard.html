@@ -63,6 +63,16 @@
         height: 300px;
         margin-bottom: 20px;
     }
+    .mechanism-name {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .mechanism-id {
+        color: #ff0000;
+        font-weight: 500;
+    }
 </style>
 {% endblock %}
 
@@ -95,10 +105,10 @@
         <div class="col-md-6">
             <label class="form-label">Custom Date Range:</label>
             <div class="date-filter-inputs">
-                <input type="date" name="custom_start_date" class="form-control" value="{{ custom_start_date|date:'Y-m-d' }}" 
+                <input type="date" name="custom_start_date" class="form-control" value="{{ custom_start_date }}" 
                        max="{{ today|date:'Y-m-d' }}">
                 <span class="date-separator">to</span>
-                <input type="date" name="custom_end_date" class="form-control" value="{{ custom_end_date|date:'Y-m-d' }}" 
+                <input type="date" name="custom_end_date" class="form-control" value="{{ custom_end_date }}" 
                        max="{{ today|date:'Y-m-d' }}">
                 <button type="submit" class="btn btn-primary ms-2">Apply</button>
             </div>
@@ -227,14 +237,15 @@
 <!-- Mechanism Statistics Table -->
 <div class="card dashboard-card">
     <div class="card-header dashboard-header">
-        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Mechanism Statistics</h5>
+        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Mechanism Statistics (by Mechanism ID)</h5>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Mechanism</th>
+                        <th>Mechanism ID</th>
+                        <th>Description</th>
                         <th>Total Checks</th>
                         <th>OK Rate</th>
                         <th>NG Rate</th>
@@ -245,7 +256,12 @@
                 <tbody>
                     {% for m_id, m_stats in mechanism_stats.items %}
                     <tr class="mechanism-stat-row">
-                        <td>{{ m_stats.name }}</td>
+                        <td><span class="mechanism-id">{{ m_stats.mechanism_id }}</span></td>
+                        <td>
+                            <span class="mechanism-name" title="{{ m_stats.name }}">
+                                {{ m_stats.name }}
+                            </span>
+                        </td>
                         <td>{{ m_stats.total }}</td>
                         <td>{{ m_stats.ok_count }} ({{ m_stats.ok_rate|floatformat:1 }}%)</td>
                         <td>{{ m_stats.ng_count }} ({{ m_stats.ng_rate|floatformat:1 }}%)</td>
@@ -257,6 +273,12 @@
                                 <div class="progress-bar bg-danger" role="progressbar" 
                                      style="width: {{ m_stats.ng_rate }}%"></div>
                             </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <i class="fas fa-info-circle me-2"></i>No mechanism data available for selected date range
                         </td>
                     </tr>
                     {% endfor %}

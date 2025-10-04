@@ -292,25 +292,10 @@
                             {% endif %}
                         </td>
 <td>
-    <strong>
-        {% if result.checkpoint_number == 1 %}
-            EMERGENCY push button is Working Properly
-        {% elif result.checkpoint_number == 2 %}
-            There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage
-        {% elif result.checkpoint_number == 3 %}
-            All nuts and bolts should not be loose or free
-        {% elif result.checkpoint_number == 4 %}
-            Check all sensors for damage or looseness
-        {% elif result.checkpoint_number == 5 %}
-            Tower lamp & Tube light should be working properly
-        {% elif result.checkpoint_number == 6 %}
-            All indicators & push buttons should be working properly
-        {% elif result.checkpoint_number == 7 %}
-            Check Safety curtain working properly
-        {% else %}
-            Checkpoint {{ result.checkpoint_number }}
-        {% endif %}
-    </strong>
+    <strong>{{ result.checkpoint.title_english }}</strong>
+    {% if result.checkpoint.title_hindi %}
+    <br><small class="text-muted">{{ result.checkpoint.title_hindi }}</small>
+    {% endif %}
 </td>
 
                         <td>

@@ -13,28 +13,62 @@
         background-color: #333;
         border-bottom: 1px solid #444;
     }
+    
+    /* Table styling */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    .mechanism-table {
+        width: 100%;
+        table-layout: fixed;
+    }
+    
     .mechanism-table th {
         background-color: #333;
         color: #ff0000;
         border-color: #444;
+        font-size: 0.9rem;
+        padding: 10px 8px;
     }
+    
     .mechanism-table td {
         border-color: #444;
+        padding: 10px 8px;
+        vertical-align: top;
+        word-wrap: break-word;
     }
+    
+    /* Column widths */
+    .mechanism-table th:nth-child(1), .mechanism-table td:nth-child(1) { width: 15%; }
+    .mechanism-table th:nth-child(2), .mechanism-table td:nth-child(2) { width: 25%; }
+    .mechanism-table th:nth-child(3), .mechanism-table td:nth-child(3) { width: 10%; }
+    .mechanism-table th:nth-child(4), .mechanism-table td:nth-child(4) { width: 8%; }
+    .mechanism-table th:nth-child(5), .mechanism-table td:nth-child(5) { width: 8%; }
+    .mechanism-table th:nth-child(6), .mechanism-table td:nth-child(6) { width: 17%; }
+    .mechanism-table th:nth-child(7), .mechanism-table td:nth-child(7) { width: 17%; }
+    
     .status-ok {
         background-color: rgba(76, 175, 80, 0.2);
         color: #4CAF50;
         font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 4px;
     }
     .status-ng {
         background-color: rgba(244, 67, 54, 0.2);
         color: #f44336;
         font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 4px;
     }
     .status-na {
         background-color: rgba(255, 152, 0, 0.2);
         color: #ff9800;
         font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 4px;
     }
     .verification-actions {
         display: flex;
@@ -43,10 +77,22 @@
     .btn-approve {
         background-color: #4CAF50;
         border-color: #4CAF50;
+        color: white;
+    }
+    .btn-approve:hover {
+        background-color: #45a049;
     }
     .btn-reject {
         background-color: #f44336;
         border-color: #f44336;
+        color: white;
+    }
+    .btn-reject:hover {
+        background-color: #da190b;
+    }
+    .mechanism-id {
+        color: #ff0000;
+        font-weight: 500;
     }
 </style>
 {% endblock %}
@@ -66,6 +112,13 @@
     </div>
 </div>
 
+{% if incomplete_statuses %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Warning:</strong> Some mechanisms have incomplete status. Please review before approving.
+</div>
+{% endif %}
+
 <!-- EP Check Details Card -->
 <div class="card verify-card mb-4">
     <div class="card-header verify-header">
@@ -78,11 +131,12 @@
                 <p><strong>Current Model:</strong> {{ ep_check.current_model }}</p>
             </div>
             <div class="col-md-4">
-                <p><strong>Shift:</strong> {{ ep_check.get_shift_display  }}</p>
+                <p><strong>Shift:</strong> {{ ep_check.get_shift_display }}</p>
                 <p><strong>Operator:</strong> {{ ep_check.operator.username }}</p>
             </div>
             <div class="col-md-4">
                 <p><strong>Created At:</strong> {{ ep_check.created_at|date:"M d, Y H:i" }}</p>
+                <p><strong>Status:</strong> <span class="badge bg-warning">{{ ep_check.get_status_display }}</span></p>
             </div>
         </div>
     </div>
@@ -98,29 +152,61 @@
             <table class="table table-hover mechanism-table mb-0">
                 <thead>
                     <tr>
-                        <th width="25%">Mechanism ID</th>
-                        <th width="10%">Status</th>
-                        <th width="10%">Working</th>
-                        <th width="10%">N/A</th>
-                        <th width="20%">Alternative Method</th>
-                        <th width="25%">Operator Comments</th>
+                        <th>Mechanism ID</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th>Working</th>
+                        <th>N/A</th>
+                        <th>Alternative Method</th>
+                        <th>Operator Comments</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for status in mechanism_statuses %}
                     <tr>
-                        <td>{{ status.get_ep_mechanism_id_display }}</td>
-                        <td class="{% if status.is_not_applicable %}status-na{% elif status.status == 'OK' %}status-ok{% elif status.status == 'NG' %}status-ng{% endif %}">
-                            {% if status.is_not_applicable %}
-                                N/A
+                        <td>
+                            <span class="mechanism-id">
+                                {{ status.mechanism.mechanism_id|default:"N/A" }}
+                            </span>
+                        </td>
+                        <td>
+                            <small>{{ status.mechanism.description|truncatewords:10|default:"No description" }}</small>
+                        </td>
+                        <td>
+                            <span class="{% if status.is_not_applicable %}status-na{% elif status.status == 'OK' %}status-ok{% elif status.status == 'NG' %}status-ng{% endif %}">
+                                {% if status.is_not_applicable %}
+                                    N/A
+                                {% else %}
+                                    {{ status.status|default:"-" }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if status.is_working %}
+                                <i class="fas fa-check text-success"></i> Yes
                             {% else %}
-                                {{ status.status }}
+                                <i class="fas fa-times text-danger"></i> No
                             {% endif %}
                         </td>
-                        <td>{{ status.is_working|yesno:"Yes,No" }}</td>
-                        <td>{{ status.is_not_applicable|yesno:"Yes,No" }}</td>
-                        <td>{{ status.alternative_method }}</td>
-                        <td>{{ status.comments }}</td>
+                        <td>
+                            {% if status.is_not_applicable %}
+                                <i class="fas fa-check text-warning"></i> Yes
+                            {% else %}
+                                <i class="fas fa-times text-muted"></i> No
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ status.alternative_method|default:"-" }}</small>
+                        </td>
+                        <td>
+                            <small>{{ status.comments|default:"-" }}</small>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-3">
+                            <i class="fas fa-info-circle me-2"></i>No mechanism statuses found
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -143,7 +229,7 @@
             </div>
             
             <div class="verification-actions mt-4">
-                <button type="submit" name="action" value="approve" class="btn btn-approve btn-lg">
+                <button type="submit" name="action" value="approve" class="btn btn-approve btn-lg" {% if incomplete_statuses %}disabled title="Cannot approve with incomplete statuses"{% endif %}>
                     <i class="fas fa-check me-2"></i>Approve
                 </button>
                 <button type="submit" name="action" value="reject" class="btn btn-reject btn-lg">

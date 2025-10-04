@@ -1,9 +1,7 @@
 {% extends 'main/base.html' %}
 {% load static %}
 
-{% block title %}
-Create DTPM Checklist
-{% endblock %}
+{% block title %}Create DTPM Checklist{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -94,20 +92,17 @@ Create DTPM Checklist
         padding-bottom: 10px;
         margin-bottom: 30px;
     }
-
-        .checklist-container {
+    .checklist-container {
         display: flex;
-        height: 90vh; /* Adjust as needed */
+        height: 90vh;
         overflow: hidden;
     }
-
     .checklist-form-container {
-        width: 65%; /* Adjust as needed */
+        width: 65%;
         overflow-y: auto;
         padding: 1rem;
         border-right: 1px solid #ccc;
     }
-
     .fixed-image-container {
         width: 35%;
         position: relative;
@@ -117,7 +112,6 @@ Create DTPM Checklist
         justify-content: center;
         background-color: #f9f9f9;
     }
-
     .fixed-image-container img {
         max-width: 100%;
         max-height: 100%;
@@ -126,7 +120,14 @@ Create DTPM Checklist
         border-radius: 8px;
         box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-
+    .no-image-placeholder {
+        background-color: #2a2a2a;
+        border: 2px dashed #555;
+        border-radius: 8px;
+        padding: 40px;
+        text-align: center;
+        color: #999;
+    }
 </style>
 {% endblock %}
 
@@ -137,223 +138,109 @@ Create DTPM Checklist
             <i class="fas fa-clipboard-check me-2"></i> 
             Daily TPM Checklist
         </h2>
+        <div class="alert alert-info">
+            <strong>Model:</strong> {{ current_model }} | 
+            <strong>Shift:</strong> {{ current_shift_from_checklist }}
+        </div>
     </div>
 </div>
-
 
 <div class="checklist-container">
-    
     <div class="checklist-form-container">
-<form method="post">
-    {% csrf_token %}
-    
-    <!-- Hidden fields -->
-    {{ form.date.as_hidden }}
-    {{ form.notes.as_hidden }}
-    
-    <!-- Checkpoint 1 -->
-    <div class="checkpoint-card">
-        <div class="checkpoint-header">
-            <h5><span class="checkpoint-number">1</span> EMERGENCY push button is Working Properly</h5>
-            <div class="hindi-text">आपातकालीन पुश बटन ठीक से काम कर रहा है</div>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=1 %}" alt="Reference Image for Checkpoint 1" class="reference-image">
-                    </div>
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Hidden fields -->
+            {{ form.date.as_hidden }}
+            {{ form.notes.as_hidden }}
+            
+            {% for checkpoint in active_checkpoints %}
+            <!-- Checkpoint {{ checkpoint.checkpoint_number }} -->
+            <div class="checkpoint-card">
+                <div class="checkpoint-header">
+                    <h5>
+                        <span class="checkpoint-number">{{ checkpoint.checkpoint_number }}</span> 
+                        {{ checkpoint.title_english }}
+                    </h5>
+                    {% if checkpoint.title_hindi %}
+                    <div class="hindi-text">{{ checkpoint.title_hindi }}</div>
+                    {% endif %}
+                    {% if checkpoint.description %}
+                    <small class="text-muted d-block mt-2">{{ checkpoint.description }}</small>
+                    {% endif %}
                 </div>
-                <div class="col-md-4">
-                    <div class="status-container">
-                        <div class="status-label">Status / स्थिति:</div>
-                        <select name="status_1" id="status_1" class="form-select status-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="OK" class="status-ok">OK ✓</option>
-                            <option value="NG" class="status-ng">NG ✗</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Checkpoint 2 -->
-    <div class="checkpoint-card">
-        <div class="checkpoint-header">
-            <h5><span class="checkpoint-number">2</span> There should not be any air leakage & Lubrication unit mounting should not be loose and no oil spillage</h5>
-            <div class="hindi-text">कोई हवा का रिसाव नहीं होना चाहिए और लुब्रिकेशन यूनिट माउंटिंग ढीली नहीं होनी चाहिए और तेल का रिसाव नहीं होना चाहिए</div>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=2 %}" alt="Reference Image for Checkpoint 2" class="reference-image">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="status-container">
-                        <div class="status-label">Status / स्थिति:</div>
-                        <select name="status_2" id="status_2" class="form-select status-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="OK" class="status-ok">OK ✓</option>
-                            <option value="NG" class="status-ng">NG ✗</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Checkpoint 3 -->
-    <div class="checkpoint-card">
-        <div class="checkpoint-header">
-            <h5><span class="checkpoint-number">3</span> All nuts and bolts should not be loose or free</h5>
-            <div class="hindi-text">सभी नट और बोल्ट ढीले या स्वतंत्र नहीं होने चाहिए</div>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=3 %}" alt="Reference Image for Checkpoint 3" class="reference-image">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="status-container">
-                        <div class="status-label">Status / स्थिति:</div>
-                        <select name="status_3" id="status_3" class="form-select status-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="OK" class="status-ok">OK ✓</option>
-                            <option value="NG" class="status-ng">NG ✗</option>
-                        </select>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="reference-image-container">
+                                {% if checkpoint.reference_image and checkpoint.reference_image.name %}
+                                <img src="{{ checkpoint.reference_image.url }}" 
+                                     alt="Reference Image for {{ checkpoint.title_english }}" 
+                                     class="reference-image">
+                                {% else %}
+                                <div class="no-image-placeholder">
+                                    <i class="fas fa-image fa-3x mb-2"></i>
+                                    <p>No reference image available</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="status-container">
+                                <div class="status-label">Status / स्थिति:</div>
+                                <select name="status_{{ checkpoint.id }}" 
+                                        id="status_{{ checkpoint.id }}" 
+                                        class="form-select status-select"
+                                        required>
+                                    <option value="">-- Select Status --</option>
+                                    <option value="OK" class="status-ok">OK ✓</option>
+                                    <option value="NG" class="status-ng">NG ✗</option>
+                                </select>
+                                
+                                <!-- Optional comments field -->
+                                <div class="mt-3">
+                                    <label for="comments_{{ checkpoint.id }}" class="form-label text-white">
+                                        Comments (Optional)
+                                    </label>
+                                    <textarea name="comments_{{ checkpoint.id }}" 
+                                              id="comments_{{ checkpoint.id }}"
+                                              class="form-control" 
+                                              rows="2"
+                                              placeholder="Add any notes or observations..."></textarea>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <!-- Checkpoint 4 -->
-    <div class="checkpoint-card">
-        <div class="checkpoint-header">
-            <h5><span class="checkpoint-number">4</span> Check all sensors for damage or looseness</h5>
-            <div class="hindi-text">सभी सेंसरों को क्षति या ढीलेपन के लिए जांचें</div>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=4 %}" alt="Reference Image for Checkpoint 4" class="reference-image">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="status-container">
-                        <div class="status-label">Status / स्थिति:</div>
-                        <select name="status_4" id="status_4" class="form-select status-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="OK" class="status-ok">OK ✓</option>
-                            <option value="NG" class="status-ng">NG ✗</option>
-                        </select>
-                    </div>
-                </div>
+            {% empty %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                No active checkpoints found. Please add checkpoints in the admin panel.
             </div>
-        </div>
-    </div>
-    
-    <!-- Checkpoint 5 -->
-    <div class="checkpoint-card">
-        <div class="checkpoint-header">
-            <h5><span class="checkpoint-number">5</span> Tower lamp & Tube light should be working properly</h5>
-            <div class="hindi-text">टॉवर लैंप और ट्यूब लाइट ठीक से काम करनी चाहिए</div>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=5 %}" alt="Reference Image for Checkpoint 5" class="reference-image">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="status-container">
-                        <div class="status-label">Status / स्थिति:</div>
-                        <select name="status_5" id="status_5" class="form-select status-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="OK" class="status-ok">OK ✓</option>
-                            <option value="NG" class="status-ng">NG ✗</option>
-                        </select>
-                    </div>
-                </div>
+            {% endfor %}
+            
+            <div class="text-end mt-4 mb-5">
+                <a href="{% url 'operator_dashboard' %}" class="btn btn-secondary me-2">
+                    <i class="fas fa-times"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-danger btn-lg">
+                    <i class="fas fa-save"></i> Submit Checklist
+                </button>
             </div>
-        </div>
+        </form>
     </div>
-    
-    <!-- Checkpoint 6 -->
-    <div class="checkpoint-card">
-        <div class="checkpoint-header">
-            <h5><span class="checkpoint-number">6</span> All indicators & push buttons should be working properly</h5>
-            <div class="hindi-text">सभी संकेतक और पुश बटन ठीक से काम करने चाहिए</div>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=6 %}" alt="Reference Image for Checkpoint 6" class="reference-image">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="status-container">
-                        <div class="status-label">Status / स्थिति:</div>
-                        <select name="status_6" id="status_6" class="form-select status-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="OK" class="status-ok">OK ✓</option>
-                            <option value="NG" class="status-ng">NG ✗</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Checkpoint 7 -->
-    <div class="checkpoint-card">
-        <div class="checkpoint-header">
-            <h5><span class="checkpoint-number">7</span> Check Safety curtain working properly</h5>
-            <div class="hindi-text">सुरक्षा पर्दे का ठीक से काम करना जांचें</div>
-        </div>
-        <div class="card-body">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <div class="reference-image-container">
-                        <img src="{% url 'serve_checkpoint_image' checkpoint_id=7 %}" alt="Reference Image for Checkpoint 7" class="reference-image">
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="status-container">
-                        <div class="status-label">Status / स्थिति:</div>
-                        <select name="status_7" id="status_7" class="form-select status-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="OK" class="status-ok">OK ✓</option>
-                            <option value="NG" class="status-ng">NG ✗</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="text-end mt-4 mb-5">
-        <a href="{% url 'dtpm_new_list' %}" class="btn btn-secondary me-2">
-            <i class="fas fa-times"></i> Cancel
-        </a>
-        <button type="submit" class="btn btn-danger btn-lg">
-            <i class="fas fa-save"></i> Submit Checklist
-        </button>
-    </div>
-</form>
-
-</div>
 
     <div class="fixed-image-container">
-        <img src="{% url 'serve_checkpoint_image' checkpoint_id=8 %}" alt="Checkpoint 8 Reference">
+        {% if machine_overview_image and machine_overview_image.reference_image and machine_overview_image.reference_image.name %}
+        <img src="{{ machine_overview_image.reference_image.url }}" alt="Machine Overview">
+        {% else %}
+        <div class="no-image-placeholder">
+            <i class="fas fa-industry fa-4x mb-3"></i>
+            <h5>Machine Overview</h5>
+            <p>Upload a machine overview image in the admin panel</p>
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}
@@ -375,6 +262,26 @@ Create DTPM Checklist
                     this.classList.add('status-ng');
                 }
             });
+        });
+        
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const selects = document.querySelectorAll('.status-select');
+            let allSelected = true;
+            
+            selects.forEach(select => {
+                if (!select.value) {
+                    allSelected = false;
+                    select.style.borderColor = '#ff0000';
+                }
+            });
+            
+            if (!allSelected) {
+                e.preventDefault();
+                alert('Please select status for all checkpoints before submitting.');
+                return false;
+            }
         });
     });
 </script>

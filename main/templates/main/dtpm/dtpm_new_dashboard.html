@@ -257,7 +257,7 @@
         <div class="issue-card">
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <h6>Checkpoint #{{ issue.check_result.checkpoint_number }}: {{ issue.check_result.get_checkpoint_number_display|truncatechars:30 }}</h6>
+                    <h6>Checkpoint #{{ issue.check_result.checkpoint.checkpoint_number }}: {{ issue.check_result.checkpoint.title_english|truncatechars:30 }}</h6>
                     <p>{{ issue.description|truncatechars:100 }}</p>
                     <div class="text-muted">
                         <small>Reported by {{ issue.reported_by.username }} on {{ issue.created_at|date:"M d, Y" }}</small>

@@ -131,54 +131,73 @@ def get_mechanism_change_summary(mechanism_status, days=7):
     return summary
 
 def get_ep_check_timeline(ep_check):
-    """Get complete timeline of changes for an EP check"""
+    """
+    Get a unified timeline of all changes for an EP check
+    Returns a list of change events sorted by timestamp
+    """
     timeline = []
     
-    # Get EP check level changes
-    ep_changes = ep_check.history.all()
-    for change in ep_changes:
+    # Get EP check history
+    ep_histories = ErrorPreventionCheckHistory.objects.filter(
+        ep_check=ep_check
+    ).select_related('changed_by')
+    
+    for history in ep_histories:
         timeline.append({
-            'type': 'ep_check',
-            'action': change.action,
-            'description': change.description or f"{change.field_name} changed",
-            'user': change.changed_by.username,
-            'timestamp': change.timestamp,
+            'type': 'ep-check',
+            'action': history.action,
+            'user': history.changed_by.username,
+            'timestamp': history.timestamp,
+            'description': history.description or f"{history.get_action_display()}",
             'details': {
-                'field': change.field_name,
-                'old_value': change.old_value,
-                'new_value': change.new_value
+                'field': history.field_name,
+                'old_value': history.old_value,
+                'new_value': history.new_value
             }
         })
     
-    # Get mechanism level changes - EXCLUDE creation records
-    for mechanism in ep_check.mechanism_statuses.all():
-        mech_changes = mechanism.history.exclude(field_name='created').all()  # Exclude creation records
-        for change in mech_changes:
-            # Create better description based on field changed
-            field_descriptions = {
-                'status': f"Status changed from '{change.old_value}' to '{change.new_value}'",
-                'is_working': f"Working status changed from '{change.old_value}' to '{change.new_value}'",
-                'is_not_applicable': f"N/A status changed from '{change.old_value}' to '{change.new_value}'",
-                'alternative_method': f"Alternative method updated",
-                'comments': f"Comments updated"
-            }
+    # Get mechanism status histories
+    mechanism_statuses = ep_check.mechanism_statuses.all()
+    for status in mechanism_statuses:
+        mech_histories = ErrorPreventionMechanismHistory.objects.filter(
+            mechanism_status=status
+        ).select_related('changed_by')
+        
+        for history in mech_histories:
+            # Get mechanism ID from the relationship or legacy field
+            if status.mechanism:
+                mechanism_id = status.mechanism.mechanism_id
+            else:
+                mechanism_id = status.ep_mechanism_id or "Unknown"
             
-            description = field_descriptions.get(
-                change.field_name, 
-                f"{change.field_name} changed"
-            )
+            # Format the description based on field name
+            if history.field_name == 'status':
+                description = f"Status changed from {history.old_value} to {history.new_value}"
+            elif history.field_name == 'is_not_applicable':
+                old_val = "N/A" if history.old_value == 'True' else "Applicable"
+                new_val = "N/A" if history.new_value == 'True' else "Applicable"
+                description = f"Changed from {old_val} to {new_val}"
+            elif history.field_name == 'comments':
+                description = f"Comments updated"
+            elif history.field_name == 'is_working':
+                old_val = "Working" if history.old_value == 'True' else "Not Working"
+                new_val = "Working" if history.new_value == 'True' else "Not Working"
+                description = f"Working status changed from {old_val} to {new_val}"
+            elif history.field_name == 'alternative_method':
+                description = f"Alternative method updated"
+            else:
+                description = f"{history.field_name} changed"
             
             timeline.append({
                 'type': 'mechanism',
-                'mechanism_id': mechanism.ep_mechanism_id,
-                'mechanism_display': mechanism.get_ep_mechanism_id_display(),
+                'user': history.changed_by.username,
+                'timestamp': history.timestamp,
+                'mechanism_id': mechanism_id,
                 'description': description,
-                'user': change.changed_by.username,
-                'timestamp': change.timestamp,
                 'details': {
-                    'field': change.field_name,
-                    'old_value': change.old_value,
-                    'new_value': change.new_value
+                    'field': history.field_name,
+                    'old_value': history.old_value,
+                    'new_value': history.new_value
                 }
             })
     

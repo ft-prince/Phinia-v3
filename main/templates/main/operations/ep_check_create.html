@@ -5,72 +5,6 @@
 
 {% block extra_css %}
 <style>
-    .form-card {
-        background-color: #222;
-        border: 1px solid #444;
-        margin-bottom: 20px;
-    }
-    .form-header {
-        background-color: #333;
-        border-bottom: 1px solid #444;
-    }
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-    .important-label {
-        color: #ff0000;
-        font-weight: bold;
-    }
-    .form-label {
-        font-weight: 500;
-    }
-    .form-text {
-        color: #aaa;
-    }
-    .form-control, .form-select {
-        background-color: #333;
-        border-color: #555;
-        color: #ffffff;
-    }
-    .form-control:focus, .form-select:focus {
-        background-color: #444;
-        border-color: #ff0000;
-        color: #ffffff;
-        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
-    }
-    .form-title {
-        color: #ff0000;
-        border-bottom: 1px solid #444;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-    .mechanism-table th {
-        background-color: #333;
-        color: #ff0000;
-        border-color: #444;
-        font-size: 0.9rem;
-        white-space: nowrap;
-    }
-    .mechanism-table td {
-        border-color: #444;
-        font-size: 0.9rem;
-        color:white !important;
-    }
-    .table-header-row {
-        background-color: #2a2a2a;
-    }
-    .ep-id-col {
-        font-weight: bold;
-        color: #ff0000;
-    }
-    .status-select {
-        min-width: 100px;
-    }
-    .hindi-text {
-        font-style: italic;
-        color: #cccccc;
-        margin-top: 4px;
-    }
     /* Base container settings */
     .container, .container-fluid {
         max-width: 100% !important;
@@ -79,7 +13,6 @@
         width: 100%;
     }
     
-    /* Form card styling */
     .form-card {
         background-color: #222;
         border: 1px solid #444;
@@ -98,17 +31,8 @@
         margin-bottom: 1.5rem;
     }
     
-    .important-label {
-        color: #ff0000;
-        font-weight: bold;
-    }
-    
     .form-label {
         font-weight: 500;
-    }
-    
-    .form-text {
-        color: #aaa;
     }
     
     .form-control, .form-select {
@@ -124,14 +48,6 @@
         box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
     }
     
-    .form-title {
-        color: #ff0000;
-        border-bottom: 1px solid #444;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-    }
-    
-    /* Table styling with fixed issues */
     .table-responsive {
         width: 100%;
         overflow-x: auto;
@@ -195,7 +111,6 @@
         line-height: 1.2;
     }
     
-    /* Prevent text overflow and ensure proper wrapping */
     .mechanism-table td > div,
     .mechanism-table td > input,
     .mechanism-table td > select,
@@ -204,59 +119,17 @@
         box-sizing: border-box;
     }
     
-    /* Updated column width adjustments for new order */
-    .mechanism-table th:nth-child(1), 
-    .mechanism-table td:nth-child(1) {
-        width: 6%;
-    }
+    .mechanism-table th:nth-child(1), .mechanism-table td:nth-child(1) { width: 6%; }
+    .mechanism-table th:nth-child(2), .mechanism-table td:nth-child(2) { width: 10%; }
+    .mechanism-table th:nth-child(3), .mechanism-table td:nth-child(3) { width: 8%; }
+    .mechanism-table th:nth-child(4), .mechanism-table td:nth-child(4) { width: 20%; }
+    .mechanism-table th:nth-child(5), .mechanism-table td:nth-child(5) { width: 20%; }
+    .mechanism-table th:nth-child(6), .mechanism-table td:nth-child(6) { width: 12%; }
+    .mechanism-table th:nth-child(7), .mechanism-table td:nth-child(7) { width: 6%; text-align: center; }
+    .mechanism-table th:nth-child(8), .mechanism-table td:nth-child(8) { width: 8%; }
+    .mechanism-table th:nth-child(9), .mechanism-table td:nth-child(9) { width: 15%; }
+    .mechanism-table th:nth-child(10), .mechanism-table td:nth-child(10) { width: 15%; }
     
-    .mechanism-table th:nth-child(2), 
-    .mechanism-table td:nth-child(2) {
-        width: 10%;
-    }
-    
-    .mechanism-table th:nth-child(3), 
-    .mechanism-table td:nth-child(3) {
-        width: 8%;
-    }
-    
-    .mechanism-table th:nth-child(4), 
-    .mechanism-table td:nth-child(4) {
-        width: 20%;
-    }
-    
-    .mechanism-table th:nth-child(5), 
-    .mechanism-table td:nth-child(5) {
-        width: 20%;
-    }
-    
-    .mechanism-table th:nth-child(6), 
-    .mechanism-table td:nth-child(6) {
-        width: 12%;
-    }
-    
-    .mechanism-table th:nth-child(7), 
-    .mechanism-table td:nth-child(7) {
-        width: 6%;
-        text-align: center;
-    }
-    
-    .mechanism-table th:nth-child(8), 
-    .mechanism-table td:nth-child(8) {
-        width: 8%;
-    }
-    
-    .mechanism-table th:nth-child(9), 
-    .mechanism-table td:nth-child(9) {
-        width: 15%;
-    }
-    
-    .mechanism-table th:nth-child(10), 
-    .mechanism-table td:nth-child(10) {
-        width: 15%;
-    }
-    
-    /* Form-check adjustments to prevent overlapping */
     .form-check {
         min-height: auto;
         margin: 0;
@@ -270,7 +143,6 @@
         float: none;
     }
     
-    /* Form and row full width adjustments */
     form {
         width: 100%;
     }
@@ -281,13 +153,6 @@
         margin-right: 0;
     }
     
-    /* Ensure content takes full width */
-    #content {
-        width: 100%;
-        padding: 0;
-    }
-    
-    /* Adjust input fields to prevent overflow */
     input.form-control, 
     select.form-select, 
     textarea.form-control {
@@ -296,7 +161,6 @@
         min-height: 30px;
     }
     
-    /* Center the switch toggles */
     .form-switch {
         display: flex;
         justify-content: center;
@@ -306,18 +170,29 @@
     .form-switch .form-check-input {
         margin-left: 0;
     }
+    
     .form-switch .form-check-input:checked {
-    background-color: #28a745; /* Green background when checked */
-    border-color: #28a745;
-    /* ... other styling ... */
-}
-.form-switch .form-check-input {
-    background-color: #dc3545; /* Red background when unchecked */
-    border-color: #dc3545;
-    /* ... other styling ... */
-}
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .form-switch .form-check-input {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .form-switch .form-check-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .status-select:disabled {
+        background-color: #444;
+        color: #999;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
 
-    /* Better responsive behavior */
     @media (max-width: 1200px) {
         .mechanism-table th,
         .mechanism-table td {
@@ -335,7 +210,6 @@
             overflow-x: scroll;
         }
     }
-
 </style>
 {% endblock %}
 
@@ -345,8 +219,8 @@
         <h2 class="mb-3"><i class="fas fa-plus-circle me-2"></i>Create New EP Check</h2>
     </div>
     <div class="col-md-4 text-end">
-        <a href="{% url 'ep_check_list' %}" class="btn btn-outline-light">
-            <i class="fas fa-arrow-left me-2"></i>Back to List
+        <a href="{% url 'operator_dashboard' %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
         </a>
     </div>
 </div>
@@ -365,34 +239,27 @@
                         <label for="date" class="form-label">Date:</label>
                         {{ form.date }}
                         {% if form.date.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.date.errors }}
-                            </div>
+                            <div class="invalid-feedback d-block">{{ form.date.errors }}</div>
                         {% endif %}
                     </div>
                 </div>
                 
                 <div class="col-md-3">
                     <div class="form-group">
-                        {{ form.current_model }}
-                        {% if form.current_model.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.current_model.errors }}
-                            </div>
-                        {% endif %}
+                        {{ form.current_model_display }}
                     </div>
                 </div>
 
+                <div class="col-md-3">
+                    <div class="form-group">
+                        {{ form.shift_display }}
+                    </div>
+                </div>
             </div>
             
             <div class="form-group">
                 <label for="comments" class="form-label">Comments:</label>
                 {{ form.comments }}
-                {% if form.comments.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.comments.errors }}
-                    </div>
-                {% endif %}
             </div>
         </div>
     </div>
@@ -411,7 +278,7 @@
                             <th>WORK STATION</th>
                             <th>PURPOSE OF ERROR PROOFING</th>
                             <th>VERIFICATION METHOD</th>
-                            <th> EP Master</th>
+                            <th>EP Master</th>
                             <th>Working</th>
                             <th>Status</th>
                             <th>Alternative Method</th>
@@ -419,455 +286,68 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- EP #01 -->
+                        {% for mechanism in mechanisms %}
                         <tr>
-                            <td class="ep-id-col">EP # 01</td>
-                            <td>P703 U704 FD SA/Gnome</td>
+                            <td class="ep-id-col">EP # {{ forloop.counter|stringformat:"02d" }}</td>
+                            
+                            <td>{{ mechanism.applicable_models }}</td>
+                            
                             <td>FMA-03-35</td>
+                            
                             <td>
-                                Ensure right model selection in respective of Model selection
-                                <div class="hindi-text">मॉडल चयन के संबंध में सही मॉडल चयन सुनिश्चित करें</div>
+                                {{ mechanism.description }}
                             </td>
-                            <td>
-                                Start the machine by selecting other model then running model on HMI. Machine should not start
-                                <div class="hindi-text">HMI पर चल रहे मॉडल के बाद अन्य मॉडल का चयन करके मशीन शुरू करें। मशीन शुरू नहीं होनी चाहिए</div>
-                            </td>
-                            <td>EPVS</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_01" 
-                                           name="is_working_01" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_01" 
-                                        name="status_01">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_01" 
-                                       name="alternative_method_01" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_01" 
-                                          name="comments_01" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
-
-                        <!-- EP #02 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 02</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure Umbrella valve presence sensor working on umbrella valve press to retainer operation
-                                <div class="hindi-text">सुनिश्चित करें कि अम्ब्रेला वाल्व उपस्थिति सेंसर काम कर रहा है</div>
-                            </td>
-                            <td>
-                                Keep the retainer on station without umbrella valve and press manually, vacuum will not start on Top tool.
-                                <div class="hindi-text">रिटेनर को बिना अम्ब्रेला वाल्व के स्टेशन पर रखें और मैन्युअल रूप से दबाएं, टॉप टूल पर वैक्यूम शुरू नहीं होगा।</div>
-                            </td>
-                            <td>FMA-03-35-M01(T6) / FMA-03-35-M09(Gnome)</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_02" 
-                                           name="is_working_02" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_02" 
-                                        name="status_02">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_02" 
-                                       name="alternative_method_02" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_02" 
-                                          name="comments_02" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
-
-                        <!-- EP #03 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 03</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure Umbrella valve and retainer Assy complete stroke confirmation sensor working on UV press to retainer operation
-                                <div class="hindi-text">सुनिश्चित करें कि अम्ब्रेला वाल्व और रिटेनर असेंबली पूर्ण स्ट्रोक पुष्टिकरण सेंसर काम कर रहा है</div>
-                            </td>
-                            <td>
-                                Keep the retainer on station with umbrella valve and press manually, vacuum will start on Top tool.
-                                <div class="hindi-text">अम्ब्रेला वाल्व के साथ स्टेशन पर रिटेनर रखें और मैन्युअल रूप से दबाएं, Top tool पर वैक्यूम शुरू हो जाएगा।</div>
-                            </td>
-                            <td>N/A</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_03" 
-                                           name="is_working_03" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_03" 
-                                        name="status_03">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_03" 
-                                       name="alternative_method_03" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_03" 
-                                          name="comments_03" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
-
-                        <!-- EP #04 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 04</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure UV Clip presence sensor working
-                                <div class="hindi-text">सुनिश्चित करें कि UV क्लिप उपस्थिति सेंसर काम कर रहा है</div>
-                            </td>
-                            <td>
-                                Load the master of UV Clip in top tool and check the master Judgement on machine
-                                <div class="hindi-text">यूवी क्लिप के मास्टर को top tool में लोड करें और मशीन पर मास्टर निर्णय की जांच करें</div>
-                            </td>
-                            <td>FMA-03-35-M02 (T6/Gnome)</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_04" 
-                                           name="is_working_04" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_04" 
-                                        name="status_04">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_04" 
-                                       name="alternative_method_04" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_04" 
-                                          name="comments_04" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
-
-                        <!-- EP #05 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 05</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure UV Clip fully snap locked with 2 no's of retainer snap
-                                <div class="hindi-text">सुनिश्चित करें कि यूवी क्लिप दोनों रिटेनर स्नैप के साथ पूरी तरह से लॉक हो</div>
-                            </td>
-                            <td>
-                                Load the Snap NG master, Machine cycle should show NG cycle
-                                <div class="hindi-text">स्नैप एनजी मास्टर लोड करें, मशीन cycle को एनजी cycle दिखाना चाहिए</div>
-                            </td>
-                            <td>FMA-03-35-M03 (T6) / FMA-03-35-M10 (Gnome)</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_05" 
-                                           name="is_working_05" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_05" 
-                                        name="status_05">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_05" 
-                                       name="alternative_method_05" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_05" 
-                                          name="comments_05" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
-
-                        <!-- EP #06 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 06</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure Umbrella valve Flow Test
-                                <div class="hindi-text">अम्ब्रेला वाल्व प्रवाह परीक्षण सुनिश्चित करें</div>
-                            </td>
+                            
                             <td>
                                 Start the machine with master and judgement will given by machine
                                 <div class="hindi-text">मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा</div>
                             </td>
-                            <td>FMA-03-35-M04 (T6) / FMA-03-35-M11 (Gnome)</td>
+                            
+                            <td>{{ mechanism.mechanism_id }}</td>
+                            
                             <td>
                                 <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_06" 
-                                           name="is_working_06" 
-                                           checked>
+                                    <input type="checkbox" 
+                                           class="form-check-input" 
+                                           id="is_working_{{ mechanism.id }}" 
+                                           {% if mechanism.is_currently_working %}checked{% endif %}
+                                           disabled>
                                 </div>
                             </td>
+                            
                             <td>
                                 <select class="form-select status-select" 
-                                        id="status_06" 
-                                        name="status_06">
+                                        id="status_mech_{{ mechanism.id }}" 
+                                        name="status_mech_{{ mechanism.id }}"
+                                        {% if not mechanism.is_currently_working %}disabled{% endif %}>
                                     <option value="" selected>-- Select --</option>
                                     <option value="OK">OK</option>
                                     <option value="NG">NG</option>
                                 </select>
                             </td>
+                            
                             <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_06" 
-                                       name="alternative_method_06" 
-                                       value="100% Inspection By Operator">
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="alternative_method_{{ mechanism.id }}" 
+                                       value="{{ mechanism.default_alternative_method }}"
+                                        >
                             </td>
+                            
                             <td>
                                 <textarea class="form-control" 
-                                          id="comments_06" 
-                                          name="comments_06" 
+                                          id="comments_{{ mechanism.id }}" 
+                                          name="comments_mech_{{ mechanism.id }}" 
                                           rows="1"></textarea>
                             </td>
                         </tr>
-
-                        <!-- EP #07 -->
+                        {% empty %}
                         <tr>
-                            <td class="ep-id-col">EP # 07</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure umbrella valve vacuum test
-                                <div class="hindi-text">अम्ब्रेला वाल्व वैक्यूम परीक्षण सुनिश्चित करें</div>
-                            </td>
-                            <td>
-                                Start the machine with master and judgement will given by machine
-                                <div class="hindi-text">मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा</div>
-                            </td>
-                            <td>FMA-03-35-M05 (T6) / FMA-03-35-M12 (Gnome)</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_07" 
-                                           name="is_working_07" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_07" 
-                                        name="status_07">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_07" 
-                                       name="alternative_method_07" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_07" 
-                                          name="comments_07" 
-                                          rows="1"></textarea>
+                            <td colspan="10" class="text-center py-4">
+                                <p class="text-danger">No EP mechanisms found for model {{ current_model }}.</p>
                             </td>
                         </tr>
-
-                        <!-- EP #08 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 08</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Verify machine LVDT mounting
-                                <div class="hindi-text">मशीन LVDT माउंटिंग Verify करें</div>
-                            </td>
-                            <td>
-                                Load LVDT master
-                                <div class="hindi-text">LVDT मास्टर को लोड करें</div>
-                            </td>
-                            <td>FMA-03-35-M06 (T6/Gnome)</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_08" 
-                                           name="is_working_08" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_08" 
-                                        name="status_08">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_08" 
-                                       name="alternative_method_08" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_08" 
-                                          name="comments_08" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
-
-                        <!-- EP #09 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 09</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure top & bottom tool alignment
-                                <div class="hindi-text">top और bottom tool alignment सुनिश्चित करें</div>
-                            </td>
-                            <td>
-                                Load alignment master in bottom tool, slide & than lift by hand, Machine show OK if alignment is OK
-                                <div class="hindi-text">अलाइनमेंट मास्टर को नीचे वाले टूल में लोड करें, स्लाइड करें और फिर हाथ से उठाएं, अगर अलाइनमेंट ठीक है तो मशीन ओके दिखाती है</div>
-                            </td>
-                            <td>FMA-03-35-M07 (T6/Gnome)</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_09" 
-                                           name="is_working_09" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_09" 
-                                        name="status_09">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_09" 
-                                       name="alternative_method_09" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_09" 
-                                          name="comments_09" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
-
-                        <!-- EP #10 -->
-                        <tr>
-                            <td class="ep-id-col">EP # 10</td>
-                            <td>P703 U704 FD SA/Gnome</td>
-                            <td>FMA-03-35</td>
-                            <td>
-                                Ensure complete cycle ok working
-                                <div class="hindi-text">सुनिश्चित करें कि पूरा cycle ठीक से काम कर रहा है</div>
-                            </td>
-                            <td>
-                                Load Ok master in machine lower nest
-                                <div class="hindi-text">मशीन के निचले नेस्ट में ओके मास्टर लोड करें</div>
-                            </td>
-                            <td>FMA-03-35-M08 (T6) / FMA-03-35-M13(Gnome)</td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" class="form-check-input" 
-                                           id="is_working_10" 
-                                           name="is_working_10" 
-                                           checked>
-                                </div>
-                            </td>
-                            <td>
-                                <select class="form-select status-select" 
-                                        id="status_10" 
-                                        name="status_10">
-                                    <option value="" selected>-- Select --</option>
-                                    <option value="OK">OK</option>
-                                    <option value="NG">NG</option>
-                                </select>
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" 
-                                       id="alternative_method_10" 
-                                       name="alternative_method_10" 
-                                       value="100% Inspection By Operator">
-                            </td>
-                            <td>
-                                <textarea class="form-control" 
-                                          id="comments_10" 
-                                          name="comments_10" 
-                                          rows="1"></textarea>
-                            </td>
-                        </tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -875,7 +355,7 @@
     </div>
     
     <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4 mb-4">
-        <a href="{% url 'ep_check_list' %}" class="btn btn-outline-light">
+        <a href="{% url 'operator_dashboard' %}" class="btn btn-outline-light">
             Cancel
         </a>
         <button type="submit" class="btn btn-primary">
@@ -887,114 +367,29 @@
 
 {% block extra_js %}
 <script>
-// Function to set status values based on URL parameters
-function setFormValuesFromURL() {
-    // Get URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // Set status dropdowns if present in URL
-    for (let i = 1; i <= 10; i++) {
-        const padded = i.toString().padStart(2, '0');
-        const statusParam = urlParams.get('status_' + padded);
-        if (statusParam) {
-            const statusSelect = document.getElementById('status_' + padded);
-            if (statusSelect) {
-                statusSelect.value = statusParam;
-            }
-        }
-        
-        // Set comments if present
-        const commentsParam = urlParams.get('comments_' + padded);
-        if (commentsParam) {
-            const commentsText = document.getElementById('comments_' + padded);
-            if (commentsText) {
-                commentsText.value = commentsParam;
-            }
-        }
-    }
-    
-    // Set form-level comments if present
-    const commentsParam = urlParams.get('comments');
-    if (commentsParam) {
-        const commentsText = document.getElementById('id_comments');
-        if (commentsText) {
-            commentsText.value = commentsParam;
-        }
-    }
-}
-
-// Set up custom tab order for status dropdowns only
-function setupCustomTabOrder() {
-    // Remove all tabindex from non-status fields initially
-    $('input[type="checkbox"], textarea, input[type="text"]').attr('tabindex', '-1');
-    
-    // Set tabindex only for status dropdowns in order
-    for (let i = 1; i <= 10; i++) {
-        const padded = i.toString().padStart(2, '0');
-        const statusSelect = document.getElementById('status_' + padded);
-        if (statusSelect) {
-            statusSelect.setAttribute('tabindex', i);
-        }
-    }
-    
-    // Add click handlers to make other fields focusable when clicked
-    $('input[type="checkbox"], textarea, input[type="text"]').on('click focus', function() {
-        $(this).attr('tabindex', '0');
+$(document).ready(function() {
+    // Custom tab order - only through status dropdowns
+    let statusSelects = $('.status-select:not(:disabled)');
+    statusSelects.each(function(index) {
+        $(this).attr('tabindex', index + 1);
     });
     
-    // Remove tabindex when they lose focus (unless they have content)
-    $('textarea, input[type="text"]').on('blur', function() {
-        if (!$(this).val().trim()) {
-            $(this).attr('tabindex', '-1');
-        }
-    });
-    
-    $('input[type="checkbox"]').on('blur', function() {
-        if (!$(this).is(':checked')) {
-            $(this).attr('tabindex', '-1');
-        }
-    });
-}
-
-// Handle Enter key to move to next status dropdown
-function handleEnterKey() {
+    // Handle Enter key to move to next status dropdown
     $('.status-select').on('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
-            const currentTabIndex = parseInt($(this).attr('tabindex'));
-            const nextTabIndex = currentTabIndex + 1;
-            
-            if (nextTabIndex <= 10) {
-                const nextStatusSelect = $(`select[tabindex="${nextTabIndex}"]`);
-                if (nextStatusSelect.length) {
-                    nextStatusSelect.focus();
-                }
+            const currentIndex = statusSelects.index(this);
+            if (currentIndex < statusSelects.length - 1) {
+                statusSelects.eq(currentIndex + 1).focus();
             } else {
-                // If on last status dropdown, move to submit button
                 $('button[type="submit"]').focus();
             }
         }
     });
-}
-
-$(document).ready(function() {
-    // Set form values from URL parameters if any
-    if (window.location.search) {
-        setFormValuesFromURL();
-    }
-    
-    // Set up custom tab order
-    setupCustomTabOrder();
-    
-    // Handle Enter key navigation
-    handleEnterKey();
-    
-    // Ensure form uses POST method
-    $('form').attr('method', 'post');
     
     // Focus on first status dropdown when page loads
     setTimeout(function() {
-        $('#status_01').focus();
+        $('.status-select:not(:disabled)').first().focus();
     }, 100);
 });
 </script>

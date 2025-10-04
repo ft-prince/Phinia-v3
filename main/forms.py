@@ -1190,16 +1190,16 @@ class DTPMChecklistFilterForm(forms.Form):
 #  new code     
 # Forms for Error Prevention models
 from django import forms
-from .models import ErrorPreventionCheck, ErrorPreventionMechanismStatus, DailyVerificationStatus
+from .models import ErrorPreventionCheck, ErrorPreventionMechanismStatus, DailyVerificationStatus ,ErrorPreventionMechanism
 
 class ErrorPreventionCheckForm(forms.ModelForm):
     """Form for creating/editing Error Prevention Check records"""
     class Meta:
         model = ErrorPreventionCheck
-        fields = ['date', 'comments']  # Removed current_model as it will be auto-populated
+        fields = ['date', 'comments']
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-            'comments': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'comments': forms.Textarea(attrs={'rows': 3, 'class': 'form-control', 'placeholder': 'Add any comments about this EP check...'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -1221,13 +1221,21 @@ class ErrorPreventionCheckForm(forms.ModelForm):
                 self.fields['current_model_display'] = forms.CharField(
                     label='Current Model (from Checklist)',
                     initial=checklist.selected_model,
-                    widget=forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control'}),
+                    widget=forms.TextInput(attrs={
+                        'readonly': 'readonly', 
+                        'class': 'form-control',
+                        'style': 'background-color: #2a2a2a; cursor: not-allowed;'
+                    }),
                     required=False
                 )
                 self.fields['shift_display'] = forms.CharField(
                     label='Shift (from Checklist)',
                     initial=dict(ChecklistBase.SHIFTS).get(checklist.shift, checklist.shift),
-                    widget=forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control'}),
+                    widget=forms.TextInput(attrs={
+                        'readonly': 'readonly', 
+                        'class': 'form-control',
+                        'style': 'background-color: #2a2a2a; cursor: not-allowed;'
+                    }),
                     required=False
                 )
     
@@ -1262,10 +1270,33 @@ class ErrorPreventionMechanismStatusForm(forms.ModelForm):
         model = ErrorPreventionMechanismStatus
         fields = ['status', 'is_not_applicable', 'comments', 'is_working', 'alternative_method']
         widgets = {
-            'status': forms.Select(attrs={'class': 'form-control'}),
-            'comments': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
-            'alternative_method': forms.TextInput(attrs={'class': 'form-control'}),
+            'status': forms.Select(
+                choices=ErrorPreventionMechanismStatus.OK_NG_CHOICES,
+                attrs={'class': 'form-control'}
+            ),
+            'is_not_applicable': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'comments': forms.Textarea(attrs={
+                'rows': 2, 
+                'class': 'form-control',
+                'placeholder': 'Add comments if needed...'
+            }),
+            'is_working': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'alternative_method': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': '100% Inspection By Operator'
+            }),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # If mechanism is linked, make is_working and alternative_method read-only
+        # since they should be controlled by the master mechanism
+        if self.instance and self.instance.mechanism:
+            self.fields['is_working'].disabled = True
+            self.fields['is_working'].help_text = "Controlled by master mechanism"
+            self.fields['alternative_method'].widget.attrs['readonly'] = True
+            self.fields['alternative_method'].help_text = "Controlled by master mechanism"
 
 
 class ErrorPreventionStatusInlineFormSet(forms.BaseInlineFormSet):
@@ -1290,15 +1321,33 @@ class ErrorPreventionFilterForm(forms.Form):
     """Form for filtering Error Prevention checks"""
     date_from = forms.DateField(
         required=False, 
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+        label='From Date',
+        widget=forms.DateInput(attrs={
+            'type': 'date', 
+            'class': 'form-control',
+            'placeholder': 'Start date'
+        })
     )
     date_to = forms.DateField(
         required=False, 
-        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+        label='To Date',
+        widget=forms.DateInput(attrs={
+            'type': 'date', 
+            'class': 'form-control',
+            'placeholder': 'End date'
+        })
     )
     model = forms.ChoiceField(
-        choices=[('', 'All Models')] + [('P703', 'P703'), ('U704', 'U704'), ('FD', 'FD'), ('SA', 'SA'), ('Gnome', 'Gnome')],
+        choices=[
+            ('', 'All Models'),
+            ('P703', 'P703'),
+            ('U704', 'U704'),
+            ('FD', 'FD'),
+            ('SA', 'SA'),
+            ('Gnome', 'Gnome')
+        ],
         required=False,
+        label='Model',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     status = forms.ChoiceField(
@@ -1310,7 +1359,21 @@ class ErrorPreventionFilterForm(forms.Form):
             ('rejected', 'Rejected'),
         ],
         required=False,
+        label='Status',
         widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    shift = forms.ChoiceField(
+        choices=[('', 'All Shifts')] + ErrorPreventionCheck.SHIFTS,
+        required=False,
+        label='Shift',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    operator = forms.ModelChoiceField(
+        queryset=User.objects.filter(user_type='operator'),
+        required=False,
+        label='Operator',
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label='All Operators'
     )
 
 
@@ -1318,34 +1381,44 @@ class ErrorPreventionWorkflowForm(forms.Form):
     """Combined form for creating a daily verification workflow with EP check"""
     date = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
-        initial=timezone.now().date()
+        initial=timezone.now().date(),
+        label='Date'
     )
     
     shift_type = forms.ChoiceField(
         choices=Shift.SHIFT_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Shift'
     )
     
-    # Removed current_model as it will be fetched from ChecklistBase
-    
     operator = forms.ModelChoiceField(
-        queryset=User.objects.filter(user_type='operator'),
-        widget=forms.Select(attrs={'class': 'form-control'})
+        queryset=User.objects.filter(user_type='operator', is_active=True),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Operator'
     )
     
     shift_supervisor = forms.ModelChoiceField(
-        queryset=User.objects.filter(user_type='shift_supervisor'),
-        widget=forms.Select(attrs={'class': 'form-control'})
+        queryset=User.objects.filter(user_type='shift_supervisor', is_active=True),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Production Supervisor',
+        required=False
     )
     
     quality_supervisor = forms.ModelChoiceField(
-        queryset=User.objects.filter(user_type='quality_supervisor'),
-        widget=forms.Select(attrs={'class': 'form-control'})
+        queryset=User.objects.filter(user_type='quality_supervisor', is_active=True),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Quality Supervisor',
+        required=False
     )
     
     comments = forms.CharField(
         required=False,
-        widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
+        widget=forms.Textarea(attrs={
+            'rows': 3, 
+            'class': 'form-control',
+            'placeholder': 'Add any initial comments...'
+        }),
+        label='Comments'
     )
     
     def __init__(self, *args, **kwargs):
@@ -1355,11 +1428,32 @@ class ErrorPreventionWorkflowForm(forms.Form):
         # Set current user as default operator if applicable
         if self.user and self.user.user_type == 'operator':
             self.initial['operator'] = self.user
+            self.fields['operator'].widget.attrs['readonly'] = True
             
         # Set default shift based on current time
+        from main.utils import get_current_shift_type
         current_shift_type = get_current_shift_type()
-        self.initial['shift_type'] = current_shift_type    
+        if current_shift_type:
+            self.initial['shift_type'] = current_shift_type
     
+    def clean(self):
+        cleaned_data = super().clean()
+        date = cleaned_data.get('date')
+        shift_type = cleaned_data.get('shift_type')
+        
+        # Check if a verification status already exists for this date and shift
+        if date and shift_type:
+            existing = DailyVerificationStatus.objects.filter(
+                date=date,
+                shift__shift_type=shift_type
+            ).exists()
+            
+            if existing:
+                raise forms.ValidationError(
+                    f"A verification status already exists for {date} - {shift_type}"
+                )
+        
+        return cleaned_data    
     
     
     
@@ -1372,75 +1466,57 @@ class DateInput(forms.DateInput):
     """Custom DateInput with HTML5 date type for better date pickers"""
     input_type = 'date'
 
+# Add to your forms.py
+
+from django import forms
+from .models import DTPMChecklistFMA03New, DTPMCheckResultNew, ChecklistBase
+
 class DTPMChecklistFMA03NewForm(forms.ModelForm):
-    """Form for creating and updating DTPM checklists"""
+    """Form for creating and updating DTPM checklists - Dynamic Version"""
     class Meta:
         model = DTPMChecklistFMA03New
-        fields = ['date', 'notes']  # Removed model field as it will be auto-populated
+        fields = ['date', 'notes']
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
     
     def __init__(self, *args, **kwargs):
-        is_supervisor = kwargs.pop('is_supervisor', False)
         verification_status = kwargs.pop('verification_status', None)
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
+        # Apply styling
         for field in self.fields:
             self.fields[field].widget.attrs.update({'class': 'form-control'})
         
-        # Make date field required
-        self.fields['date'].required = True
-        
-        # Set initial date to today if creating a new record
+        # Set initial date
         if not self.instance.pk:
             from django.utils import timezone
             self.initial['date'] = timezone.now().date()
             
-            # Set verification status if provided
             if verification_status:
                 self.instance.verification_status = verification_status
-                
-            # Set operator if user is provided
             if user:
                 self.instance.operator = user
         
-        # If we have a verification status, show the model and shift as read-only info
+        # Show model and shift info
         if verification_status:
             checklist = verification_status.checklists.first()
             if checklist:
-                # Add read-only fields to display the model and shift from checklist
                 self.fields['current_model_display'] = forms.CharField(
-                    label='Current Model (from Checklist)',
+                    label='Current Model',
                     initial=checklist.selected_model,
                     widget=forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control'}),
                     required=False
                 )
                 self.fields['shift_display'] = forms.CharField(
-                    label='Shift (from Checklist)',
+                    label='Shift',
                     initial=dict(ChecklistBase.SHIFTS).get(checklist.shift, checklist.shift),
                     widget=forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control'}),
                     required=False
                 )
 
-    def save(self, commit=True):
-        """Save form with verification status and auto-populated data"""
-        instance = super().save(commit=False)
-        
-        # Set verification status if provided during initialization
-        if hasattr(self, 'instance') and hasattr(self.instance, 'verification_status') and self.instance.verification_status:
-            instance.verification_status = self.instance.verification_status
-        
-        # Set operator if provided during initialization
-        if hasattr(self, 'instance') and hasattr(self.instance, 'operator') and self.instance.operator:
-            instance.operator = self.instance.operator
-            
-        if commit:
-            instance.save()  # The save method will auto-populate model and shift
-            
-        return instance
 
 
 class DTPMCheckResultNewForm(forms.ModelForm):

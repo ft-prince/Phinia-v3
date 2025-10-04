@@ -4,7 +4,7 @@ from django.contrib.auth import login, authenticate
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime, time, timedelta
-from .models import ChecklistBase, ChecklistDynamicValue, ChecksheetContentConfig, DTPMVerificationHistory, DailyVerificationStatus, ErrorPreventionCheck, ErrorPreventionMechanismStatus, SubgroupEntry, SubgroupFrequencyConfig, Verification, Shift, User
+from .models import ChecklistBase, ChecklistDynamicValue, ChecksheetContentConfig, DTPMVerificationHistory, DailyVerificationStatus, ErrorPreventionCheck, ErrorPreventionCheckHistory, ErrorPreventionMechanism, ErrorPreventionMechanismHistory, ErrorPreventionMechanismStatus, SubgroupEntry, SubgroupFrequencyConfig, Verification, Shift, User
 from .forms import ChecklistBaseForm, DailyVerificationWorkflowForm, ErrorPreventionCheckForm, ErrorPreventionFilterForm, ErrorPreventionStatusFormSet, ErrorPreventionWorkflowForm, FTQRecordEditForm, SubgroupEntryForm, SubgroupVerificationForm, VerificationForm, ConcernForm, UserRegistrationForm
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -5739,10 +5739,13 @@ def ep_check_detail(request, pk):
         pk=pk
     )
     
-    # Get all mechanism statuses for this check
+    # Get all mechanism statuses for this check, ordered by mechanism display order
     mechanism_statuses = ErrorPreventionMechanismStatus.objects.filter(
         ep_check=ep_check
-    ).order_by('ep_mechanism_id')
+    ).select_related('mechanism').order_by(
+        'mechanism__display_order',
+        'mechanism__mechanism_id'
+    )
     
     # Get change history timeline
     timeline = get_ep_check_timeline(ep_check)
@@ -5778,142 +5781,143 @@ def ep_check_detail(request, pk):
     }
     
     return render(request, 'main/operations/ep_check_detail.html', context)
-    
-    
+
+
+
+
 @login_required
 @user_passes_test(lambda u: u.user_type == 'operator')
 def ep_check_edit(request, pk):
-    """Edit an EP check with change tracking - operators can edit pending or rejected"""
+    """Edit an existing Error Prevention check - operators can edit when pending or rejected"""
     ep_check = get_object_or_404(ErrorPreventionCheck, pk=pk)
     
-    # Verify permission to edit
-    if ep_check.operator != request.user and not request.user.is_superuser:
-        messages.error(request, 'You do not have permission to edit this EP check.')
-        return redirect('ep_check_detail', pk=ep_check.pk)
+    # Updated permission check: allow editing when pending OR rejected
+    if request.user != ep_check.operator:
+        messages.error(request, 'You can only edit your own EP checks.')
+        return redirect('ep_check_detail', pk=pk)
     
-    # Check if EP check can be edited - operators can edit pending OR rejected
     if ep_check.status not in ['pending', 'rejected']:
-        messages.error(request, 'Cannot edit a verified EP check. Only pending or rejected checks can be modified.')
-        return redirect('ep_check_detail', pk=ep_check.pk)
+        messages.error(request, 'You can only edit EP checks that are pending or rejected.')
+        return redirect('ep_check_detail', pk=pk)
+    
+    # Get all mechanism statuses for this check, ordered by mechanism display order
+    mechanism_statuses = ep_check.mechanism_statuses.select_related('mechanism').order_by(
+        'mechanism__display_order', 
+        'mechanism__mechanism_id'
+    )
     
     if request.method == 'POST':
-        form = ErrorPreventionCheckForm(request.POST, instance=ep_check)
+        form = ErrorPreventionCheckForm(
+            request.POST,
+            instance=ep_check,
+            verification_status=ep_check.verification_status,
+            user=request.user
+        )
+        
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # Store original status for reset logic
-                    was_rejected = ep_check.status == 'rejected'
+                    # Save the main EP check
+                    ep_check = form.save()
                     
-                    # Save EP check first
-                    try:
-                        ep_check = form.save(commit=False)
-                        ep_check.save(user=request.user)
-                    except TypeError:
-                        # Fallback if save method doesn't accept user parameter
-                        ep_check = form.save()
+                    # Track changes for history
+                    changes_made = []
                     
-                    # If this was a rejected check being edited, reset status to pending
-                    if was_rejected:
-                        ep_check.status = 'pending'
-                        ep_check.supervisor = None
-                        ep_check.quality_supervisor = None
-                        ep_check.comments = ''
-                        if hasattr(ep_check, 'rejected_at'):
-                            ep_check.rejected_at = None
-                        if hasattr(ep_check, 'rejected_by'):
-                            ep_check.rejected_by = None
-                        
-                        # Reset verification status
-                        verification_status = ep_check.verification_status
-                        verification_status.status = 'pending'
-                        verification_status.quality_notified = False
-                        verification_status.save()
-                        
-                        ep_check.save()
-                    
-                    # Get all existing mechanism statuses for this EP check
-                    existing_statuses = ErrorPreventionMechanismStatus.objects.filter(
-                        ep_check=ep_check
-                    )
-                    
-                    # Process form data for each mechanism
-                    updated_count = 0
-                    for i in range(1, 11):  # For the 10 EP mechanisms
-                        index_str = f"{i:02d}"
+                    # Update mechanism statuses from POST data
+                    for status in mechanism_statuses:
+                        if not status.mechanism:
+                            continue
+                            
+                        # Use mechanism ID as the key (consistent with create view)
+                        mech_key = f"mech_{status.mechanism.id}"
                         
                         # Get form data
-                        is_working = request.POST.get(f'is_working_{index_str}') == 'on'
-                        is_na = request.POST.get(f'is_na_{index_str}') == 'on'
-                        status_value = '' if is_na else request.POST.get(f'status_{index_str}', '')
-                        alternative_method = request.POST.get(f'alternative_method_{index_str}', '100% Inspection By Operator')
-                        comments = request.POST.get(f'comments_{index_str}', '')
+                        new_status = request.POST.get(f'status_{mech_key}', '')
+                        new_is_na = request.POST.get(f'is_na_{mech_key}') == 'on'
+                        new_comments = request.POST.get(f'comments_{mech_key}', '')
+                        new_alternative = request.POST.get(f'alternative_method_{mech_key}', '')
                         
-                        # Find the corresponding mechanism status
-                        status_list = list(existing_statuses.order_by('ep_mechanism_id'))
-                        
-                        if i <= len(status_list):
-                            mechanism_status = status_list[i-1]
-                            
-                            # Check for changes
-                            changes_made = (
-                                mechanism_status.is_working != is_working or
-                                mechanism_status.is_not_applicable != is_na or
-                                mechanism_status.status != status_value or
-                                mechanism_status.alternative_method != alternative_method or
-                                mechanism_status.comments != comments
+                        # Track changes
+                        if status.status != new_status and not new_is_na:
+                            ErrorPreventionMechanismHistory.objects.create(
+                                mechanism_status=status,
+                                changed_by=request.user,
+                                field_name='status',
+                                old_value=status.status,
+                                new_value=new_status
                             )
-                            
-                            if changes_made:
-                                # Update existing mechanism status
-                                mechanism_status.is_working = is_working
-                                mechanism_status.is_not_applicable = is_na
-                                mechanism_status.status = status_value
-                                mechanism_status.alternative_method = alternative_method
-                                mechanism_status.comments = comments
-                                
-                                # Save with user context for history tracking
-                                try:
-                                    mechanism_status.save(user=request.user)
-                                except TypeError:
-                                    mechanism_status.save()
-                                
-                                updated_count += 1
-                        else:
-                            print(f"Warning: Could not find mechanism status for index {i}")
-                
-                if was_rejected:
-                    messages.success(request, f'EP check updated successfully. Status reset to pending for re-verification. {updated_count} mechanism(s) updated.')
-                else:
-                    messages.success(request, f'EP check updated successfully. {updated_count} mechanism(s) updated. Changes have been logged.')
-                return redirect('ep_check_detail', pk=ep_check.pk)
-                
+                            changes_made.append(f"{status.mechanism.mechanism_id}: {status.status} → {new_status}")
+                        
+                        if status.is_not_applicable != new_is_na:
+                            ErrorPreventionMechanismHistory.objects.create(
+                                mechanism_status=status,
+                                changed_by=request.user,
+                                field_name='is_not_applicable',
+                                old_value=str(status.is_not_applicable),
+                                new_value=str(new_is_na)
+                            )
+                        
+                        if status.comments != new_comments:
+                            ErrorPreventionMechanismHistory.objects.create(
+                                mechanism_status=status,
+                                changed_by=request.user,
+                                field_name='comments',
+                                old_value=status.comments,
+                                new_value=new_comments
+                            )
+                        
+                        # Update the status
+                        status.status = '' if new_is_na else new_status
+                        status.is_not_applicable = new_is_na
+                        status.comments = new_comments
+                        # Alternative method can be edited by operator
+                        status.alternative_method = new_alternative
+                        # is_working remains synced from master (not editable)
+                        status.last_edited_by = request.user
+                        status.last_edited_at = timezone.now()
+                        status.save()
+                    
+                    # Create EP check history entry
+                    ErrorPreventionCheckHistory.objects.create(
+                        ep_check=ep_check,
+                        changed_by=request.user,
+                        action='updated',
+                        description=f'EP check updated. Changes: {", ".join(changes_made) if changes_made else "No mechanism changes"}',
+                        additional_data={'changes': changes_made}
+                    )
+                    
+                    messages.success(request, 'EP check updated successfully!')
+                    return redirect('ep_check_detail', pk=ep_check.pk)
+                    
             except Exception as e:
                 messages.error(request, f"Error updating EP check: {str(e)}")
-                print(f"Full error details: {e}")
-                import traceback
-                traceback.print_exc()
         else:
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
     else:
-        form = ErrorPreventionCheckForm(instance=ep_check)
+        # Initialize form with existing data
+        form = ErrorPreventionCheckForm(
+            instance=ep_check,
+            verification_status=ep_check.verification_status,
+            user=request.user
+        )
     
     context = {
         'form': form,
         'ep_check': ep_check,
-        'title': 'Edit Error Prevention Check'
+        'mechanism_statuses': mechanism_statuses,
+        'title': 'Edit Error Prevention Check',
     }
     
     return render(request, 'main/operations/ep_check_edit.html', context)
 
-
-
 @login_required
 @user_passes_test(lambda u: u.user_type == 'operator')
 def ep_check_create(request):
-    """Create a new Error Prevention check with all mechanism statuses in one form"""
-    # Get the active verification status if available
+    """Create a new Error Prevention check with dynamic mechanisms from master list"""
+    
+    # Get the active verification status
     active_verification = DailyVerificationStatus.objects.filter(
         created_by=request.user,
         date=timezone.now().date(),
@@ -5922,15 +5926,18 @@ def ep_check_create(request):
     
     if not active_verification:
         messages.warning(request, 'You need to create a Daily Verification Sheet first.')
-        return redirect('start_verification')
+        return redirect('create_checklist')
     
-    # Check if EP check already exists for this verification
-    existing_check = ErrorPreventionCheck.objects.filter(verification_status=active_verification).first()
+    # Check if EP check already exists
+    existing_check = ErrorPreventionCheck.objects.filter(
+        verification_status=active_verification
+    ).first()
+    
     if existing_check:
         messages.warning(request, 'An EP check already exists for this verification status.')
         return redirect('ep_check_detail', pk=existing_check.pk)
     
-    # Get active checklist to ensure it exists (model and shift will be auto-populated)
+    # Get active checklist
     active_checklist = ChecklistBase.objects.filter(
         verification_status=active_verification
     ).first()
@@ -5939,64 +5946,56 @@ def ep_check_create(request):
         messages.error(request, 'No checklist found. Please create a checklist first.')
         return redirect('create_checklist')
     
+    # Get current model to filter mechanisms
+    current_model = active_checklist.selected_model
+    
+    # Get applicable mechanisms for this model
+    mechanisms = ErrorPreventionMechanism.objects.filter(
+        is_active=True,
+        applicable_models__icontains=current_model
+    ).order_by('display_order')
+    
     if request.method == 'POST':
-        form = ErrorPreventionCheckForm(request.POST, verification_status=active_verification, user=request.user)
+        form = ErrorPreventionCheckForm(
+            request.POST,
+            verification_status=active_verification,
+            user=request.user
+        )
+        
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # Create the main EP check (model and shift will be auto-populated from save method)
+                    # Create the main EP check
                     ep_check = form.save()
                     
-                    # Create initial history entry
-                    from .history_utils import create_initial_history
-                    create_initial_history(ep_check, request.user)
-                    
-                    # Create mechanism statuses from the form data
-                    for i in range(1, 11):  # For the 10 EP mechanisms in your choices
-                        index_str = f"{i:02d}"  # Format as 01, 02, etc.
+                    # Create mechanism statuses from POST data
+                    for mechanism in mechanisms:
+                        # Use mechanism ID as the key
+                        mech_key = f"mech_{mechanism.id}"
                         
-                        # Use the mechanism IDs from your EP_MECHANISM_CHOICES
-                        mechanism_choices = [
-                            'FMA-03-35-M01_T6',  # 1
-                            'FMA-03-35-M02',     # 2
-                            'FMA-03-35-M03',     # 3
-                            'FMA-03-35-M04',     # 4
-                            'FMA-03-35-M05',     # 5
-                            'FMA-03-35-M06',     # 6
-                            'FMA-03-35-M07',     # 7
-                            'FMA-03-35-M08',     # 8
-                            'FMA-03-35-M01_T6',  # 9 (could be different, check your model)
-                            'FMA-03-35-M08',     # 10 (could be different, check your model)
-                        ]
+                        # Get form data
+                        status = request.POST.get(f'status_{mech_key}', '')
+                        is_na = request.POST.get(f'is_na_{mech_key}') == 'on'
+                        comments = request.POST.get(f'comments_{mech_key}', '')
                         
-                        if i <= len(mechanism_choices):
-                            mech_id = mechanism_choices[i-1]
-                        else:
-                            continue  # Skip if index is out of range
-                        
-                        # Get values from the form
-                        is_working = request.POST.get(f'is_working_{index_str}') == 'on'
-                        is_na = request.POST.get(f'is_na_{index_str}') == 'on'
-                        status = request.POST.get(f'status_{index_str}', '')
-                        alternative_method = request.POST.get(f'alternative_method_{index_str}', '100% Inspection By Operator')
-                        comments = request.POST.get(f'comments_{index_str}', '')
-                        
-                        # Create the mechanism status
-                        mechanism_status = ErrorPreventionMechanismStatus.objects.create(
+                        # Create mechanism status
+                        ErrorPreventionMechanismStatus.objects.create(
                             ep_check=ep_check,
-                            ep_mechanism_id=mech_id,
-                            is_working=is_working,
+                            mechanism=mechanism,
+                            status='' if is_na else status,
                             is_not_applicable=is_na,
-                            status='' if is_na else status,  # Set status to empty if N/A is checked
-                            alternative_method=alternative_method,
-                            comments=comments
+                            is_working=mechanism.is_currently_working,
+                            alternative_method=mechanism.default_alternative_method,
+                            comments=comments,
+                            last_edited_by=request.user
                         )
-                        
-                        # Don't create initial history for mechanism statuses
-                        # History should only track actual changes, not initial creation
-                
-                messages.success(request, f'EP check created successfully for {ep_check.current_model} model on {ep_check.get_shift_display()} shift.')
-                return redirect('operator_dashboard')
+                    
+                    messages.success(
+                        request, 
+                        f'EP check created successfully with {mechanisms.count()} mechanisms!'
+                    )
+                    return redirect('operator_dashboard')
+                    
             except Exception as e:
                 messages.error(request, f"Error creating EP check: {str(e)}")
         else:
@@ -6004,9 +6003,8 @@ def ep_check_create(request):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
     else:
-        # Pre-fill date from verification status (model and shift are auto-populated)
+        # Initialize form
         initial_data = {'date': active_verification.date}
-        
         form = ErrorPreventionCheckForm(
             initial=initial_data,
             verification_status=active_verification,
@@ -6018,13 +6016,14 @@ def ep_check_create(request):
         'title': 'Create Error Prevention Check',
         'active_verification': active_verification,
         'active_checklist': active_checklist,
-        'current_shift': active_verification.shift.get_shift_type_display(),
-        'current_model': active_checklist.selected_model,
-        'current_shift_from_checklist': dict(ChecklistBase.SHIFTS).get(active_checklist.shift, active_checklist.shift),
+        'current_model': current_model,
+        'current_shift': active_verification.shift.get_shift_type_display() if active_verification.shift else 'N/A',
+        'mechanisms': mechanisms,  # Pass mechanisms to template
+        'mechanisms_count': mechanisms.count(),
     }
     
     return render(request, 'main/operations/ep_check_create.html', context)
-  
+
 
 @login_required
 def ep_check_edit_statuses(request, pk):
@@ -6111,9 +6110,10 @@ def ep_check_verify_supervisor(request, pk):
                 success_message = 'EP check approved by supervisor.'
             
             # Update verification status to notify quality supervisor
-            verification_status = ep_check.verification_status
-            verification_status.quality_notified = True
-            verification_status.save()
+            if ep_check.verification_status:
+                verification_status = ep_check.verification_status
+                verification_status.quality_notified = True
+                verification_status.save()
             
         else:  # reject action
             ep_check.status = 'rejected'
@@ -6126,29 +6126,35 @@ def ep_check_verify_supervisor(request, pk):
                 ep_check.quality_approved_at = None
             
             # Update verification status
-            verification_status = ep_check.verification_status
-            verification_status.status = 'rejected'
-            verification_status.quality_notified = False
-            verification_status.save()
+            if ep_check.verification_status:
+                verification_status = ep_check.verification_status
+                verification_status.status = 'rejected'
+                verification_status.quality_notified = False
+                verification_status.save()
             
             success_message = 'EP check rejected by supervisor. Operator can edit and resubmit.'
             
         ep_check.save()
         
-        # Log the verification action
-        if hasattr(ep_check, 'save') and 'user' in ep_check.save.__code__.co_varnames:
-            try:
-                ep_check.save(user=request.user)
-            except:
-                ep_check.save()
+        # Create history entry
+        ErrorPreventionCheckHistory.objects.create(
+            ep_check=ep_check,
+            changed_by=request.user,
+            action='supervisor_verified' if action == 'approve' else 'rejected',
+            description=f'Supervisor {"approved" if action == "approve" else "rejected"} EP check',
+            additional_data={'comments': comments}
+        )
         
         messages.success(request, success_message)
         return redirect('dashboard')
     
-    # Get all mechanism statuses for review
+    # Get all mechanism statuses with related mechanism data, ordered properly
     mechanism_statuses = ErrorPreventionMechanismStatus.objects.filter(
         ep_check=ep_check
-    ).order_by('ep_mechanism_id')
+    ).select_related('mechanism').order_by(
+        'mechanism__display_order',
+        'mechanism__mechanism_id'
+    )
     
     # Check for incomplete statuses
     incomplete_statuses = ErrorPreventionMechanismStatus.objects.filter(
@@ -6168,7 +6174,6 @@ def ep_check_verify_supervisor(request, pk):
     return render(request, 'main/operations/ep_check_verify.html', context)
 
 
- 
 @login_required
 @user_passes_test(lambda u: u.user_type == 'quality_supervisor')
 def ep_check_verify_quality(request, pk):
@@ -6192,40 +6197,52 @@ def ep_check_verify_quality(request, pk):
             ep_check.comments = comments
             
             # Update verification status
-            verification_status = ep_check.verification_status
-            verification_status.status = 'completed'
-            verification_status.save()
+            if ep_check.verification_status:
+                verification_status = ep_check.verification_status
+                verification_status.status = 'completed'
+                verification_status.save()
             
             success_message = 'EP check approved by quality. Process complete.'
             
         else:  # reject action
             ep_check.status = 'rejected'
-            ep_check.quality_supervisor = request.user
+            # DO NOT set quality_supervisor when rejecting - clear it instead
+            ep_check.quality_supervisor = None
             ep_check.comments = comments
             
+            # Also clear supervisor approval to force re-verification
+            ep_check.supervisor = None
+            
             # Update verification status
-            verification_status = ep_check.verification_status
-            verification_status.status = 'rejected'
-            verification_status.save()
+            if ep_check.verification_status:
+                verification_status = ep_check.verification_status
+                verification_status.status = 'rejected'
+                verification_status.quality_notified = False
+                verification_status.save()
             
             success_message = 'EP check rejected by quality. Sent back for review.'
             
         ep_check.save()
         
-        # Log the verification action
-        if hasattr(ep_check, 'save') and 'user' in ep_check.save.__code__.co_varnames:
-            try:
-                ep_check.save(user=request.user)
-            except:
-                ep_check.save()
+        # Create history entry
+        ErrorPreventionCheckHistory.objects.create(
+            ep_check=ep_check,
+            changed_by=request.user,
+            action='quality_verified' if action == 'approve' else 'rejected',
+            description=f'Quality {"approved" if action == "approve" else "rejected"} EP check',
+            additional_data={'comments': comments}
+        )
         
         messages.success(request, success_message)
         return redirect('dashboard')
     
-    # Get all mechanism statuses for review
+    # Get all mechanism statuses with related mechanism data, ordered properly
     mechanism_statuses = ErrorPreventionMechanismStatus.objects.filter(
         ep_check=ep_check
-    ).order_by('ep_mechanism_id')
+    ).select_related('mechanism').order_by(
+        'mechanism__display_order',
+        'mechanism__mechanism_id'
+    )
     
     # Check for any non-working mechanisms
     non_working_mechanisms = ErrorPreventionMechanismStatus.objects.filter(
@@ -6330,12 +6347,12 @@ def ep_check_dashboard(request):
             # Fall back to default if dates are invalid
             days = int(request.GET.get('days', 30))
             end_date = today
-            start_date = end_date - timedelta(days=days-1)  # -1 to include today
+            start_date = end_date - timedelta(days=days-1)
     else:
         # Get date range for filtering from days parameter
         days = int(request.GET.get('days', 30))
         end_date = today
-        start_date = end_date - timedelta(days=days-1)  # -1 to include today
+        start_date = end_date - timedelta(days=days-1)
     
     # Get EP checks in date range
     ep_checks = ErrorPreventionCheck.objects.filter(
@@ -6365,13 +6382,18 @@ def ep_check_dashboard(request):
     # Get mechanism statuses for checks in range
     mechanism_statuses = ErrorPreventionMechanismStatus.objects.filter(
         ep_check__in=ep_checks
-    )
+    ).select_related('mechanism')
     
-    # Calculate statistics by mechanism
+    # Get all active mechanisms from master list
+    active_mechanisms = ErrorPreventionMechanism.objects.filter(
+        is_active=True
+    ).order_by('display_order', 'mechanism_id')
+    
+    # Calculate statistics by mechanism using the master mechanism list
     mechanism_stats = {}
-    for mech_id, mech_name in ErrorPreventionCheck.EP_MECHANISM_CHOICES:
+    for mechanism in active_mechanisms:
         # Get all statuses for this mechanism
-        statuses = mechanism_statuses.filter(ep_mechanism_id=mech_id)
+        statuses = mechanism_statuses.filter(mechanism=mechanism)
         
         total = statuses.count()
         ok_count = statuses.filter(status='OK').count()
@@ -6387,8 +6409,9 @@ def ep_check_dashboard(request):
             ok_rate = 0
             ng_rate = 0
             
-        mechanism_stats[mech_id] = {
-            'name': mech_name,
+        mechanism_stats[mechanism.mechanism_id] = {
+            'name': mechanism.description[:50],  # Truncate long descriptions
+            'mechanism_id': mechanism.mechanism_id,
             'total': total,
             'ok_count': ok_count,
             'ng_count': ng_count,
@@ -6399,22 +6422,20 @@ def ep_check_dashboard(request):
     
     # Prepare chart data for mechanisms
     chart_data = {
-        'labels': [m_stats['name'][:20] + '...' if len(m_stats['name']) > 20 else m_stats['name'] 
-                  for m_id, m_stats in mechanism_stats.items()],
+        'labels': [m_stats['mechanism_id'] for m_id, m_stats in mechanism_stats.items()],
         'ok_rates': [m_stats['ok_rate'] for m_id, m_stats in mechanism_stats.items()],
         'ok_counts': [m_stats['ok_count'] for m_id, m_stats in mechanism_stats.items()],
         'ng_counts': [m_stats['ng_count'] for m_id, m_stats in mechanism_stats.items()]
     }
     
     # Generate time series data for trend chart
-    # Create date range for x-axis
     date_range = []
     current_date = start_date
     while current_date <= end_date:
         date_range.append(current_date)
         current_date += timedelta(days=1)
     
-    # Format date range based on total days (more readable labels for larger ranges)
+    # Format date range based on total days
     if days <= 14:
         formatted_dates = [d.strftime('%b %d') for d in date_range]
     elif days <= 90:
@@ -6450,16 +6471,13 @@ def ep_check_dashboard(request):
     
     for date in date_range:
         if days <= 14:
-            # Daily data for short ranges
             day_checks = ep_checks.filter(date=date)
         elif days <= 90:
-            # Weekly data for medium ranges
             week_end = date + timedelta(days=6)
             day_checks = ep_checks.filter(date__range=[date, min(week_end, end_date)])
         else:
-            # Monthly data for long ranges
-            month_end = date.replace(day=28) + timedelta(days=4)  # Go to next month
-            month_end = month_end.replace(day=1) - timedelta(days=1)  # Last day of current month
+            month_end = date.replace(day=28) + timedelta(days=4)
+            month_end = month_end.replace(day=1) - timedelta(days=1)
             day_checks = ep_checks.filter(date__range=[date, min(month_end, end_date)])
         
         total_counts.append(day_checks.count())
@@ -6654,6 +6672,9 @@ def export_ep_excel(request, pk):
     wb.save(response)
     return response
 
+
+
+
 @login_required
 def ep_mechanism_status_update(request, status_id):
     """API endpoint to update a mechanism status via AJAX"""
@@ -6835,6 +6856,20 @@ from .forms import (
     DTPMIssueResolveNewForm, DTPMChecklistNewFilterForm
 )
 
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib import messages
+from django.utils import timezone
+from django.db import transaction
+from .models import (
+    DTPMCheckpoint, DTPMChecklistFMA03New, DTPMCheckResultNew, 
+    DailyVerificationStatus, ChecklistBase
+)
+from .forms import DTPMChecklistFMA03NewForm
+
+
+
 @login_required
 def dtpm_new_list(request):
     """List all DTPM checklists with filtering options"""
@@ -6889,52 +6924,56 @@ def dtpm_new_list(request):
 
 @login_required
 def dtpm_new_detail(request, pk):
-    """View details of a specific DTPM checklist"""
+    """View details of a specific DTPM checklist with dynamic checkpoints"""
     checklist = get_object_or_404(
-        DTPMChecklistFMA03New.objects.select_related('shift', 'operator', 'supervisor', 'verification_status'),
+        DTPMChecklistFMA03New.objects.select_related(
+            'shift', 'operator', 'supervisor', 'verification_status'
+        ),
         pk=pk
     )
     
-    # Get all checkpoint results for this checklist
-    checkpoint_results = list(DTPMCheckResultNew.objects.filter(
+    # Get all checkpoint results with their checkpoint details
+    # Use the Meta ordering from DTPMCheckResultNew model
+    checkpoint_results = DTPMCheckResultNew.objects.filter(
         checklist=checklist
-    ).order_by('checkpoint_number'))
+    ).select_related('checkpoint')
     
     # Get issues for this checklist
     issues = DTPMIssueNew.objects.filter(
         check_result__checklist=checklist
     ).select_related('check_result', 'reported_by', 'assigned_to').order_by('-created_at')
     
+    # Permissions
     can_edit = (
         request.user == checklist.operator and 
-        checklist.status in ['pending', 'rejected']
+        checklist.status == 'pending'
     )
     
-    # Check if user can verify the checklist
-    # Supervisors can verify at any time
-    can_verify = (request.user == checklist.supervisor)
+    can_verify_supervisor = (
+        request.user.user_type == 'shift_supervisor' and
+        checklist.status == 'pending'
+    )
     
-    # Process each checkpoint result to determine if it's really modified
+    can_verify_quality = (
+        request.user.user_type == 'quality_supervisor' and
+        checklist.status == 'supervisor_approved'
+    )
+    
+    # Check for modifications (timestamp difference > 30 seconds)
     from datetime import timedelta
     has_modifications = False
     modifications = []
     
     for result in checkpoint_results:
-        # Calculate time difference in seconds
         time_diff = abs((result.updated_at - result.checked_at).total_seconds())
-        
-        # Consider it modified if there's more than 30 seconds difference
-        # This accounts for the normal creation process timing
         is_really_modified = time_diff > 30
-        
-        # Add the property to the result object
         result.is_really_modified = is_really_modified
         
         if is_really_modified:
             has_modifications = True
             modifications.append({
-                'checkpoint_number': result.checkpoint_number,
-                'checkpoint_title': dict(DTPMChecklistFMA03New.CHECKPOINT_CHOICES)[result.checkpoint_number],
+                'checkpoint_number': result.checkpoint.checkpoint_number,
+                'checkpoint_title': result.checkpoint.title_english,
                 'current_status': result.status,
                 'has_comments': bool(result.comments),
                 'last_modified': result.updated_at,
@@ -6942,14 +6981,30 @@ def dtpm_new_detail(request, pk):
                 'time_diff_seconds': time_diff,
             })
     
+    # Get machine overview image
+    machine_overview = DTPMCheckpoint.objects.filter(
+        checkpoint_number=8,
+        is_active=True
+    ).first()
+    
+    # Calculate statistics
+    total_checkpoints = checkpoint_results.count()
+    ok_count = checkpoint_results.filter(status='OK').count()
+    ng_count = checkpoint_results.filter(status='NG').count()
+    
     context = {
         'checklist': checklist,
         'checkpoint_results': checkpoint_results,
         'issues': issues,
         'can_edit': can_edit,
-        'can_verify': can_verify,
+        'can_verify_supervisor': can_verify_supervisor,
+        'can_verify_quality': can_verify_quality,
         'has_modifications': has_modifications,
         'modifications': modifications,
+        'machine_overview_image': machine_overview,
+        'total_checkpoints': total_checkpoints,
+        'ok_count': ok_count,
+        'ng_count': ng_count,
         'title': f'DTPM Checklist - {checklist.date}'
     }
     
@@ -6959,8 +7014,9 @@ def dtpm_new_detail(request, pk):
 @login_required
 @user_passes_test(lambda u: u.user_type == 'operator')
 def dtpm_checklist_create(request):
-    """Create a new DTPM checklist linked to the active verification"""
-    # Get the active verification status if available
+    """Create a new DTPM checklist with dynamic checkpoints"""
+    
+    # Get the active verification status
     active_verification = DailyVerificationStatus.objects.filter(
         created_by=request.user,
         date=timezone.now().date(),
@@ -6969,7 +7025,7 @@ def dtpm_checklist_create(request):
     
     if not active_verification:
         messages.warning(request, 'You need to create a Daily Verification Sheet first.')
-        return redirect('start_verification')
+        return redirect('create_checklist')
     
     # Check if checklist exists (for auto-population)
     active_checklist = ChecklistBase.objects.filter(
@@ -6980,14 +7036,29 @@ def dtpm_checklist_create(request):
         messages.error(request, 'No checklist found. Please create a checklist first.')
         return redirect('create_checklist')
     
-    # Check if DTPM checklist already exists for this verification
-    existing_checklist = DTPMChecklistFMA03New.objects.filter(verification_status=active_verification).first()
+    # Check if DTPM checklist already exists
+    existing_checklist = DTPMChecklistFMA03New.objects.filter(
+        verification_status=active_verification
+    ).first()
+    
     if existing_checklist:
         messages.warning(request, 'A DTPM checklist already exists for this verification status.')
         return redirect('dtpm_new_detail', pk=existing_checklist.pk)
     
+    # Get all active checkpoints ordered by display order
+    active_checkpoints = DTPMCheckpoint.objects.filter(
+        is_active=True
+    ).exclude(
+        checkpoint_number=8  # Exclude machine overview image from main checkpoints
+    ).order_by('order', 'checkpoint_number')
+    
+    # Get machine overview image (checkpoint #8)
+    machine_overview = DTPMCheckpoint.objects.filter(
+        checkpoint_number=8,
+        is_active=True
+    ).first()
+    
     if request.method == 'POST':
-        # Create form with verification status for auto-population
         form = DTPMChecklistFMA03NewForm(
             request.POST, 
             verification_status=active_verification, 
@@ -6997,11 +7068,9 @@ def dtpm_checklist_create(request):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # Save the checklist but don't commit yet
+                    # Save the checklist
                     checklist = form.save(commit=False)
-                    
-                    # Set required fields
-                    checklist.shift = active_verification.shift  # Fix: Set the shift ForeignKey
+                    checklist.shift = active_verification.shift
                     checklist.operator = request.user
                     checklist.verification_status = active_verification
                     
@@ -7009,32 +7078,29 @@ def dtpm_checklist_create(request):
                     if active_verification.shift.shift_supervisor:
                         checklist.supervisor = active_verification.shift.shift_supervisor
                     
-                    # Now save the checklist (this will trigger auto-population of model and checklist_shift)
+                    # Save checklist (this triggers signal to auto-create checkpoint results)
                     checklist.save()
                     
-                    # Process the checkpoint results from the POST data
-                    # First, delete any auto-created checkpoint results to avoid conflicts
-                    DTPMCheckResultNew.objects.filter(checklist=checklist).delete()
-                    
-                    # Now create checkpoint results with the form data
-                    for i in range(1, 8):  # 7 checkpoints
-                        status = request.POST.get(f'status_{i}', 'NG')  # Default to NG
-                        comments = request.POST.get(f'comments_{i}', '')
+                    # UPDATE the auto-created checkpoint results with form data (don't create new ones)
+                    for checkpoint in active_checkpoints:
+                        status = request.POST.get(f'status_{checkpoint.id}', 'NG')
+                        comments = request.POST.get(f'comments_{checkpoint.id}', '')
                         
-                        # Create the checkpoint result with both timestamps set to the same time
-                        # This way, during creation, checked_at and updated_at will be the same
-                        creation_time = timezone.now()
-                        DTPMCheckResultNew.objects.create(
+                        # Update existing checkpoint result (created by signal)
+                        DTPMCheckResultNew.objects.filter(
                             checklist=checklist,
-                            checkpoint_number=i,
+                            checkpoint=checkpoint
+                        ).update(
                             status=status,
-                            comments=comments,
-                            checked_at=creation_time,
-                            updated_at=creation_time  # Set both to the same time initially
+                            comments=comments
                         )
-                
-                messages.success(request, f'DTPM checklist created successfully for {checklist.current_model} model on {dict(ChecklistBase.SHIFTS).get(checklist.checklist_shift, checklist.checklist_shift)} shift.')
-                return redirect('operator_dashboard')
+                    
+                    messages.success(
+                        request, 
+                        f'DTPM checklist created successfully for {checklist.current_model} model.'
+                    )
+                    return redirect('operator_dashboard')
+                    
             except Exception as e:
                 messages.error(request, f"Error creating DTPM checklist: {str(e)}")
         else:
@@ -7042,14 +7108,10 @@ def dtpm_checklist_create(request):
                 for error in errors:
                     messages.error(request, f"{field}: {error}")
     else:
-        # Create form with verification status and user for auto-population
         form = DTPMChecklistFMA03NewForm(
             verification_status=active_verification, 
             user=request.user
         )
-    
-    # Get checkpoint choices for the template
-    checkpoint_choices = DTPMChecklistFMA03New.CHECKPOINT_CHOICES
     
     context = {
         'form': form,
@@ -7058,12 +7120,16 @@ def dtpm_checklist_create(request):
         'active_checklist': active_checklist,
         'current_shift': active_verification.shift.get_shift_type_display(),
         'current_model': active_checklist.selected_model,
-        'current_shift_from_checklist': dict(ChecklistBase.SHIFTS).get(active_checklist.shift, active_checklist.shift),
-        'checkpoint_choices': checkpoint_choices,
+        'current_shift_from_checklist': dict(ChecklistBase.SHIFTS).get(
+            active_checklist.shift, 
+            active_checklist.shift
+        ),
+        'active_checkpoints': active_checkpoints,
+        'machine_overview_image': machine_overview,
     }
     
     return render(request, 'main/dtpm/dtpm_new_form.html', context)
-
+   
 
 # Optional: Helper function for DTPM dashboard statistics
 def get_dtpm_dashboard_stats(verification_status):
@@ -7117,6 +7183,8 @@ def dtpm_new_delete(request, pk):
     
     return render(request, 'main/dtpm/dtpm_new_confirm_delete.html', context)
 
+
+
 @login_required
 def dtpm_new_edit_checks(request, pk):
     """Edit all checkpoint results for a DTPM checklist"""
@@ -7129,67 +7197,53 @@ def dtpm_new_edit_checks(request, pk):
             return redirect('dtpm_new_detail', pk=checklist.pk)
     
     # Check if checklist can be edited
-    # Operators can edit when status is 'pending' OR 'rejected'
     if checklist.status not in ['pending', 'rejected']:
         messages.error(request, 'This checklist cannot be edited. Only pending or rejected checklists can be modified.')
         return redirect('dtpm_new_detail', pk=checklist.pk)
+    
+    # Get all active checkpoints (excluding machine overview)
+    active_checkpoints = DTPMCheckpoint.objects.filter(
+        is_active=True
+    ).exclude(
+        checkpoint_number=8
+    ).order_by('order', 'checkpoint_number')
     
     if request.method == 'POST':
         try:
             with transaction.atomic():
                 updated_count = 0
                 
-                # Process the checkpoint results
-                for i in range(1, 8):  # 7 checkpoints
-                    # Try both naming conventions for backwards compatibility
-                    status_key_prefixed = f"{checklist.id}-status_{i}"
-                    comments_key_prefixed = f"{checklist.id}-comments_{i}"
-                    status_key_simple = f'status_{i}'
-                    comments_key_simple = f'comments_{i}'
+                # Process each checkpoint result
+                for checkpoint in active_checkpoints:
+                    status = request.POST.get(f'status_{checkpoint.id}', '')
+                    comments = request.POST.get(f'comments_{checkpoint.id}', '')
                     
-                    # Get values, trying prefixed first, then simple
-                    status = (request.POST.get(status_key_prefixed) or 
-                             request.POST.get(status_key_simple, ''))
-                    comments = (request.POST.get(comments_key_prefixed) or 
-                               request.POST.get(comments_key_simple, ''))
+                    # Get or create the checkpoint result
+                    check_result, created = DTPMCheckResultNew.objects.get_or_create(
+                        checklist=checklist,
+                        checkpoint=checkpoint,
+                        defaults={'status': 'NG'}
+                    )
                     
-                    # Get the checkpoint result
-                    try:
-                        check_result = DTPMCheckResultNew.objects.get(
-                            checklist=checklist,
-                            checkpoint_number=i
-                        )
+                    # Check if there are actual changes
+                    status_changed = check_result.status != status
+                    comments_changed = check_result.comments != comments
+                    
+                    if status_changed or comments_changed:
+                        check_result.status = status
+                        check_result.comments = comments
                         
-                        # Check if there are actual changes
-                        status_changed = check_result.status != status
-                        comments_changed = check_result.comments != comments
+                        # Only update timestamp if this is a real edit (not initial creation)
+                        from django.utils import timezone
+                        time_since_creation = (timezone.now() - check_result.checked_at).total_seconds()
+                        if time_since_creation > 30:  # More than 30 seconds since creation
+                            check_result.updated_at = timezone.now()
                         
-                        if status_changed or comments_changed:
-                            # Update the fields
-                            check_result.status = status
-                            check_result.comments = comments
-                            # Only update the updated_at if this is a real edit (not initial creation)
-                            # Check if enough time has passed since creation to consider this a real edit
-                            from django.utils import timezone
-                            time_since_creation = (timezone.now() - check_result.checked_at).total_seconds()
-                            if time_since_creation > 30:  # More than 30 seconds since creation
-                                check_result.updated_at = timezone.now()
-                            check_result.save()
-                            updated_count += 1
-                            
-                    except DTPMCheckResultNew.DoesNotExist:
-                        # This shouldn't happen, but create if missing
-                        DTPMCheckResultNew.objects.create(
-                            checklist=checklist,
-                            checkpoint_number=i,
-                            status=status,
-                            comments=comments
-                        )
+                        check_result.save()
                         updated_count += 1
                 
                 if updated_count > 0:
-                    # If this was a rejected checklist that's now being edited, 
-                    # reset status back to pending for re-verification
+                    # If this was a rejected checklist, reset status to pending
                     if checklist.status == 'rejected':
                         checklist.status = 'pending'
                         checklist.rejected_at = None
@@ -7206,33 +7260,28 @@ def dtpm_new_edit_checks(request, pk):
         except Exception as e:
             messages.error(request, f"Error updating checkpoint results: {str(e)}")
     
-    # Get checkpoint results for the template
+    # Get checkpoint results - use the Meta ordering from the model
     checkpoint_results = DTPMCheckResultNew.objects.filter(
         checklist=checklist
-    ).order_by('checkpoint_number')
+    ).select_related('checkpoint')
     
-    # Ensure all 7 checkpoints exist
-    existing_checkpoints = {result.checkpoint_number for result in checkpoint_results}
-    for i in range(1, 8):
-        if i not in existing_checkpoints:
-            DTPMCheckResultNew.objects.create(
-                checklist=checklist,
-                checkpoint_number=i,
-                status='NG'  # Default status
-            )
-    
-    # Refresh the queryset
-    checkpoint_results = DTPMCheckResultNew.objects.filter(
-        checklist=checklist
-    ).order_by('checkpoint_number')
+    # Get machine overview image
+    machine_overview = DTPMCheckpoint.objects.filter(
+        checkpoint_number=8,
+        is_active=True
+    ).first()
     
     context = {
         'checklist': checklist,
         'checkpoint_results': checkpoint_results,
+        'active_checkpoints': active_checkpoints,
+        'machine_overview_image': machine_overview,
         'title': 'Edit Checkpoint Results'
     }
     
     return render(request, 'main/dtpm/dtpm_new_check_results_form.html', context)
+@login_required
+
 
 @login_required
 @user_passes_test(lambda u: u.user_type == 'shift_supervisor')
@@ -7240,7 +7289,6 @@ def dtpm_new_supervisor_verify(request, pk):
     """Supervisor verification of a DTPM checklist - can verify/re-verify at any time"""
     checklist = get_object_or_404(DTPMChecklistFMA03New, pk=pk)
     
-    # Supervisors can verify at any time - no status restrictions
     if request.method == 'POST':
         action = request.POST.get('action')
         
@@ -7256,7 +7304,6 @@ def dtpm_new_supervisor_verify(request, pk):
         
         # Update checklist status based on supervisor action
         if action == 'supervisor_approve':
-            # Reset any previous quality verifications if re-approving
             previous_status = checklist.status
             
             checklist.status = 'supervisor_approved'
@@ -7268,7 +7315,7 @@ def dtpm_new_supervisor_verify(request, pk):
             checklist.rejected_at = None
             checklist.rejected_by = None
             
-            # Clear quality verification if re-approving (needs fresh quality review)
+            # Clear quality verification if re-approving
             if previous_status in ['quality_certified', 'quality_rejected']:
                 checklist.quality_certified_at = None
                 checklist.quality_certified_by = None
@@ -7318,21 +7365,21 @@ def dtpm_new_supervisor_verify(request, pk):
         messages.success(request, success_message)
         return redirect('dashboard')
     
-    # Get all checkpoint results for verification review
+    # Get all checkpoint results - use Meta ordering
     checkpoint_results = DTPMCheckResultNew.objects.filter(
         checklist=checklist
-    ).order_by('checkpoint_number')
+    ).select_related('checkpoint')
     
-    # Check for incomplete checkpoints for template
+    # Check for incomplete checkpoints
     incomplete_checks = DTPMCheckResultNew.objects.filter(
         checklist=checklist, 
         status=''
     ).exists()
     
-    # Get verification history for context
+    # Get verification history
     verification_history = DTPMVerificationHistory.objects.filter(
         checklist=checklist
-    ).order_by('-verified_at')[:5]  # Last 5 actions
+    ).order_by('-verified_at')[:5]
     
     context = {
         'checklist': checklist,
@@ -7352,7 +7399,6 @@ def dtpm_new_quality_verify(request, pk):
     """Quality verification of a DTPM checklist - can verify at any time"""
     checklist = get_object_or_404(DTPMChecklistFMA03New, pk=pk)
     
-    # Quality supervisors can verify at any time, but warn if not supervisor approved
     show_warning = checklist.status != 'supervisor_approved'
     
     if request.method == 'POST':
@@ -7365,11 +7411,7 @@ def dtpm_new_quality_verify(request, pk):
             status='NG'
         ).exists()
         
-        # Update checklist status based on quality action
         if action == 'quality_certify':
-            # Allow certification even with critical issues if quality supervisor decides
-            # (Business decision - they can override based on context)
-            
             checklist.status = 'quality_certified'
             checklist.quality_certified_at = timezone.now()
             checklist.quality_certified_by = request.user
@@ -7417,10 +7459,10 @@ def dtpm_new_quality_verify(request, pk):
         messages.success(request, success_message)
         return redirect('dashboard')
     
-    # Get all checkpoint results for verification review
+    # Get all checkpoint results - use Meta ordering
     checkpoint_results = DTPMCheckResultNew.objects.filter(
         checklist=checklist
-    ).order_by('checkpoint_number')
+    ).select_related('checkpoint')
     
     # Check for quality issues (NG status checkpoints)
     ng_checkpoints = DTPMCheckResultNew.objects.filter(
@@ -7428,10 +7470,10 @@ def dtpm_new_quality_verify(request, pk):
         status='NG'
     )
     
-    # Get verification history for context
+    # Get verification history
     verification_history = DTPMVerificationHistory.objects.filter(
         checklist=checklist
-    ).order_by('-verified_at')[:5]  # Last 5 actions
+    ).order_by('-verified_at')[:5]
     
     context = {
         'checklist': checklist,
@@ -7445,7 +7487,6 @@ def dtpm_new_quality_verify(request, pk):
     }
     
     return render(request, 'main/dtpm/dtpm_new_quality_verify.html', context)
-
 
 # Updated routing view with flexible permissions
 @login_required
@@ -7589,12 +7630,10 @@ def dtpm_new_dashboard(request):
             end_date = datetime.strptime(request.GET.get('end_date'), '%Y-%m-%d').date()
             custom_date = True
         except ValueError:
-            # Fallback to default if dates are invalid
             days = int(request.GET.get('date_filter', 30))
             end_date = timezone.now().date()
             start_date = end_date - timedelta(days=days)
     else:
-        # Standard date filter
         days = int(request.GET.get('date_filter', 30))
         end_date = timezone.now().date()
         start_date = end_date - timedelta(days=days)
@@ -7617,17 +7656,17 @@ def dtpm_new_dashboard(request):
     # Calculate summary statistics
     stats = {
         'total_checklists': checklists.count(),
-        'verified_count': checklists.filter(status='verified').count(),
-        'rejected_count': checklists.filter(status='rejected').count(),
-        'pending_count': checklists.filter(status='pending').count(),
+        'verified_count': checklists.filter(status='quality_certified').count(),
+        'rejected_count': checklists.filter(status__in=['rejected', 'quality_rejected']).count(),
+        'pending_count': checklists.filter(status__in=['pending', 'supervisor_approved']).count(),
     }
     
     # Calculate previous period statistics
     prev_stats = {
         'total_checklists': prev_checklists.count(),
-        'verified_count': prev_checklists.filter(status='verified').count(),
-        'rejected_count': prev_checklists.filter(status='rejected').count(),
-        'pending_count': prev_checklists.filter(status='pending').count(),
+        'verified_count': prev_checklists.filter(status='quality_certified').count(),
+        'rejected_count': prev_checklists.filter(status__in=['rejected', 'quality_rejected']).count(),
+        'pending_count': prev_checklists.filter(status__in=['pending', 'supervisor_approved']).count(),
     }
     
     if stats['total_checklists'] > 0:
@@ -7650,68 +7689,58 @@ def dtpm_new_dashboard(request):
     else:
         stats['total_trend'] = 0
         
-    if prev_stats['success_rate'] > 0:
-        stats['success_rate_trend'] = stats['success_rate'] - prev_stats['success_rate']
-    else:
-        stats['success_rate_trend'] = 0
-        
-    if prev_stats['completion_rate'] > 0:
-        stats['completion_rate_trend'] = stats['completion_rate'] - prev_stats['completion_rate']
-    else:
-        stats['completion_rate_trend'] = 0
-        
+    stats['success_rate_trend'] = stats['success_rate'] - prev_stats['success_rate'] if prev_stats['success_rate'] > 0 else 0
+    stats['completion_rate_trend'] = stats['completion_rate'] - prev_stats['completion_rate'] if prev_stats['completion_rate'] > 0 else 0
+    
     if prev_stats['rejected_count'] > 0:
         stats['rejected_trend'] = ((stats['rejected_count'] - prev_stats['rejected_count']) / prev_stats['rejected_count']) * 100
     else:
         stats['rejected_trend'] = 0
+    
+    # Get all active checkpoints (excluding machine overview)
+    active_checkpoints = DTPMCheckpoint.objects.filter(
+        is_active=True
+    ).exclude(checkpoint_number=8).order_by('order', 'checkpoint_number')
     
     # Calculate statistics by checkpoint
     checkpoint_stats = {}
     prev_checkpoint_stats = {}
     
     # First collect previous period stats
-    for i, desc in DTPMChecklistFMA03New.CHECKPOINT_CHOICES:
-        # Get all results for this checkpoint from previous period
+    for checkpoint in active_checkpoints:
         prev_results = DTPMCheckResultNew.objects.filter(
             checklist__in=prev_checklists,
-            checkpoint_number=i
+            checkpoint=checkpoint
         )
         
         prev_total = prev_results.count()
         prev_ok_count = prev_results.filter(status='OK').count()
         
-        if prev_total > 0:
-            prev_ok_rate = (prev_ok_count / prev_total) * 100
-        else:
-            prev_ok_rate = 0
+        prev_ok_rate = (prev_ok_count / prev_total) * 100 if prev_total > 0 else 0
             
-        prev_checkpoint_stats[i] = {
+        prev_checkpoint_stats[checkpoint.checkpoint_number] = {
             'ok_rate': prev_ok_rate
         }
     
     # Now collect current period stats with comparison
-    for i, desc in DTPMChecklistFMA03New.CHECKPOINT_CHOICES:
-        # Get all results for this checkpoint
+    for checkpoint in active_checkpoints:
         results = DTPMCheckResultNew.objects.filter(
             checklist__in=checklists,
-            checkpoint_number=i
+            checkpoint=checkpoint
         )
         
         total = results.count()
         ok_count = results.filter(status='OK').count()
         ng_count = results.filter(status='NG').count()
         
-        if total > 0:
-            ok_rate = (ok_count / total) * 100
-        else:
-            ok_rate = 0
+        ok_rate = (ok_count / total) * 100 if total > 0 else 0
         
         # Calculate change from previous period    
-        prev_ok_rate = prev_checkpoint_stats.get(i, {}).get('ok_rate', 0)
+        prev_ok_rate = prev_checkpoint_stats.get(checkpoint.checkpoint_number, {}).get('ok_rate', 0)
         change = ok_rate - prev_ok_rate
             
-        checkpoint_stats[i] = {
-            'description': desc,
+        checkpoint_stats[checkpoint.checkpoint_number] = {
+            'description': checkpoint.title_english,
             'total': total,
             'ok_count': ok_count,
             'ng_count': ng_count,
@@ -7723,28 +7752,28 @@ def dtpm_new_dashboard(request):
     open_issues = DTPMIssueNew.objects.filter(
         check_result__checklist__in=checklists,
         status__in=['open', 'in_progress']
-    ).select_related('check_result', 'reported_by').order_by('-created_at')
+    ).select_related('check_result__checkpoint', 'reported_by').order_by('-created_at')
     
     # Prepare bar chart data
     chart_data = {
-        'labels': [f"CP{i}" for i in range(1, 8)],  # Checkpoints 1-7
-        'ok_rates': [checkpoint_stats.get(i, {'ok_rate': 0})['ok_rate'] for i in range(1, 8)],
-        'descriptions': [checkpoint_stats.get(i, {'description': ''})['description'][:30] + '...' 
-                        if len(checkpoint_stats.get(i, {'description': ''})['description']) > 30 
-                        else checkpoint_stats.get(i, {'description': ''})['description'] 
-                        for i in range(1, 8)]
+        'labels': [f"CP{cp.checkpoint_number}" for cp in active_checkpoints],
+        'ok_rates': [checkpoint_stats.get(cp.checkpoint_number, {'ok_rate': 0})['ok_rate'] for cp in active_checkpoints],
+        'descriptions': [
+            (checkpoint_stats.get(cp.checkpoint_number, {'description': ''})['description'][:30] + '...' 
+            if len(checkpoint_stats.get(cp.checkpoint_number, {'description': ''})['description']) > 30 
+            else checkpoint_stats.get(cp.checkpoint_number, {'description': ''})['description'])
+            for cp in active_checkpoints
+        ]
     }
     
     # Prepare trend line chart data (daily data within selected range)
     date_range = []
     current_date = start_date
     
-    # Generate dates for the range
     while current_date <= end_date:
         date_range.append(current_date)
         current_date += timedelta(days=1)
     
-    # Initialize data
     success_rates = []
     completion_rates = []
     checklist_counts = []
@@ -7755,10 +7784,9 @@ def dtpm_new_dashboard(request):
         day_count = day_checklists.count()
         checklist_counts.append(day_count)
         
-        day_verified = day_checklists.filter(status='verified').count()
-        day_rejected = day_checklists.filter(status='rejected').count()
+        day_verified = day_checklists.filter(status='quality_certified').count()
+        day_rejected = day_checklists.filter(status__in=['rejected', 'quality_rejected']).count()
         
-        # Calculate success rate and completion rate
         if day_verified + day_rejected > 0:
             day_success_rate = (day_verified / (day_verified + day_rejected)) * 100
         else:
@@ -7772,7 +7800,6 @@ def dtpm_new_dashboard(request):
         success_rates.append(day_success_rate)
         completion_rates.append(day_completion_rate)
     
-    # Format dates for display
     formatted_dates = [d.strftime('%m/%d') for d in date_range]
     
     trend_data = {
@@ -7785,7 +7812,6 @@ def dtpm_new_dashboard(request):
     # Prepare weekly data for stacked bar chart
     weekly_data = {'weeks': [], 'verified': [], 'rejected': [], 'pending': []}
     
-    # Define weeks (starting from Monday)
     start_week = start_date - timedelta(days=start_date.weekday())
     end_week = end_date + timedelta(days=(6 - end_date.weekday()))
     
@@ -7793,21 +7819,17 @@ def dtpm_new_dashboard(request):
     while current_week_start <= end_week:
         current_week_end = current_week_start + timedelta(days=6)
         
-        # Get checklists in this week
         week_checklists = checklists.filter(
             date__range=[current_week_start, current_week_end]
         )
         
-        # Format week label
         week_label = f"{current_week_start.strftime('%m/%d')} - {current_week_end.strftime('%m/%d')}"
         weekly_data['weeks'].append(week_label)
         
-        # Count by status
-        weekly_data['verified'].append(week_checklists.filter(status='verified').count())
-        weekly_data['rejected'].append(week_checklists.filter(status='rejected').count())
-        weekly_data['pending'].append(week_checklists.filter(status='pending').count())
+        weekly_data['verified'].append(week_checklists.filter(status='quality_certified').count())
+        weekly_data['rejected'].append(week_checklists.filter(status__in=['rejected', 'quality_rejected']).count())
+        weekly_data['pending'].append(week_checklists.filter(status__in=['pending', 'supervisor_approved']).count())
         
-        # Move to next week
         current_week_start += timedelta(days=7)
     
     context = {
