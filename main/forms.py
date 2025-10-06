@@ -371,16 +371,80 @@ class SubgroupEntryForm(forms.ModelForm):
     class Meta:
         model = SubgroupEntry
         fields = [
+            # UV Vacuum Test
             'uv_vacuum_test_1', 'uv_vacuum_test_2', 'uv_vacuum_test_3', 'uv_vacuum_test_4', 'uv_vacuum_test_5',
+            'uv_vacuum_test_1_comment', 'uv_vacuum_test_2_comment', 'uv_vacuum_test_3_comment', 
+            'uv_vacuum_test_4_comment', 'uv_vacuum_test_5_comment',
+            
+            # UV Flow Value
             'uv_flow_value_1', 'uv_flow_value_2', 'uv_flow_value_3', 'uv_flow_value_4', 'uv_flow_value_5',
+            'uv_flow_value_1_comment', 'uv_flow_value_2_comment', 'uv_flow_value_3_comment',
+            'uv_flow_value_4_comment', 'uv_flow_value_5_comment',
+            
+            # Umbrella Valve Assembly
             'umbrella_valve_assembly_1', 'umbrella_valve_assembly_2', 'umbrella_valve_assembly_3', 
             'umbrella_valve_assembly_4', 'umbrella_valve_assembly_5',
+            'umbrella_valve_assembly_1_comment', 'umbrella_valve_assembly_2_comment', 
+            'umbrella_valve_assembly_3_comment', 'umbrella_valve_assembly_4_comment', 
+            'umbrella_valve_assembly_5_comment',
+            
+            # UV Clip Pressing
             'uv_clip_pressing_1', 'uv_clip_pressing_2', 'uv_clip_pressing_3', 'uv_clip_pressing_4', 'uv_clip_pressing_5',
+            'uv_clip_pressing_1_comment', 'uv_clip_pressing_2_comment', 'uv_clip_pressing_3_comment',
+            'uv_clip_pressing_4_comment', 'uv_clip_pressing_5_comment',
+            
+            # Workstation Clean
             'workstation_clean',
+            'workstation_clean_comment',
+            
+            # Bin Contamination Check
             'bin_contamination_check_1', 'bin_contamination_check_2', 'bin_contamination_check_3', 
             'bin_contamination_check_4', 'bin_contamination_check_5',
+            'bin_contamination_check_1_comment', 'bin_contamination_check_2_comment',
+            'bin_contamination_check_3_comment', 'bin_contamination_check_4_comment',
+            'bin_contamination_check_5_comment',
+            
+            # Maintenance
             'is_after_maintenance', 'maintenance_comment', 'effectiveness_comment'
         ]
+        
+        widgets = {
+            # Comment fields styling
+            'uv_vacuum_test_1_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_vacuum_test_2_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_vacuum_test_3_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_vacuum_test_4_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_vacuum_test_5_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            
+            'uv_flow_value_1_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_flow_value_2_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_flow_value_3_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_flow_value_4_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_flow_value_5_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            
+            'umbrella_valve_assembly_1_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'umbrella_valve_assembly_2_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'umbrella_valve_assembly_3_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'umbrella_valve_assembly_4_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'umbrella_valve_assembly_5_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            
+            'uv_clip_pressing_1_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_clip_pressing_2_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_clip_pressing_3_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_clip_pressing_4_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'uv_clip_pressing_5_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            
+            'workstation_clean_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            
+            'bin_contamination_check_1_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'bin_contamination_check_2_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'bin_contamination_check_3_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'bin_contamination_check_4_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'bin_contamination_check_5_comment': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            
+            'maintenance_comment': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'effectiveness_comment': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+        }
     
     def __init__(self, *args, **kwargs):
         self.checklist = kwargs.pop('checklist', None)
@@ -389,9 +453,6 @@ class SubgroupEntryForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         errors = []
-        
-        # REMOVED: Comment validation for out-of-range values
-        # REMOVED: Comment validation for NOK/No values
         
         # ONLY validate maintenance comment if checkbox is checked
         is_after_maintenance = cleaned_data.get('is_after_maintenance')
@@ -404,7 +465,9 @@ class SubgroupEntryForm(forms.ModelForm):
             raise forms.ValidationError(errors)
         
         return cleaned_data
-
+    
+    
+    
 class NOKApprovalForm(forms.Form):
     """Form for supervisor/quality to approve NOK entries"""
     approval_type = forms.ChoiceField(
@@ -593,6 +656,13 @@ class CustomAuthenticationForm(AuthenticationForm):
         self.fields['password'].widget.attrs.update({'class': 'form-control'})
 
 
+
+from .models import (
+    FTQRecord, DefectRecord, DefectType, CustomDefectType, 
+    OperationNumber, TimeBasedDefectEntry, Shift, ChecklistBase, User
+)
+
+
 class FTQRecordForm(forms.ModelForm):
     """Form for FTQ Record model"""
     class Meta:
@@ -609,7 +679,6 @@ class FTQRecordForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        # Get the verification status if provided
         self.verification_status = kwargs.pop('verification_status', None)
         self.user = kwargs.pop('user', None)
         
@@ -618,16 +687,13 @@ class FTQRecordForm(forms.ModelForm):
         for field in self.fields:
             self.fields[field].widget.attrs.update({'class': 'form-control'})
             
-        # Set default date to today
         if not self.initial.get('date'):
             self.initial['date'] = timezone.now().date()
         
-        # Set default julian date to today
         if not self.initial.get('julian_date'):
             self.initial['julian_date'] = timezone.now().date()
     
     def save(self, commit=True):
-        """Save form with verification status and created_by"""
         instance = super().save(commit=False)
         
         if self.verification_status:
@@ -635,6 +701,45 @@ class FTQRecordForm(forms.ModelForm):
             
         if self.user:
             instance.created_by = self.user
+            
+        if commit:
+            instance.save()
+            
+        return instance
+
+
+class TimeBasedDefectEntryForm(forms.ModelForm):
+    """Form for time-based defect entry"""
+    class Meta:
+        model = TimeBasedDefectEntry
+        fields = ['defect_type', 'recorded_at', 'count', 'notes']
+        widgets = {
+            'recorded_at': forms.TimeInput(attrs={'type': 'time'}),
+            'count': forms.NumberInput(attrs={'min': 0}),
+            'notes': forms.Textarea(attrs={'rows': 2}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.ftq_record = kwargs.pop('ftq_record', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({'class': 'form-control'})
+        
+        # Filter defect types to only show relevant ones
+        if self.ftq_record:
+            operation = OperationNumber.objects.filter(number='OP#35').first()
+            if operation:
+                self.fields['defect_type'].queryset = DefectType.objects.filter(
+                    operation_number=operation
+                ).order_by('order', 'name')
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        if self.ftq_record:
+            instance.ftq_record = self.ftq_record
             
         if commit:
             instance.save()
@@ -685,42 +790,6 @@ class DefectRecordForm(forms.ModelForm):
         return instance
 
 
-class CustomDefectTypeForm(forms.ModelForm):
-    """Form for Custom Defect Type model"""
-    class Meta:
-        model = CustomDefectType
-        fields = ['name', 'operation_number']
-    
-    def __init__(self, *args, **kwargs):
-        # Get the FTQ record and user if provided
-        self.ftq_record = kwargs.pop('ftq_record', None)
-        self.user = kwargs.pop('user', None)
-        
-        super().__init__(*args, **kwargs)
-        
-        for field in self.fields:
-            self.fields[field].widget.attrs.update({'class': 'form-control'})
-            
-        # Set default operation number to OP#35
-        operation = OperationNumber.objects.filter(number='OP#35').first()
-        if operation:
-            self.initial['operation_number'] = operation
-    
-    def save(self, commit=True):
-        """Save form with FTQ record and added_by"""
-        instance = super().save(commit=False)
-        
-        if self.ftq_record:
-            instance.ftq_record = self.ftq_record
-            
-        if self.user:
-            instance.added_by = self.user
-            
-        if commit:
-            instance.save()
-            
-        return instance
-
 
 # Create a combined form for daily verification workflow
 class DailyVerificationWorkflowForm(forms.Form):
@@ -765,23 +834,24 @@ class DailyVerificationWorkflowForm(forms.Form):
         self.initial['shift_type'] = 'day' if 6 <= current_hour < 18 else 'night'
 
 
-# Create inline formset for defect records
+TimeBasedDefectEntryFormSet = inlineformset_factory(
+    FTQRecord,
+    TimeBasedDefectEntry,
+    form=TimeBasedDefectEntryForm,
+    extra=3,
+    can_delete=True,
+    fields=['defect_type', 'recorded_at', 'count', 'notes']
+)
+
+
+# Keep legacy formset for backward compatibility
 DefectRecordFormSet = inlineformset_factory(
     FTQRecord,
     DefectRecord,
-    form=DefectRecordForm,
+    fields=['defect_type', 'count', 'notes'],
     extra=1,
     can_delete=True
 )
-# Create inline formset for defect records
-DefectRecordFormSet = inlineformset_factory(
-    FTQRecord,
-    DefectRecord,
-    form=DefectRecordForm,
-    extra=1,
-    can_delete=True
-)        
-
 
 
 
@@ -791,7 +861,7 @@ from django.utils import timezone
 from .models import FTQRecord, DefectRecord, DefectType, CustomDefectType, OperationNumber
 
 class FTQRecordEditForm(forms.ModelForm):
-    """Special form for editing FTQ records with prefilled defect counts"""
+    """Form for editing FTQ records with time-based defects"""
     class Meta:
         model = FTQRecord
         fields = [
@@ -806,192 +876,106 @@ class FTQRecordEditForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        # Get the FTQ record instance from kwargs
         instance = kwargs.get('instance', None)
         
         super().__init__(*args, **kwargs)
         
-        # If an instance is provided, create dynamic fields for defects
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({'class': 'form-control'})
+        
+        # If an instance is provided, prepare defect data
         if instance:
-            self.setup_defect_fields(instance)
+            self.setup_defect_data(instance)
             
-    def setup_defect_fields(self, ftq_record):
-        """Set up dynamic fields for defects"""
-        # Get all defect records for this FTQ record
-        defect_records = DefectRecord.objects.filter(ftq_record=ftq_record).select_related(
-            'defect_type', 'defect_type_custom'
-        )
+    def setup_defect_data(self, ftq_record):
+        """Set up data structures for defects"""
+        # Get all time-based defect entries grouped by defect type
+        time_entries = TimeBasedDefectEntry.objects.filter(
+            ftq_record=ftq_record
+        ).select_related('defect_type', 'defect_type_custom').order_by('recorded_at')
         
-        # Create a dictionary mapping defect type IDs to counts
-        self.default_defect_counts = {}
-        self.custom_defect_counts = {}
+        # Organize by defect type
+        self.defect_entries = {}
         
-        for record in defect_records:
-            if record.defect_type:
-                # Store count for default defect
-                self.default_defect_counts[record.defect_type.id] = record.count
-            elif record.defect_type_custom:
-                # Store count for custom defect
-                self.custom_defect_counts[record.defect_type_custom.id] = {
-                    'count': record.count,
-                    'name': record.defect_type_custom.name,
-                    'record_id': record.id
+        for entry in time_entries:
+            if entry.defect_type:
+                key = f"standard_{entry.defect_type.id}"
+                name = entry.defect_type.name
+                defect_id = entry.defect_type.id
+                is_custom = False
+            else:
+                key = f"custom_{entry.defect_type_custom.id}"
+                name = entry.defect_type_custom.name
+                defect_id = entry.defect_type_custom.id
+                is_custom = True
+            
+            if key not in self.defect_entries:
+                self.defect_entries[key] = {
+                    'name': name,
+                    'defect_id': defect_id,
+                    'is_custom': is_custom,
+                    'entries': []
                 }
+            
+            self.defect_entries[key]['entries'].append({
+                'time': entry.recorded_at,
+                'count': entry.count,
+                'entry_id': entry.id
+            })
         
-        # Get default defect types
+        # Get default defect types for display
         try:
             operation = OperationNumber.objects.get(number='OP#35')
-            default_defects = DefectType.objects.filter(
+            self.default_defect_types = DefectType.objects.filter(
                 operation_number=operation,
                 is_default=True
             ).order_by('order')[:10]
-            
-            # Create fields for default defects
-            for defect_type in default_defects:
-                count = self.default_defect_counts.get(defect_type.id, 0)
-                field_name = f'defect_{defect_type.id}'
-                self.fields[field_name] = forms.IntegerField(
-                    min_value=0, 
-                    required=False,
-                    initial=count,
-                    widget=forms.NumberInput(attrs={
-                        'class': 'form-control defect-count',
-                        'data-defect-id': defect_type.id
-                    })
-                )
-                
-            # Store defect types for later use in the template
-            self.default_defect_types = default_defects
-            
         except OperationNumber.DoesNotExist:
             self.default_defect_types = []
-            
-        # Create fields for custom defects
-        self.custom_defects = []
-        for custom_id, data in self.custom_defect_counts.items():
-            field_name = f'custom_defect_{custom_id}'
-            self.fields[field_name] = forms.IntegerField(
-                min_value=0,
-                required=False,
-                initial=data['count'],
-                widget=forms.NumberInput(attrs={
-                    'class': 'form-control custom-defect-count',
-                    'data-custom-id': custom_id
-                })
-            )
-            
-            # Store custom defect data for template
-            self.custom_defects.append({
-                'id': custom_id,
-                'name': data['name'],
-                'count': data['count'],
-                'field_name': field_name
-            })
-            
+    
     def save(self, commit=True):
-        """Save the form with defect records"""
-        # First save the FTQ record
         ftq_record = super().save(commit=commit)
         
         if commit:
-            # Then save the defect records
-            self.save_defect_records(ftq_record)
+            # Defect entries will be saved separately via AJAX or form processing
+            pass
             
         return ftq_record
+  
+       
+class CustomDefectTypeForm(forms.ModelForm):
+    """Form for Custom Defect Type model"""
+    class Meta:
+        model = CustomDefectType
+        fields = ['name', 'operation_number']
     
-    def save_defect_records(self, ftq_record):
-        """Save the defect records for this FTQ record"""
-        # Process default defects
-        try:
-            operation = OperationNumber.objects.get(number='OP#35')
-            default_defects = DefectType.objects.filter(
-                operation_number=operation,
-                is_default=True
-            ).order_by('order')[:10]
+    def __init__(self, *args, **kwargs):
+        self.ftq_record = kwargs.pop('ftq_record', None)
+        self.user = kwargs.pop('user', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({'class': 'form-control'})
             
-            # Update or create defect records for default types
-            for defect_type in default_defects:
-                field_name = f'defect_{defect_type.id}'
-                if field_name in self.cleaned_data:
-                    count = self.cleaned_data[field_name] or 0
-                    
-                    if count > 0:
-                        DefectRecord.objects.update_or_create(
-                            ftq_record=ftq_record,
-                            defect_type=defect_type,
-                            defaults={'count': count}
-                        )
-                    else:
-                        # Delete if count is zero
-                        DefectRecord.objects.filter(
-                            ftq_record=ftq_record,
-                            defect_type=defect_type
-                        ).delete()
+        # Set default operation number to OP#35
+        operation = OperationNumber.objects.filter(number='OP#35').first()
+        if operation:
+            self.initial['operation_number'] = operation
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        if self.ftq_record:
+            instance.ftq_record = self.ftq_record
             
-            # Process custom defects
-            for custom_id in self.custom_defect_counts.keys():
-                field_name = f'custom_defect_{custom_id}'
-                if field_name in self.cleaned_data:
-                    count = self.cleaned_data[field_name] or 0
-                    
-                    if count > 0:
-                        # Get the custom defect type
-                        custom_defect = CustomDefectType.objects.get(id=custom_id)
-                        
-                        # Update the defect record
-                        DefectRecord.objects.update_or_create(
-                            ftq_record=ftq_record,
-                            defect_type_custom=custom_defect,
-                            defaults={'count': count}
-                        )
-                    else:
-                        # Get the custom defect type
-                        custom_defect = CustomDefectType.objects.get(id=custom_id)
-                        
-                        # Delete the defect record
-                        DefectRecord.objects.filter(
-                            ftq_record=ftq_record,
-                            defect_type_custom=custom_defect
-                        ).delete()
-                        
-                        # Delete the custom defect type
-                        custom_defect.delete()
+        if self.user:
+            instance.added_by = self.user
             
-            # Process new custom defects
-            custom_defect_count = int(self.data.get('custom_defect_count', 0))
-            for i in range(custom_defect_count):
-                defect_name = self.data.get(f'custom_defect_name_{i}', '')
-                defect_count = self.data.get(f'custom_defect_count_{i}', 0)
-                
-                if defect_name and int(defect_count) > 0:
-                    # Create custom defect type
-                    custom_defect = CustomDefectType.objects.create(
-                        ftq_record=ftq_record,
-                        name=defect_name,
-                        operation_number=operation,
-                        added_by=ftq_record.created_by
-                    )
-                    
-                    # Create defect record
-                    DefectRecord.objects.create(
-                        ftq_record=ftq_record,
-                        defect_type_custom=custom_defect,
-                        count=int(defect_count)
-                    )
+        if commit:
+            instance.save()
             
-            # Update total defects count
-            total_defects = DefectRecord.objects.filter(ftq_record=ftq_record).aggregate(
-                total=forms.models.Sum('count')
-            )['total'] or 0
-            
-            ftq_record.total_defects = total_defects
-            ftq_record.save()
-            
-        except Exception as e:
-            # Log the error but don't block the save
-            print(f"Error saving defect records: {str(e)}")
-            
-            
+        return instance
             
             
             

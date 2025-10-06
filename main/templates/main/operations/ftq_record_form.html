@@ -11,321 +11,156 @@
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(255, 0, 0, 0.4);
     }
     
-    .form-card .card-title {
-        color: #ff0000;
-        font-weight: 600;
-        font-size: 1.2rem;
-        margin-bottom: 15px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        padding-bottom: 10px;
-    }
-    
-    .form-label {
-        color: #ffffff;
-        font-weight: 500;
-    }
-    
+    .card-title { color: #ff0000; font-weight: 600; margin-bottom: 15px; }
+    .form-label { color: #ffffff; font-weight: 500; }
     .form-control, .form-select {
         background-color: #111111;
         color: #ffffff;
         border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 6px;
     }
-    
     .form-control:focus, .form-select:focus {
         background-color: #111111;
         color: #ffffff;
         border-color: #ff0000;
-        box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.25);
     }
     
-    .defect-table {
+    .defect-time-table {
         width: 100%;
-        margin-bottom: 0;
         color: #ffffff;
     }
-    
-    .defect-table thead th {
+    .defect-time-table thead th {
         background-color: rgba(255, 0, 0, 0.2);
-        color: #ffffff;
-        font-weight: 600;
-        padding: 12px 15px;
+        padding: 12px 8px;
         border-bottom: 2px solid #ff0000;
-        text-align: left;
     }
+    .defect-time-table tbody tr:nth-child(odd) { background-color: rgba(255, 255, 255, 0.05); }
+    .defect-time-table td { padding: 8px; }
     
-    .defect-table tbody tr:nth-child(odd) {
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-    
-    .defect-table tbody tr:nth-child(even) {
-        background-color: rgba(0, 0, 0, 0.3);
-    }
-    
-    .defect-table tbody tr:hover {
-        background-color: rgba(255, 0, 0, 0.1);
-    }
-    
-    .defect-table td {
-        padding: 12px 15px;
-        vertical-align: middle;
-    }
-    
-    .custom-defect-row {
-        background-color: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 10px;
-    }
-    
-    .custom-defect-row:hover {
-        background-color: rgba(255, 0, 0, 0.1);
-    }
-    
-    .btn-add-custom {
-        background-color: transparent;
-        border: 2px solid #ffffff;
-        color: #ffffff;
-        font-weight: 500;
-        transition: all 0.3s;
-    }
-    
-    .btn-add-custom:hover {
-        background-color: rgba(255, 0, 0, 0.5);
-        border-color: #ffffff;
-        color: #ffffff;
-        transform: translateY(-2px);
-    }
-    
-    .btn-remove-custom {
-        background-color: transparent;
-        border: 2px solid #ff0000;
-        color: #ff0000;
-        font-weight: 500;
-        transition: all 0.3s;
-    }
-    
-    .btn-remove-custom:hover {
-        background-color: rgba(255, 0, 0, 0.5);
-        border-color: #ffffff;
-        color: #ffffff;
-    }
-    
-    .form-section-heading {
-        color: #ff0000;
-        font-weight: 600;
-        font-size: 1.1rem;
-        margin: 20px 0 15px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-        padding-bottom: 8px;
-    }
-    
-    .action-btn {
-        font-weight: 500;
-        transition: all 0.3s;
-        border-width: 2px;
-    }
-    
-    .action-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-    
-    .info-value {
-        color: #ffffff;
-        font-weight: 600;
-    }
-    
-    .info-label {
-        color: #ff7e7e;
-        font-weight: 500;
-    }
-    
-    .prefilled-field {
-        background-color: rgba(255, 0, 0, 0.1) !important;
-        border-color: rgba(255, 0, 0, 0.3) !important;
-    }
-    
-    .verification-info {
+    .time-entry-group {
         display: flex;
-        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+        margin-bottom: 5px;
     }
-    
-    .verification-info-item {
-        margin-right: 2rem;
-        margin-bottom: 0.5rem;
+    .time-input {
+        width: 80px;
+        background-color: #222;
+        color: #fff;
+        border: 1px solid #fff;
+        border-radius: 4px;
+        padding: 4px 8px;
     }
-    
-    .alert-verification {
-        background-color: rgba(0, 0, 0, 0.4);
-        border-left: 4px solid #ff0000;
+    .count-input {
+        width: 60px;
+        background-color: #222;
+        color: #fff;
+        border: 1px solid #fff;
+        border-radius: 4px;
+        padding: 4px 8px;
     }
+    .btn-add-time, .btn-remove-time {
+        background-color: transparent;
+        border: 1px solid #28a745;
+        color: #28a745;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+    }
+    .btn-remove-time { border-color: #dc3545; color: #dc3545; }
+    .defect-total { font-weight: bold; color: #ff0000; text-align: center; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
-    <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-white"><i class="fas fa-plus-circle me-2"></i>Create FTQ Record</h2>
-        <div>
-            <a href="{% url 'ftq_list' %}" class="btn btn-outline-light">
-                <i class="fas fa-arrow-left me-1"></i> Back to List
-            </a>
-        </div>
+        <a href="{% url 'ftq_list' %}" class="btn btn-outline-light">
+            <i class="fas fa-arrow-left me-1"></i> Back
+        </a>
     </div>
     
     {% if active_checklist %}
-    <!-- Active Verification Info Card -->
     <div class="form-card">
-        <h5 class="card-title"><i class="fas fa-clipboard-check me-2"></i>Active Verification Information</h5>
-        
-        <div class="verification-info mb-3">
-            <div class="verification-info-item">
-                <span class="info-label">Date:</span>
-                <span class="info-value">{{ active_verification.date }}</span>
-            </div>
-            
-            <div class="verification-info-item">
-                <span class="info-label">Shift:</span>
-                <span class="info-value">{{ active_verification.shift.get_shift_type_display }}</span>
-            </div>
-            
-            <div class="verification-info-item">
-                <span class="info-label">Model:</span>
-                <span class="info-value">{{ active_checklist.get_selected_model_display }}</span>
-            </div>
-            
-            <div class="verification-info-item">
-                <span class="info-label">Operator:</span>
-                <span class="info-value">{{ active_verification.created_by.get_full_name }}</span>
-            </div>
-            
-            <div class="verification-info-item">
-                <span class="info-label">Status:</span>
-                <span class="info-value">{{ active_verification.get_status_display }}</span>
-            </div>
-            
-            <div class="verification-info-item">
-                <span class="info-label">Verification ID:</span>
-                <span class="info-value">{{ active_verification.id }}</span>
-            </div>
+        <h5 class="card-title">Active Verification Information</h5>
+        <div class="row">
+            <div class="col-md-2"><strong>Date:</strong> {{ active_verification.date }}</div>
+            <div class="col-md-2"><strong>Shift:</strong> {{ active_verification.shift.get_shift_type_display }}</div>
+            <div class="col-md-2"><strong>Model:</strong> {{ active_checklist.get_selected_model_display }}</div>
+            <div class="col-md-3"><strong>Operator:</strong> {{ active_verification.created_by.username }}</div>
         </div>
-        
-        <div class="alert alert-verification">
-            <i class="fas fa-info-circle me-2"></i> The form below has been pre-filled based on your active verification. Pre-filled fields are highlighted with a subtle red background.
-        </div>
-    </div>
-    {% else %}
-    <!-- No Active Verification Warning -->
-    <div class="alert alert-warning mb-4">
-        <i class="fas fa-exclamation-triangle me-2"></i> No active verification found. You'll need to fill in all fields manually.
     </div>
     {% endif %}
     
     <form method="post" id="ftqForm">
         {% csrf_token %}
         
-        <!-- Main Information Card -->
         <div class="form-card">
-            <h5 class="card-title"><i class="fas fa-info-circle me-2"></i>Record Information</h5>
-            
+            <h5 class="card-title">Record Information</h5>
             <div class="row g-3">
-                <!-- Date field -->
                 <div class="col-md-3">
-                    <label for="{{ form.date.id_for_label }}" class="form-label">Date</label>
+                    <label class="form-label">Date</label>
                     {{ form.date }}
-                    {% if form.date.errors %}
-                        <div class="text-danger mt-1">{{ form.date.errors }}</div>
-                    {% endif %}
                 </div>
-                
-                <!-- Shift Type field -->
                 <div class="col-md-3">
-                    <label for="{{ form.shift_type.id_for_label }}" class="form-label">Shift</label>
+                    <label class="form-label">Shift</label>
                     {{ form.shift_type }}
-                    {% if form.shift_type.errors %}
-                        <div class="text-danger mt-1">{{ form.shift_type.errors }}</div>
-                    {% endif %}
                 </div>
-                
-                <!-- Model Name field -->
                 <div class="col-md-3">
-                    <label for="{{ form.model_name.id_for_label }}" class="form-label">Model</label>
+                    <label class="form-label">Model</label>
                     {{ form.model_name }}
-                    {% if form.model_name.errors %}
-                        <div class="text-danger mt-1">{{ form.model_name.errors }}</div>
-                    {% endif %}
                 </div>
-                
-                <!-- Julian Date field -->
                 <div class="col-md-3">
-                    <label for="{{ form.julian_date.id_for_label }}" class="form-label">Julian Date</label>
+                    <label class="form-label">Julian Date</label>
                     {{ form.julian_date }}
-                    {% if form.julian_date.errors %}
-                        <div class="text-danger mt-1">{{ form.julian_date.errors }}</div>
-                    {% endif %}
                 </div>
             </div>
-            
-            <div class="row g-3 mt-3">
-                <!-- Total Inspected field -->
+            <div class="row g-3 mt-2">
                 <div class="col-md-6">
-                    <label for="{{ form.total_inspected.id_for_label }}" class="form-label">Production/Day</label>
+                    <label class="form-label">Production/Day</label>
                     {{ form.total_inspected }}
-                    {% if form.total_inspected.errors %}
-                        <div class="text-danger mt-1">{{ form.total_inspected.errors }}</div>
-                    {% endif %}
                 </div>
-                
-                <!-- Production per Shift field -->
-   
             </div>
-            
-            {% if active_verification %}
-            <!-- Hidden input for verification_status_id -->
-            <input type="hidden" name="verification_status" value="{{ active_verification.id }}">
-            {% endif %}
         </div>
         
-        <!-- Default Defects Card -->
         <div class="form-card">
-            <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Default Defects</h5>
+            <h5 class="card-title">Time-Based Defect Tracking</h5>
+            <p class="text-muted small">Record defects with time throughout the shift</p>
             
             <div class="table-responsive">
-                <table class="defect-table">
+                <table class="defect-time-table">
                     <thead>
                         <tr>
-                            <th width="10%">S.No.</th>
-                            <th width="65%">Issues/Defects</th>
-                            <th width="25%">Count</th>
+                            <th width="5%">S.No.</th>
+                            <th width="40%">Defect Type</th>
+                            <th width="45%">Time & Count Entries</th>
+                            <th width="10%">Total</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for defect in default_defects %}
                         <tr>
-                            <td>{{ forloop.counter }}</td>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td>{{ defect.name }}</td>
                             <td>
-                                {{ defect.name }}
-                                {% if defect.is_critical %}
-                                <span class="badge bg-danger ms-2">Critical</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <input type="number" class="form-control defect-count" 
-                                       name="defect_{{ defect.id }}" min="0" value="0">
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="3" class="text-center py-4">
-                                <div class="text-muted">
-                                    <i class="fas fa-info-circle me-2"></i> No default defect types available
+                                <div id="time-entries-{{ defect.id }}">
+                                    <div class="time-entry-group">
+                                        <input type="time" class="time-input" 
+                                               name="defect_time_{{ defect.id }}_0">
+                                        <input type="number" class="count-input defect-count" 
+                                               name="defect_count_{{ defect.id }}_0" 
+                                               min="0" value="0" 
+                                               data-defect-id="{{ defect.id }}">
+                                        <button type="button" class="btn-add-time" 
+                                                onclick="addTimeEntry({{ defect.id }})">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
+                            <td class="defect-total" id="total-{{ defect.id }}">0</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -333,29 +168,21 @@
             </div>
         </div>
         
-        <!-- Custom Defects Card -->
         <div class="form-card">
-            <h5 class="card-title"><i class="fas fa-plus-circle me-2"></i>Additional Defects</h5>
-            
-            <div id="customDefectsContainer">
-                <div id="customDefectRows"></div>
-                
-                <input type="hidden" id="customDefectCount" name="custom_defect_count" value="0">
-                
-                <div class="text-center mt-3">
-                    <button type="button" id="addCustomDefect" class="btn btn-add-custom">
-                        <i class="fas fa-plus me-1"></i> Add Custom Defect
-                    </button>
-                </div>
+            <h5 class="card-title">Custom Defects</h5>
+            <div id="customDefectsContainer"></div>
+            <div class="text-center mt-3">
+                <button type="button" class="btn btn-outline-light" onclick="addCustomDefect()">
+                    <i class="fas fa-plus me-1"></i> Add Custom Defect
+                </button>
             </div>
         </div>
         
-        <!-- Action Buttons -->
         <div class="text-center mt-4 mb-5">
-            <button type="submit" class="btn btn-primary action-btn px-4">
+            <button type="submit" class="btn btn-danger px-5">
                 <i class="fas fa-save me-1"></i> Save Record
             </button>
-            <a href="{% url 'ftq_list' %}" class="btn btn-outline-light action-btn ms-3">
+            <a href="{% url 'ftq_list' %}" class="btn btn-outline-light ms-3">
                 <i class="fas fa-times me-1"></i> Cancel
             </a>
         </div>
@@ -365,105 +192,96 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    {% if active_checklist %}
-    // Mark prefilled fields
-    const prefilledFields = ['id_date', 'id_shift_type', 'id_model_name', 'id_julian_date'];
-    prefilledFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.classList.add('prefilled-field');
-            
-            // Make date and julian_date readonly
-            if (fieldId === 'id_date' || fieldId === 'id_julian_date') {
-                field.setAttribute('readonly', 'readonly');
-            }
-            
-            // Make model_name readonly but ensure its value is submitted
-            if (fieldId === 'id_model_name') {
-                const modelValue = field.value;
-                field.setAttribute('disabled', 'disabled');
-                
-                // Create hidden input to ensure the value is submitted
-                const hiddenInput = document.createElement('input');
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = 'model_name';
-                hiddenInput.value = modelValue;
-                field.parentNode.appendChild(hiddenInput);
-            }
-        }
+let timeEntryCounters = {};
+let customDefectCounter = 0;
+
+document.querySelectorAll('[data-defect-id]').forEach(row => {
+    const defectId = row.getAttribute('data-defect-id');
+    timeEntryCounters[defectId] = 1;
+});
+
+function addTimeEntry(defectId) {
+    const container = document.getElementById(`time-entries-${defectId}`);
+    const index = timeEntryCounters[defectId];
+    
+    const entryDiv = document.createElement('div');
+    entryDiv.className = 'time-entry-group';
+    entryDiv.innerHTML = `
+        <input type="time" class="time-input" name="defect_time_${defectId}_${index}">
+        <input type="number" class="count-input defect-count" 
+               name="defect_count_${defectId}_${index}" 
+               min="0" value="0" data-defect-id="${defectId}">
+        <button type="button" class="btn-remove-time" 
+                onclick="removeTimeEntry(this, ${defectId})">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    
+    container.appendChild(entryDiv);
+    timeEntryCounters[defectId]++;
+    
+    entryDiv.querySelector('.defect-count').addEventListener('input', function() {
+        updateDefectTotal(defectId);
     });
-    {% endif %}
+}
+
+function removeTimeEntry(button, defectId) {
+    button.closest('.time-entry-group').remove();
+    updateDefectTotal(defectId);
+}
+
+function updateDefectTotal(defectId) {
+    const counts = document.querySelectorAll(`.defect-count[data-defect-id="${defectId}"]`);
+    let total = 0;
+    counts.forEach(input => { total += parseInt(input.value) || 0; });
+    document.getElementById(`total-${defectId}`).textContent = total;
+}
+
+function addCustomDefect() {
+    const container = document.getElementById('customDefectsContainer');
+    const customId = `custom_${customDefectCounter}`;
     
-    // Custom defect counter
-    let customDefectIndex = 0;
-    
-    // Add Custom Defect button click handler
-    document.getElementById('addCustomDefect').addEventListener('click', function() {
-        const container = document.getElementById('customDefectRows');
-        
-        const row = document.createElement('div');
-        row.className = 'custom-defect-row';
-        row.innerHTML = `
-            <div class="row g-3 align-items-center">
-                <div class="col-md-7">
-                    <label class="form-label">Defect Description</label>
-                    <input type="text" class="form-control custom-defect-name" 
-                           name="custom_defect_name_${customDefectIndex}" 
-                           placeholder="Enter defect description" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Count</label>
-                    <input type="number" class="form-control custom-defect-count" 
-                           name="custom_defect_count_${customDefectIndex}" 
-                           min="0" value="0" required>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="button" class="btn btn-remove-custom w-100 remove-custom-defect">
-                        <i class="fas fa-trash me-1"></i> Remove
-                    </button>
-                </div>
+    const defectDiv = document.createElement('div');
+    defectDiv.className = 'form-card';
+    defectDiv.innerHTML = `
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label class="form-label">Custom Defect Name</label>
+                <input type="text" class="form-control" 
+                       name="custom_defect_name_${customId}" required>
             </div>
-        `;
-        
-        container.appendChild(row);
-        
-        // Update counter
-        customDefectIndex++;
-        document.getElementById('customDefectCount').value = customDefectIndex;
-        
-        // Add event listener to the new remove button
-        row.querySelector('.remove-custom-defect').addEventListener('click', function() {
-            row.remove();
-            
-            // Recount custom defects
-            const customRows = document.querySelectorAll('.custom-defect-row');
-            document.getElementById('customDefectCount').value = customRows.length;
-        });
-    });
+            <div class="col-md-6">
+                <button type="button" class="btn btn-outline-danger" 
+                        onclick="this.closest('.form-card').remove()">
+                    <i class="fas fa-trash me-1"></i> Remove
+                </button>
+            </div>
+        </div>
+        <div id="time-entries-${customId}">
+            <div class="time-entry-group">
+                <input type="time" class="time-input" name="defect_time_${customId}_0">
+                <input type="number" class="count-input defect-count" 
+                       name="defect_count_${customId}_0" 
+                       min="0" value="0" data-defect-id="${customId}">
+                <button type="button" class="btn-add-time" 
+                        onclick="addTimeEntry('${customId}')">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>
+        <div class="mt-2">Total: <span class="defect-total" id="total-${customId}">0</span></div>
+    `;
     
-    // Form validation
-    document.getElementById('ftqForm').addEventListener('submit', function(event) {
-        const totalInspected = parseInt(document.getElementById('id_total_inspected').value) || 0;
-        
-        // Calculate total defects
-        let totalDefects = 0;
-        
-        // Count standard defects
-        document.querySelectorAll('.defect-count').forEach(input => {
-            totalDefects += parseInt(input.value) || 0;
+    container.appendChild(defectDiv);
+    timeEntryCounters[customId] = 1;
+    customDefectCounter++;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.defect-count').forEach(input => {
+        input.addEventListener('input', function() {
+            updateDefectTotal(this.getAttribute('data-defect-id'));
         });
-        
-        // Count custom defects
-        document.querySelectorAll('.custom-defect-count').forEach(input => {
-            totalDefects += parseInt(input.value) || 0;
-        });
-        
-        // Validate that total defects doesn't exceed total inspected
-        if (totalDefects > totalInspected) {
-            event.preventDefault();
-            alert('Total defects cannot exceed total production. Please check your numbers.');
-        }
     });
 });
 </script>

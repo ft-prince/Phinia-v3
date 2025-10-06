@@ -203,28 +203,29 @@ class ChecklistBase(models.Model):
     )
     
     # Verifications
-    master_verification_lvdt = models.CharField(
-        max_length=3,
-        choices=OK_NG_CHOICES,
-        verbose_name="Master Verification for LVDT"
-    )
+    # master_verification_lvdt = models.CharField(
+    #     max_length=3,
+    #     choices=OK_NG_CHOICES,
+    #     verbose_name="Master Verification for LVDT"
+    # )
     
-    good_bad_master_verification = models.CharField(
-        max_length=3,
-        choices=OK_NG_CHOICES,
-        verbose_name="Good and Bad master verification (refer EPVS)"
-    )
+    # good_bad_master_verification = models.CharField(
+    #     max_length=3,
+    #     choices=OK_NG_CHOICES,
+    #     verbose_name="Good and Bad master verification (refer EPVS)"
+    # )
+    
     
     test_pressure_vacuum = models.FloatField(
         help_text="Recommended Range: 0.25 - 0.3 MPa",
         verbose_name="Test Pressure for Vacuum generation"
     )
     
-    tool_alignment = models.CharField(
-        max_length=3,
-        choices=OK_NG_CHOICES,
-        verbose_name="Tool Alignment (Top & Bottom) (Tool Alignment) सही होना चाहिए"
-    )
+    # tool_alignment = models.CharField(
+    #     max_length=3,
+    #     choices=OK_NG_CHOICES,
+    #     verbose_name="Tool Alignment (Top & Bottom) (Tool Alignment) सही होना चाहिए"
+    # )
     
     # Tool IDs and Part Numbers
     top_tool_id = models.CharField(
@@ -286,11 +287,11 @@ class ChecklistBase(models.Model):
     # Add a shift field that will be automatically set from new_shift
     shift = models.CharField(max_length=100, choices=SHIFTS, null=True, blank=True, editable=False)
     
-    error_proofing_verification = models.CharField(
-        max_length=3,
-        choices=YES_NO_CHOICES,
-        verbose_name="All Error proofing / Error detection verification done"
-    )
+    # error_proofing_verification = models.CharField(
+    #     max_length=3,
+    #     choices=YES_NO_CHOICES,
+    #     verbose_name="All Error proofing / Error detection verification done"
+    # )
     
     
     frequency_config = models.ForeignKey(
@@ -339,8 +340,7 @@ class SubgroupFrequencyConfig(models.Model):
         verbose_name = "Subgroup Frequency Configuration"
         verbose_name_plural = "Subgroup Frequency Configurations"
 
-# models.py - Updated with single workstation cleanliness reading
-
+ 
 class SubgroupEntry(models.Model):
     """Repeated measurements taken every 2 hours - now with 5 readings each (except workstation cleanliness)"""
     VERIFICATION_STATUS_CHOICES = (
@@ -523,6 +523,47 @@ class SubgroupEntry(models.Model):
         choices=YES_NO_CHOICES,
         verbose_name="Bin Contamination Check Reading 5", blank=True,null=True
     )
+    
+    
+    # UV Vacuum Test Comments (5)
+    uv_vacuum_test_1_comment = models.TextField(blank=True, null=True, verbose_name="UV Vacuum Test 1 Comment")
+    uv_vacuum_test_2_comment = models.TextField(blank=True, null=True, verbose_name="UV Vacuum Test 2 Comment")
+    uv_vacuum_test_3_comment = models.TextField(blank=True, null=True, verbose_name="UV Vacuum Test 3 Comment")
+    uv_vacuum_test_4_comment = models.TextField(blank=True, null=True, verbose_name="UV Vacuum Test 4 Comment")
+    uv_vacuum_test_5_comment = models.TextField(blank=True, null=True, verbose_name="UV Vacuum Test 5 Comment")
+    
+    # UV Flow Value Comments (5)
+    uv_flow_value_1_comment = models.TextField(blank=True, null=True, verbose_name="UV Flow Value 1 Comment")
+    uv_flow_value_2_comment = models.TextField(blank=True, null=True, verbose_name="UV Flow Value 2 Comment")
+    uv_flow_value_3_comment = models.TextField(blank=True, null=True, verbose_name="UV Flow Value 3 Comment")
+    uv_flow_value_4_comment = models.TextField(blank=True, null=True, verbose_name="UV Flow Value 4 Comment")
+    uv_flow_value_5_comment = models.TextField(blank=True, null=True, verbose_name="UV Flow Value 5 Comment")
+    
+    # Umbrella Valve Assembly Comments (5)
+    umbrella_valve_assembly_1_comment = models.TextField(blank=True, null=True, verbose_name="Umbrella Valve 1 Comment")
+    umbrella_valve_assembly_2_comment = models.TextField(blank=True, null=True, verbose_name="Umbrella Valve 2 Comment")
+    umbrella_valve_assembly_3_comment = models.TextField(blank=True, null=True, verbose_name="Umbrella Valve 3 Comment")
+    umbrella_valve_assembly_4_comment = models.TextField(blank=True, null=True, verbose_name="Umbrella Valve 4 Comment")
+    umbrella_valve_assembly_5_comment = models.TextField(blank=True, null=True, verbose_name="Umbrella Valve 5 Comment")
+    
+    # UV Clip Pressing Comments (5)
+    uv_clip_pressing_1_comment = models.TextField(blank=True, null=True, verbose_name="UV Clip Pressing 1 Comment")
+    uv_clip_pressing_2_comment = models.TextField(blank=True, null=True, verbose_name="UV Clip Pressing 2 Comment")
+    uv_clip_pressing_3_comment = models.TextField(blank=True, null=True, verbose_name="UV Clip Pressing 3 Comment")
+    uv_clip_pressing_4_comment = models.TextField(blank=True, null=True, verbose_name="UV Clip Pressing 4 Comment")
+    uv_clip_pressing_5_comment = models.TextField(blank=True, null=True, verbose_name="UV Clip Pressing 5 Comment")
+    
+    # Workstation Clean Comment (1)
+    workstation_clean_comment = models.TextField(blank=True, null=True, verbose_name="Workstation Clean Comment")
+    
+    # Bin Contamination Check Comments (5)
+    bin_contamination_check_1_comment = models.TextField(blank=True, null=True, verbose_name="Bin Contamination 1 Comment")
+    bin_contamination_check_2_comment = models.TextField(blank=True, null=True, verbose_name="Bin Contamination 2 Comment")
+    bin_contamination_check_3_comment = models.TextField(blank=True, null=True, verbose_name="Bin Contamination 3 Comment")
+    bin_contamination_check_4_comment = models.TextField(blank=True, null=True, verbose_name="Bin Contamination 4 Comment")
+    bin_contamination_check_5_comment = models.TextField(blank=True, null=True, verbose_name="Bin Contamination 5 Comment")
+
+    
     # NEW: Flag for NOK entries requiring approval
     has_nok_entries = models.BooleanField(default=False, editable=False)
     nok_supervisor_approved = models.BooleanField(default=False)
@@ -927,6 +968,39 @@ class ChecklistDynamicValue(models.Model):
         return f"{self.checklist} - {self.parameter.parameter_name}: {self.value}"
 
  
+#  FTQ
+
+
+from django.utils import timezone
+from django.db.models import Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+  
+# Define these ONLY ONCE at the beginning
+class OperationNumber(models.Model):
+    """Operation numbers for the manufacturing process"""
+    number = models.CharField(max_length=10)
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.number} - {self.name}"
+
+
+class DefectCategory(models.Model):
+    """Categories of defects"""
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return self.name
+    
+    class Meta:
+        verbose_name_plural = "Defect Categories"
+
 
 class FTQRecord(models.Model):
     """First Time Quality records"""
@@ -938,29 +1012,28 @@ class FTQRecord(models.Model):
         ('Gnome', 'Gnome'),
     )
     
-    SHIFT_CHOICES = (
-        ('A', 'A'),
-        ('B', 'B'),
-        ('C', 'C'),
-    )
     SHIFTS = [
-    ('S1', 'S1 - 6:30 AM to 6:30 PM'),
-    ('A', 'A - 6:30 AM to 3:00 PM'),
-    ('G', 'G - 8:30 AM to 5:00 PM'),
-    ('B', 'B - 3:00 PM to 11:30 PM'),
-    ('C', 'C - 11:30 PM to 6:30 AM'),
-    ('S2', 'S2 - 6:30 PM to 6:30 AM'),
-]
+        ('S1', 'S1 - 6:30 AM to 6:30 PM'),
+        ('A', 'A - 6:30 AM to 3:00 PM'),
+        ('G', 'G - 8:30 AM to 5:00 PM'),
+        ('B', 'B - 3:00 PM to 11:30 PM'),
+        ('C', 'C - 11:30 PM to 6:30 AM'),
+        ('S2', 'S2 - 6:30 PM to 6:30 AM'),
+    ]
 
-    # Link to DailyVerificationStatus instead of directly to Shift
-    verification_status = models.ForeignKey(DailyVerificationStatus, on_delete=models.CASCADE, related_name='ftq_records', null=True, blank=True)
+    verification_status = models.ForeignKey(
+        'DailyVerificationStatus', 
+        on_delete=models.CASCADE, 
+        related_name='ftq_records', 
+        null=True, 
+        blank=True
+    )
     date = models.DateField()
-    shift_type = models.CharField(max_length=100, choices=SHIFTS,blank=True,null=True)
+    shift_type = models.CharField(max_length=100, choices=SHIFTS, blank=True, null=True)
     model_name = models.CharField(max_length=10, choices=MODEL_CHOICES)
     julian_date = models.DateField(help_text="Date in Julian calendar")
     
     total_inspected = models.PositiveIntegerField(verbose_name="Production/day")
-    total_defects = models.PositiveIntegerField(verbose_name="Total Reject", default=0)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_ftq_records')
     verified_by = models.ForeignKey(
         User, 
@@ -970,9 +1043,20 @@ class FTQRecord(models.Model):
         blank=True,
         verbose_name="Supervisor"
     )
-    production_per_shift = models.PositiveIntegerField(verbose_name="Production Data/Shift",blank=True,null=True)
+    production_per_shift = models.PositiveIntegerField(
+        verbose_name="Production Data/Shift", 
+        blank=True, 
+        null=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    @property
+    def total_defects(self):
+        """Calculate total defects by summing all time-based defect entries"""
+        return self.time_based_defects.aggregate(
+            total=Sum('count')
+        )['total'] or 0
     
     @property
     def ftq_percentage(self):
@@ -981,27 +1065,130 @@ class FTQRecord(models.Model):
             return ((self.total_inspected - self.total_defects) / self.total_inspected) * 100
         return 0
     
-    @property
-    def calculate_total_defects(self):
-        """Calculate total defects by summing all defect records"""
-        return self.defect_records.aggregate(total=models.Sum('count'))['total'] or 0
-    
-    def save(self, *args, **kwargs):
-        """Update total_defects when saving"""
-        # Only update if it's an existing record
-        if self.pk:
-            self.total_defects = self.calculate_total_defects
-        super().save(*args, **kwargs)
-    
     def __str__(self):
         return f"{self.date} - {self.shift_type} - {self.model_name}: {self.ftq_percentage:.2f}%"
     
     class Meta:
-        # Removed unique_together constraint
-        pass
-
-
+        ordering = ['-date', '-created_at']
 # Signal handlers for notifications
+
+
+
+class DefectType(models.Model):
+    """Define types of defects that can be tracked"""
+    name = models.CharField(max_length=100)
+    operation_number = models.ForeignKey(
+        OperationNumber,  # Reference the class defined above
+        on_delete=models.CASCADE, 
+        related_name='defect_types'
+    )
+    category = models.ForeignKey(
+        DefectCategory,  # Reference the class defined above
+        on_delete=models.CASCADE, 
+        related_name='defect_types'
+    )
+    description = models.TextField(blank=True, null=True)
+    is_critical = models.BooleanField(default=False)
+    is_default = models.BooleanField(
+        default=False, 
+        help_text="If true, this defect type will be shown by default"
+    )
+    order = models.PositiveIntegerField(
+        default=0, 
+        help_text="Order in which to display this defect type"
+    )
+    
+    def __str__(self):
+        return f"{self.operation_number.number} - {self.name}"
+    
+    class Meta:
+        ordering = ['operation_number', 'order', 'name']
+
+
+class TimeBasedDefectEntry(models.Model):
+    """Track defects with timestamp"""
+    ftq_record = models.ForeignKey(
+        FTQRecord, 
+        on_delete=models.CASCADE, 
+        related_name='time_based_defects'
+    )
+    defect_type = models.ForeignKey(
+        DefectType, 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True
+    )
+    defect_type_custom = models.ForeignKey(
+        'CustomDefectType', 
+        on_delete=models.CASCADE, 
+        null=True, 
+        blank=True
+    )
+    
+    recorded_at = models.TimeField(
+        verbose_name="Time Recorded",
+        help_text="Time when this defect was observed"
+    )
+    count = models.PositiveIntegerField(
+        verbose_name="Defect Count",
+        help_text="Number of defects at this time"
+    )
+    
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        defect_name = ""
+        if self.defect_type:
+            defect_name = self.defect_type.name
+        elif self.defect_type_custom:
+            defect_name = self.defect_type_custom.name
+        
+        return f"{defect_name} - {self.recorded_at.strftime('%H:%M')} - Count: {self.count}"
+    
+    class Meta:
+        ordering = ['recorded_at']
+        verbose_name = "Time-Based Defect Entry"
+        verbose_name_plural = "Time-Based Defect Entries"
+
+
+class DefectRecord(models.Model):
+    """Legacy defect record - kept for backward compatibility"""
+    ftq_record = models.ForeignKey(FTQRecord, on_delete=models.CASCADE, related_name='defect_records')
+    defect_type = models.ForeignKey(DefectType, on_delete=models.CASCADE, null=True, blank=True)
+    defect_type_custom = models.ForeignKey('CustomDefectType', on_delete=models.CASCADE, null=True, blank=True)
+    count = models.PositiveIntegerField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    
+    def __str__(self):
+        if self.defect_type:
+            return f"{self.defect_type.name} ({self.count}) - {self.ftq_record.date}"
+        elif self.defect_type_custom:
+            return f"{self.defect_type_custom.name} ({self.count}) - {self.ftq_record.date}"
+        return f"Defect record ({self.count}) - {self.ftq_record.date}"
+
+
+class CustomDefectType(models.Model):
+    """Custom defect types that can be added by operators"""
+    ftq_record = models.ForeignKey(
+        FTQRecord, 
+        on_delete=models.CASCADE, 
+        related_name='custom_defect_types'
+    )
+    name = models.CharField(max_length=200)
+    operation_number = models.ForeignKey(
+        OperationNumber,  # Reference the class defined above
+        on_delete=models.CASCADE, 
+        related_name='custom_defect_types'
+    )
+    added_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.operation_number.number} - {self.name} (Custom)"
+    
+
 
 @receiver(post_save, sender=ChecklistBase)
 def notify_supervisors(sender, instance, created, **kwargs):
@@ -1032,83 +1219,7 @@ def complete_verification_status(sender, instance, created, **kwargs):
         verification_status.status = 'completed'
         verification_status.save()
 
-class OperationNumber(models.Model):
-    """Operation numbers for the manufacturing process"""
-    number = models.CharField(max_length=10)
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)
-    
-    def __str__(self):
-        return f"{self.number} - {self.name}"
-
-class DefectCategory(models.Model):
-    """Categories of defects, such as 'Incorrect parts', 'Damage', etc."""
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    
-    def __str__(self):
-        return self.name
-    
-    class Meta:
-        verbose_name_plural = "Defect Categories"
-
-class DefectType(models.Model):
-    """Define types of defects that can be tracked"""
-    name = models.CharField(max_length=100)
-    operation_number = models.ForeignKey(OperationNumber, on_delete=models.CASCADE, related_name='defect_types')
-    category = models.ForeignKey(DefectCategory, on_delete=models.CASCADE, related_name='defect_types')
-    description = models.TextField(blank=True, null=True)
-    is_critical = models.BooleanField(default=False)
-    is_default = models.BooleanField(default=False, help_text="If true, this defect type will be shown by default")
-    order = models.PositiveIntegerField(default=0, help_text="Order in which to display this defect type")
-    
-    def __str__(self):
-        return f"{self.operation_number.number} - {self.name}"
-    
-    class Meta:
-        ordering = ['operation_number', 'order', 'name']
-
-class DefectRecord(models.Model):
-    """Record specific defects found during a shift"""
-    ftq_record = models.ForeignKey('FTQRecord', on_delete=models.CASCADE, related_name='defect_records')
-    defect_type = models.ForeignKey('DefectType', on_delete=models.CASCADE, null=True, blank=True)
-    defect_type_custom = models.ForeignKey('CustomDefectType', on_delete=models.CASCADE, null=True, blank=True)
-    count = models.PositiveIntegerField(blank=True, null=True)
-    notes = models.TextField(blank=True, null=True)
-    
-    def __str__(self):
-        if self.defect_type:
-            return f"{self.defect_type.name} ({self.count}) - {self.ftq_record.date}"
-        elif self.defect_type_custom:
-            return f"{self.defect_type_custom.name} ({self.count}) - {self.ftq_record.date}"
-        return f"Defect record ({self.count}) - {self.ftq_record.date}"
-        
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=(
-                    models.Q(defect_type__isnull=False, defect_type_custom__isnull=True) |
-                    models.Q(defect_type__isnull=True, defect_type_custom__isnull=False)
-                ),
-                name='exactly_one_defect_type'
-            )
-        ]
-            
-class CustomDefectType(models.Model):
-    """Custom defect types that can be added by operators"""
-    ftq_record = models.ForeignKey('FTQRecord', on_delete=models.CASCADE, related_name='custom_defect_types')
-    name = models.CharField(max_length=200)
-    operation_number = models.ForeignKey('OperationNumber', on_delete=models.CASCADE, related_name='custom_defect_types')
-    added_by = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
-    
-    def __str__(self):
-        return f"{self.operation_number.number} - {self.name} (Custom)"
-    
-    
-    
-    
+   
     
     
     

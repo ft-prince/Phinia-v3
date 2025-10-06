@@ -128,16 +128,15 @@
                             .nok-comment-container {
                                 margin-top: 5px;
                                 display: none;
-                             }
+                            }
                             .nok-comment-container.show {
                                 display: block;
                             }
                             .nok-comment-container textarea {
                                 font-size: 11px;
-                                background-color: white;
-                                border-color: #ff6666;
-                                 
-
+                                background-color: #222 !important;
+                                color: white !important;
+                                border-color: #ff6666 !important;
                             }
                             .form-check-input {
                                 background-color: #222;
@@ -217,40 +216,35 @@
                                     <div class="individual-warning" id="uvVacuum1Warning">Out of range!</div>
                                     {{ form.uv_vacuum_test_1 }}
                                     <div class="nok-comment-container" id="uvVacuumComment1">
-                                        <textarea name="uv_vacuum_test_1_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_vacuum_test_1_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvVacuum2Warning">Out of range!</div>
                                     {{ form.uv_vacuum_test_2 }}
                                     <div class="nok-comment-container" id="uvVacuumComment2">
-                                        <textarea name="uv_vacuum_test_2_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_vacuum_test_2_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvVacuum3Warning">Out of range!</div>
                                     {{ form.uv_vacuum_test_3 }}
                                     <div class="nok-comment-container" id="uvVacuumComment3">
-                                        <textarea name="uv_vacuum_test_3_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_vacuum_test_3_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvVacuum4Warning">Out of range!</div>
                                     {{ form.uv_vacuum_test_4 }}
                                     <div class="nok-comment-container" id="uvVacuumComment4">
-                                        <textarea name="uv_vacuum_test_4_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_vacuum_test_4_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvVacuum5Warning">Out of range!</div>
                                     {{ form.uv_vacuum_test_5 }}
                                     <div class="nok-comment-container" id="uvVacuumComment5">
-                                        <textarea name="uv_vacuum_test_5_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_vacuum_test_5_comment }}
                                     </div>
                                 </div>
                             </div>
@@ -280,40 +274,35 @@
                                     <div class="individual-warning" id="uvFlow1Warning">Out of range!</div>
                                     {{ form.uv_flow_value_1 }}
                                     <div class="nok-comment-container" id="uvFlowComment1">
-                                        <textarea name="uv_flow_value_1_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_flow_value_1_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvFlow2Warning">Out of range!</div>
                                     {{ form.uv_flow_value_2 }}
                                     <div class="nok-comment-container" id="uvFlowComment2">
-                                        <textarea name="uv_flow_value_2_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_flow_value_2_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvFlow3Warning">Out of range!</div>
                                     {{ form.uv_flow_value_3 }}
                                     <div class="nok-comment-container" id="uvFlowComment3">
-                                        <textarea name="uv_flow_value_3_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_flow_value_3_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvFlow4Warning">Out of range!</div>
                                     {{ form.uv_flow_value_4 }}
                                     <div class="nok-comment-container" id="uvFlowComment4">
-                                        <textarea name="uv_flow_value_4_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_flow_value_4_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     <div class="individual-warning" id="uvFlow5Warning">Out of range!</div>
                                     {{ form.uv_flow_value_5 }}
                                     <div class="nok-comment-container" id="uvFlowComment5">
-                                        <textarea name="uv_flow_value_5_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if out of range"></textarea>
+                                        {{ form.uv_flow_value_5_comment }}
                                     </div>
                                 </div>
                             </div>
@@ -338,36 +327,31 @@
                                 <div class="reading-container">
                                     {{ form.umbrella_valve_assembly_1 }}
                                     <div class="nok-comment-container" id="umbrellaComment1">
-                                        <textarea name="umbrella_valve_assembly_1_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.umbrella_valve_assembly_1_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.umbrella_valve_assembly_2 }}
                                     <div class="nok-comment-container" id="umbrellaComment2">
-                                        <textarea name="umbrella_valve_assembly_2_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.umbrella_valve_assembly_2_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.umbrella_valve_assembly_3 }}
                                     <div class="nok-comment-container" id="umbrellaComment3">
-                                        <textarea name="umbrella_valve_assembly_3_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.umbrella_valve_assembly_3_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.umbrella_valve_assembly_4 }}
                                     <div class="nok-comment-container" id="umbrellaComment4">
-                                        <textarea name="umbrella_valve_assembly_4_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.umbrella_valve_assembly_4_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.umbrella_valve_assembly_5 }}
                                     <div class="nok-comment-container" id="umbrellaComment5">
-                                        <textarea name="umbrella_valve_assembly_5_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.umbrella_valve_assembly_5_comment }}
                                     </div>
                                 </div>
                             </div>
@@ -392,36 +376,31 @@
                                 <div class="reading-container">
                                     {{ form.uv_clip_pressing_1 }}
                                     <div class="nok-comment-container" id="uvClipComment1">
-                                        <textarea name="uv_clip_pressing_1_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.uv_clip_pressing_1_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.uv_clip_pressing_2 }}
                                     <div class="nok-comment-container" id="uvClipComment2">
-                                        <textarea name="uv_clip_pressing_2_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.uv_clip_pressing_2_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.uv_clip_pressing_3 }}
                                     <div class="nok-comment-container" id="uvClipComment3">
-                                        <textarea name="uv_clip_pressing_3_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.uv_clip_pressing_3_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.uv_clip_pressing_4 }}
                                     <div class="nok-comment-container" id="uvClipComment4">
-                                        <textarea name="uv_clip_pressing_4_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.uv_clip_pressing_4_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.uv_clip_pressing_5 }}
                                     <div class="nok-comment-container" id="uvClipComment5">
-                                        <textarea name="uv_clip_pressing_5_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if NOK"></textarea>
+                                        {{ form.uv_clip_pressing_5_comment }}
                                     </div>
                                 </div>
                             </div>
@@ -439,8 +418,7 @@
                                 <div class="reading-container" style="width: 200px;">
                                     {{ form.workstation_clean }}
                                     <div class="nok-comment-container" id="workstationComment">
-                                        <textarea name="workstation_clean_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if No"></textarea>
+                                        {{ form.workstation_clean_comment }}
                                     </div>
                                 </div>
                             </div>
@@ -466,36 +444,31 @@
                                 <div class="reading-container">
                                     {{ form.bin_contamination_check_1 }}
                                     <div class="nok-comment-container" id="binComment1">
-                                        <textarea name="bin_contamination_check_1_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if No"></textarea>
+                                        {{ form.bin_contamination_check_1_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.bin_contamination_check_2 }}
                                     <div class="nok-comment-container" id="binComment2">
-                                        <textarea name="bin_contamination_check_2_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if No"></textarea>
+                                        {{ form.bin_contamination_check_2_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.bin_contamination_check_3 }}
                                     <div class="nok-comment-container" id="binComment3">
-                                        <textarea name="bin_contamination_check_3_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if No"></textarea>
+                                        {{ form.bin_contamination_check_3_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.bin_contamination_check_4 }}
                                     <div class="nok-comment-container" id="binComment4">
-                                        <textarea name="bin_contamination_check_4_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if No"></textarea>
+                                        {{ form.bin_contamination_check_4_comment }}
                                     </div>
                                 </div>
                                 <div class="reading-container">
                                     {{ form.bin_contamination_check_5 }}
                                     <div class="nok-comment-container" id="binComment5">
-                                        <textarea name="bin_contamination_check_5_comment" class="form-control" rows="2" 
-                                                  placeholder="Comment required if No"></textarea>
+                                        {{ form.bin_contamination_check_5_comment }}
                                     </div>
                                 </div>
                             </div>
@@ -542,33 +515,42 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Real-time validation function
-    function validateField(fieldName, value, min, max, unit, index) {
-        const field = form[fieldName];
-        const warningElement = document.getElementById(`${fieldName.replace('_test_', '').replace('_value_', '').replace(/\d+$/, '')}${index}Warning`);
-        const commentDiv = document.getElementById(`${fieldName.replace('_test_', '').replace('_value_', '').replace(/\d+$/, '')}Comment${index}`);
-        
-        if (value !== '' && (parseFloat(value) < min || parseFloat(value) > max)) {
-            field.classList.add('out-of-range');
-            if (warningElement) {
-                warningElement.style.display = 'block';
-                warningElement.textContent = `${parseFloat(value)} ${unit} is out of range!`;
-            }
-            if (commentDiv) {
-                commentDiv.classList.add('show');
-            }
-            return false;
-        } else {
-            field.classList.remove('out-of-range');
-            if (warningElement) {
-                warningElement.style.display = 'none';
-            }
-            if (commentDiv) {
-                commentDiv.classList.remove('show');
-            }
-            return true;
-        }
+ // Real-time validation function
+function validateField(fieldName, value, min, max, unit, index) {
+    const field = form[fieldName];
+    let commentDivId;
+    
+    // Properly map field names to comment div IDs
+    if (fieldName.startsWith('uv_vacuum_test_')) {
+        commentDivId = `uvVacuumComment${index}`;
+    } else if (fieldName.startsWith('uv_flow_value_')) {
+        commentDivId = `uvFlowComment${index}`;
     }
+    
+    const warningElement = document.getElementById(`${fieldName.replace('_test_', '').replace('_value_', '').replace(/\d+$/, '')}${index}Warning`);
+    const commentDiv = document.getElementById(commentDivId);
+    
+    if (value !== '' && (parseFloat(value) < min || parseFloat(value) > max)) {
+        field.classList.add('out-of-range');
+        if (warningElement) {
+            warningElement.style.display = 'block';
+            warningElement.textContent = `${parseFloat(value)} ${unit} is out of range!`;
+        }
+        if (commentDiv) {
+            commentDiv.classList.add('show');
+        }
+        return false;
+    } else {
+        field.classList.remove('out-of-range');
+        if (warningElement) {
+            warningElement.style.display = 'none';
+        }
+        if (commentDiv) {
+            commentDiv.classList.remove('show');
+        }
+        return true;
+    }
+}
 
     // Check for overall section warnings
     function checkSectionWarnings() {
@@ -626,172 +608,168 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Handle NOK/No selections for select fields
-// Handle NOK/No selections for select fields - OPTIONAL COMMENTS
-document.querySelectorAll('select').forEach(select => {
-    select.addEventListener('change', function() {
-        const name = this.name;
-        let commentDiv = null;
-        
-        // Find the corresponding comment div
-        if (name.includes('umbrella_valve_assembly_')) {
-            const index = name.match(/\d+/)[0];
-            commentDiv = document.getElementById(`umbrellaComment${index}`);
-        } else if (name.includes('uv_clip_pressing_')) {
-            const index = name.match(/\d+/)[0];
-            commentDiv = document.getElementById(`uvClipComment${index}`);
-        } else if (name === 'workstation_clean') {
-            commentDiv = document.getElementById('workstationComment');
-        } else if (name.includes('bin_contamination_check_')) {
-            const index = name.match(/\d+/)[0];
-            commentDiv = document.getElementById(`binComment${index}`);
-        }
-        
-        if (commentDiv) {
-            const commentTextarea = commentDiv.querySelector('textarea');
-            if (this.value === 'NOK' || this.value === 'No') {
-                commentDiv.classList.add('show');
-                // DO NOT SET REQUIRED - comments are optional
-                if (commentTextarea) {
-                    commentTextarea.required = false;
-                }
-            } else {
-                commentDiv.classList.remove('show');
-                if (commentTextarea) {
-                    commentTextarea.required = false;
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', function() {
+            const name = this.name;
+            let commentDiv = null;
+            
+            // Find the corresponding comment div
+            if (name.includes('umbrella_valve_assembly_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`umbrellaComment${index}`);
+            } else if (name.includes('uv_clip_pressing_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`uvClipComment${index}`);
+            } else if (name === 'workstation_clean') {
+                commentDiv = document.getElementById('workstationComment');
+            } else if (name.includes('bin_contamination_check_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`binComment${index}`);
+            }
+            
+            if (commentDiv) {
+                const commentTextarea = commentDiv.querySelector('textarea');
+                if (this.value === 'NOK' || this.value === 'No') {
+                    commentDiv.classList.add('show');
+                    if (commentTextarea) {
+                        commentTextarea.required = false; // Optional comments
+                    }
+                } else {
+                    commentDiv.classList.remove('show');
+                    if (commentTextarea) {
+                        commentTextarea.required = false;
+                    }
                 }
             }
-        }
+        });
     });
-});
 
     // Form submission validation
-// Form submission validation
-// Form submission validation
-form.addEventListener('submit', function(e) {
-    let warningMessages = [];
-    let infoMessages = [];
+    form.addEventListener('submit', function(e) {
+        let warningMessages = [];
+        let infoMessages = [];
 
-    // Check UV vacuum test readings - NO COMMENT REQUIRED
-    for (let i = 1; i <= 5; i++) {
-        const fieldName = `uv_vacuum_test_${i}`;
-        const field = form[fieldName];
-        
-        if (field && field.value) {
-            const uvVacuum = parseFloat(field.value);
+        // Check UV vacuum test readings
+        for (let i = 1; i <= 5; i++) {
+            const fieldName = `uv_vacuum_test_${i}`;
+            const field = form[fieldName];
             
-            if (!isNaN(uvVacuum) && (uvVacuum < -43 || uvVacuum > -35)) {
-                warningMessages.push(`UV Vacuum Test Reading ${i}: ${uvVacuum} kPa is outside range (-43 to -35 kPa)`);
+            if (field && field.value) {
+                const uvVacuum = parseFloat(field.value);
+                
+                if (!isNaN(uvVacuum) && (uvVacuum < -43 || uvVacuum > -35)) {
+                    warningMessages.push(`UV Vacuum Test Reading ${i}: ${uvVacuum} kPa is outside range (-43 to -35 kPa)`);
+                }
             }
         }
-    }
 
-    // Check UV flow value readings - NO COMMENT REQUIRED
-    for (let i = 1; i <= 5; i++) {
-        const fieldName = `uv_flow_value_${i}`;
-        const field = form[fieldName];
-        
-        if (field && field.value) {
-            const uvFlow = parseFloat(field.value);
+        // Check UV flow value readings
+        for (let i = 1; i <= 5; i++) {
+            const fieldName = `uv_flow_value_${i}`;
+            const field = form[fieldName];
             
-            if (!isNaN(uvFlow) && (uvFlow < 30 || uvFlow > 40)) {
-                warningMessages.push(`UV Flow Value Reading ${i}: ${uvFlow} LPM is outside range (30-40 LPM)`);
+            if (field && field.value) {
+                const uvFlow = parseFloat(field.value);
+                
+                if (!isNaN(uvFlow) && (uvFlow < 30 || uvFlow > 40)) {
+                    warningMessages.push(`UV Flow Value Reading ${i}: ${uvFlow} LPM is outside range (30-40 LPM)`);
+                }
             }
         }
-    }
 
-    // Check for NOK/No values - just warn, don't require comments
-    for (let i = 1; i <= 5; i++) {
-        const umbrellaField = form[`umbrella_valve_assembly_${i}`];
-        if (umbrellaField && umbrellaField.value === 'NOK') {
-            warningMessages.push(`Umbrella Valve Assembly ${i} marked as NOK`);
-        }
-        
-        const uvClipField = form[`uv_clip_pressing_${i}`];
-        if (uvClipField && uvClipField.value === 'NOK') {
-            warningMessages.push(`UV Clip Pressing ${i} marked as NOK`);
-        }
-        
-        const binField = form[`bin_contamination_check_${i}`];
-        if (binField && binField.value === 'No') {
-            warningMessages.push(`Bin Contamination Check ${i} marked as No`);
-        }
-    }
-    
-    // Check workstation
-    const workstationField = form['workstation_clean'];
-    if (workstationField && workstationField.value === 'No') {
-        warningMessages.push('Workstation marked as not clean');
-    }
-    
-    // Check maintenance fields - ONLY if checkbox is checked
-    if (maintenanceCheckbox && maintenanceCheckbox.checked) {
-        const maintenanceCommentField = document.querySelector('textarea[name="maintenance_comment"]');
-        if (!maintenanceCommentField || !maintenanceCommentField.value.trim()) {
-            alert('Maintenance activity description is required when maintenance checkbox is selected.');
-            e.preventDefault();
-            if (maintenanceCommentField) {
-                maintenanceCommentField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                maintenanceCommentField.focus();
+        // Check for NOK/No values
+        for (let i = 1; i <= 5; i++) {
+            const umbrellaField = form[`umbrella_valve_assembly_${i}`];
+            if (umbrellaField && umbrellaField.value === 'NOK') {
+                warningMessages.push(`Umbrella Valve Assembly ${i} marked as NOK`);
             }
-            return false;
-        }
-    }
-
-    // Calculate averages for info
-    let uvVacuumSum = 0, uvFlowSum = 0, uvVacCount = 0, uvFlowCount = 0;
-    
-    for (let i = 1; i <= 5; i++) {
-        const uvVacField = form[`uv_vacuum_test_${i}`];
-        if (uvVacField && uvVacField.value) {
-            const val = parseFloat(uvVacField.value);
-            if (!isNaN(val)) {
-                uvVacuumSum += val;
-                uvVacCount++;
+            
+            const uvClipField = form[`uv_clip_pressing_${i}`];
+            if (uvClipField && uvClipField.value === 'NOK') {
+                warningMessages.push(`UV Clip Pressing ${i} marked as NOK`);
+            }
+            
+            const binField = form[`bin_contamination_check_${i}`];
+            if (binField && binField.value === 'No') {
+                warningMessages.push(`Bin Contamination Check ${i} marked as No`);
             }
         }
         
-        const uvFlowField = form[`uv_flow_value_${i}`];
-        if (uvFlowField && uvFlowField.value) {
-            const val = parseFloat(uvFlowField.value);
-            if (!isNaN(val)) {
-                uvFlowSum += val;
-                uvFlowCount++;
+        // Check workstation
+        const workstationField = form['workstation_clean'];
+        if (workstationField && workstationField.value === 'No') {
+            warningMessages.push('Workstation marked as not clean');
+        }
+        
+        // Check maintenance fields
+        if (maintenanceCheckbox && maintenanceCheckbox.checked) {
+            const maintenanceCommentField = document.querySelector('textarea[name="maintenance_comment"]');
+            if (!maintenanceCommentField || !maintenanceCommentField.value.trim()) {
+                alert('Maintenance activity description is required when maintenance checkbox is selected.');
+                e.preventDefault();
+                if (maintenanceCommentField) {
+                    maintenanceCommentField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    maintenanceCommentField.focus();
+                }
+                return false;
             }
         }
-    }
-    
-    if (uvVacCount > 0) {
-        const uvVacuumAvg = (uvVacuumSum / uvVacCount).toFixed(2);
-        infoMessages.push(`UV Vacuum Test Average: ${uvVacuumAvg} kPa`);
-    }
-    
-    if (uvFlowCount > 0) {
-        const uvFlowAvg = (uvFlowSum / uvFlowCount).toFixed(2);
-        infoMessages.push(`UV Flow Value Average: ${uvFlowAvg} LPM`);
-    }
 
-    // Combine messages
-    let allMessages = [];
-    if (warningMessages.length > 0) {
-        allMessages.push('WARNINGS:');
-        allMessages = allMessages.concat(warningMessages);
-    }
-    if (infoMessages.length > 0) {
-        allMessages.push('\nINFO:');
-        allMessages = allMessages.concat(infoMessages);
-    }
-
-    // Show warnings/info and allow submission
-    if (allMessages.length > 0) {
-        const proceed = confirm(allMessages.join('\n') + '\n\nDo you want to proceed with saving this subgroup?');
-        if (!proceed) {
-            e.preventDefault();
-            return false;
+        // Calculate averages for info
+        let uvVacuumSum = 0, uvFlowSum = 0, uvVacCount = 0, uvFlowCount = 0;
+        
+        for (let i = 1; i <= 5; i++) {
+            const uvVacField = form[`uv_vacuum_test_${i}`];
+            if (uvVacField && uvVacField.value) {
+                const val = parseFloat(uvVacField.value);
+                if (!isNaN(val)) {
+                    uvVacuumSum += val;
+                    uvVacCount++;
+                }
+            }
+            
+            const uvFlowField = form[`uv_flow_value_${i}`];
+            if (uvFlowField && uvFlowField.value) {
+                const val = parseFloat(uvFlowField.value);
+                if (!isNaN(val)) {
+                    uvFlowSum += val;
+                    uvFlowCount++;
+                }
+            }
         }
-    }
-    
-    return true;
-});
+        
+        if (uvVacCount > 0) {
+            const uvVacuumAvg = (uvVacuumSum / uvVacCount).toFixed(2);
+            infoMessages.push(`UV Vacuum Test Average: ${uvVacuumAvg} kPa`);
+        }
+        
+        if (uvFlowCount > 0) {
+            const uvFlowAvg = (uvFlowSum / uvFlowCount).toFixed(2);
+            infoMessages.push(`UV Flow Value Average: ${uvFlowAvg} LPM`);
+        }
+
+        // Combine messages
+        let allMessages = [];
+        if (warningMessages.length > 0) {
+            allMessages.push('WARNINGS:');
+            allMessages = allMessages.concat(warningMessages);
+        }
+        if (infoMessages.length > 0) {
+            allMessages.push('\nINFO:');
+            allMessages = allMessages.concat(infoMessages);
+        }
+
+        // Show warnings/info and allow submission
+        if (allMessages.length > 0) {
+            const proceed = confirm(allMessages.join('\n') + '\n\nDo you want to proceed with saving this subgroup?');
+            if (!proceed) {
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        return true;
+    });
 
     // Run initial validation
     updateValidation();

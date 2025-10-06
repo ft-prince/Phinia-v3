@@ -5,6 +5,42 @@ from datetime import timedelta
 
 register = template.Library()
 
+
+@register.filter
+def get_field(obj, field_name):
+    """
+    Get a field value from an object dynamically.
+    Usage: {{ subgroup|get_field:'uv_vacuum_test_1' }}
+    """
+    if obj is None:
+        return None
+    try:
+        # Handle the case where field_name might already include the index
+        return getattr(obj, str(field_name), None)
+    except (AttributeError, TypeError):
+        return None
+
+@register.filter
+def get_attr(obj, attr_name):
+    """
+    Alternative way to get attribute - handles None gracefully
+    Usage: {{ subgroup|get_attr:'uv_vacuum_test_1' }}
+    """
+    if obj is None or attr_name is None:
+        return None
+    try:
+        return getattr(obj, str(attr_name), None)
+    except (AttributeError, TypeError):
+        return None
+    
+@register.filter
+def add(value, arg):
+    """Add the arg to the value."""
+    try:
+        return str(value) + str(arg)
+    except (ValueError, TypeError):
+        return value
+
 @register.filter
 def multiply(value, arg):
     """Multiplies the value by the argument"""

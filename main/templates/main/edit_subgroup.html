@@ -20,19 +20,19 @@
         color: #ffffff;
     }
     
-    .form-control {
+    .form-control, textarea {
         background-color: #000000;
         color: #ffffff;
         border: 1px solid #ff0000;
         transition: border-color 0.3s ease, box-shadow 0.3s ease;
     }
     
-    .form-control:hover {
+    .form-control:hover, textarea:hover {
         border-color: #ffffff;
         box-shadow: 0 0 0 0.25rem rgba(255, 0, 0, 0.1);
     }
     
-    .form-control:focus {
+    .form-control:focus, textarea:focus {
         background-color: #000000;
         color: #ffffff;
         border-color: #ffffff;
@@ -132,6 +132,32 @@
         margin-bottom: 10px;
     }
     
+    .reading-container {
+        position: relative;
+    }
+    
+    .nok-comment-container {
+        margin-top: 5px;
+        display: none;
+    }
+    
+    .nok-comment-container.show {
+        display: block;
+    }
+    
+    .nok-comment-container textarea {
+        font-size: 11px;
+        background-color: #222 !important;
+        color: white !important;
+        border-color: #ff6666 !important;
+    }
+    
+    .out-of-range {
+        border-color: #ff0000 !important;
+        background-color: #440000 !important;
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.8) !important;
+    }
+    
     @media (max-width: 768px) {
         .readings-grid {
             grid-template-columns: 1fr 1fr;
@@ -167,11 +193,36 @@
                                 <div class="reading-label">Reading 5</div>
                             </div>
                             <div class="readings-grid">
-                                {{ form.uv_vacuum_test_1 }}
-                                {{ form.uv_vacuum_test_2 }}
-                                {{ form.uv_vacuum_test_3 }}
-                                {{ form.uv_vacuum_test_4 }}
-                                {{ form.uv_vacuum_test_5 }}
+                                <div class="reading-container">
+                                    {{ form.uv_vacuum_test_1 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment1">
+                                        {{ form.uv_vacuum_test_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_vacuum_test_2 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment2">
+                                        {{ form.uv_vacuum_test_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_vacuum_test_3 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment3">
+                                        {{ form.uv_vacuum_test_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_vacuum_test_4 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment4">
+                                        {{ form.uv_vacuum_test_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_vacuum_test_5 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment5">
+                                        {{ form.uv_vacuum_test_5_comment }}
+                                    </div>
+                                </div>
                             </div>
                             <div class="warning-message" id="uv_vacuum_warning"></div>
                         </div>
@@ -189,11 +240,36 @@
                                 <div class="reading-label">Reading 5</div>
                             </div>
                             <div class="readings-grid">
-                                {{ form.uv_flow_value_1 }}
-                                {{ form.uv_flow_value_2 }}
-                                {{ form.uv_flow_value_3 }}
-                                {{ form.uv_flow_value_4 }}
-                                {{ form.uv_flow_value_5 }}
+                                <div class="reading-container">
+                                    {{ form.uv_flow_value_1 }}
+                                    <div class="nok-comment-container" id="uvFlowComment1">
+                                        {{ form.uv_flow_value_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_flow_value_2 }}
+                                    <div class="nok-comment-container" id="uvFlowComment2">
+                                        {{ form.uv_flow_value_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_flow_value_3 }}
+                                    <div class="nok-comment-container" id="uvFlowComment3">
+                                        {{ form.uv_flow_value_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_flow_value_4 }}
+                                    <div class="nok-comment-container" id="uvFlowComment4">
+                                        {{ form.uv_flow_value_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_flow_value_5 }}
+                                    <div class="nok-comment-container" id="uvFlowComment5">
+                                        {{ form.uv_flow_value_5_comment }}
+                                    </div>
+                                </div>
                             </div>
                             <div class="warning-message" id="uv_flow_warning"></div>
                         </div>
@@ -211,11 +287,36 @@
                                 <div class="reading-label">Check 5</div>
                             </div>
                             <div class="readings-grid">
-                                {{ form.umbrella_valve_assembly_1 }}
-                                {{ form.umbrella_valve_assembly_2 }}
-                                {{ form.umbrella_valve_assembly_3 }}
-                                {{ form.umbrella_valve_assembly_4 }}
-                                {{ form.umbrella_valve_assembly_5 }}
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_1 }}
+                                    <div class="nok-comment-container" id="umbrellaComment1">
+                                        {{ form.umbrella_valve_assembly_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_2 }}
+                                    <div class="nok-comment-container" id="umbrellaComment2">
+                                        {{ form.umbrella_valve_assembly_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_3 }}
+                                    <div class="nok-comment-container" id="umbrellaComment3">
+                                        {{ form.umbrella_valve_assembly_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_4 }}
+                                    <div class="nok-comment-container" id="umbrellaComment4">
+                                        {{ form.umbrella_valve_assembly_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_5 }}
+                                    <div class="nok-comment-container" id="umbrellaComment5">
+                                        {{ form.umbrella_valve_assembly_5_comment }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -232,21 +333,51 @@
                                 <div class="reading-label">Check 5</div>
                             </div>
                             <div class="readings-grid">
-                                {{ form.uv_clip_pressing_1 }}
-                                {{ form.uv_clip_pressing_2 }}
-                                {{ form.uv_clip_pressing_3 }}
-                                {{ form.uv_clip_pressing_4 }}
-                                {{ form.uv_clip_pressing_5 }}
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_1 }}
+                                    <div class="nok-comment-container" id="uvClipComment1">
+                                        {{ form.uv_clip_pressing_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_2 }}
+                                    <div class="nok-comment-container" id="uvClipComment2">
+                                        {{ form.uv_clip_pressing_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_3 }}
+                                    <div class="nok-comment-container" id="uvClipComment3">
+                                        {{ form.uv_clip_pressing_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_4 }}
+                                    <div class="nok-comment-container" id="uvClipComment4">
+                                        {{ form.uv_clip_pressing_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_5 }}
+                                    <div class="nok-comment-container" id="uvClipComment5">
+                                        {{ form.uv_clip_pressing_5_comment }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
-                        <!-- Workstation Clean Section - UPDATED TO SINGLE FIELD -->
+                        <!-- Workstation Clean Section -->
                         <div class="parameter-section">
                             <h6 class="parameter-title">Workstation Cleanliness</h6>
                             <div class="range-info">All workstations are clean (वर्कस्टेशन साफ होना चाहिए) - Single Check</div>
                             
                             <div class="single-reading">
-                                {{ form.workstation_clean }}
+                                <div class="reading-container" style="width: 200px;">
+                                    {{ form.workstation_clean }}
+                                    <div class="nok-comment-container" id="workstationComment">
+                                        {{ form.workstation_clean_comment }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -264,15 +395,40 @@
                                 <div class="reading-label">Check 5</div>
                             </div>
                             <div class="readings-grid">
-                                {{ form.bin_contamination_check_1 }}
-                                {{ form.bin_contamination_check_2 }}
-                                {{ form.bin_contamination_check_3 }}
-                                {{ form.bin_contamination_check_4 }}
-                                {{ form.bin_contamination_check_5 }}
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_1 }}
+                                    <div class="nok-comment-container" id="binComment1">
+                                        {{ form.bin_contamination_check_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_2 }}
+                                    <div class="nok-comment-container" id="binComment2">
+                                        {{ form.bin_contamination_check_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_3 }}
+                                    <div class="nok-comment-container" id="binComment3">
+                                        {{ form.bin_contamination_check_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_4 }}
+                                    <div class="nok-comment-container" id="binComment4">
+                                        {{ form.bin_contamination_check_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_5 }}
+                                    <div class="nok-comment-container" id="binComment5">
+                                        {{ form.bin_contamination_check_5_comment }}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Edit History Section (if any changes exist) -->
+                        <!-- Edit History Section -->
                         {% if edit_history %}
                         <div class="parameter-section">
                             <h6 class="parameter-title">Edit History</h6>
@@ -320,40 +476,112 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('editSubgroupForm');
     
-    // Real-time validation and warning display
-    function updateWarnings() {
-        let warningMessages = [];
+    // Show/hide comment fields based on current values
+    function initializeCommentFields() {
+        // Check UV vacuum readings
+        for (let i = 1; i <= 5; i++) {
+            const field = form[`uv_vacuum_test_${i}`];
+            const commentDiv = document.getElementById(`uvVacuumComment${i}`);
+            if (field && field.value) {
+                const val = parseFloat(field.value);
+                if (!isNaN(val) && (val < -43 || val > -35)) {
+                    if (commentDiv) commentDiv.classList.add('show');
+                    if (field) field.classList.add('out-of-range');
+                }
+            }
+        }
         
-        // Clear previous warnings
+        // Check UV flow readings
+        for (let i = 1; i <= 5; i++) {
+            const field = form[`uv_flow_value_${i}`];
+            const commentDiv = document.getElementById(`uvFlowComment${i}`);
+            if (field && field.value) {
+                const val = parseFloat(field.value);
+                if (!isNaN(val) && (val < 30 || val > 40)) {
+                    if (commentDiv) commentDiv.classList.add('show');
+                    if (field) field.classList.add('out-of-range');
+                }
+            }
+        }
+        
+        // Check NOK/No values
+        for (let i = 1; i <= 5; i++) {
+            const umbrellaField = form[`umbrella_valve_assembly_${i}`];
+            if (umbrellaField && umbrellaField.value === 'NOK') {
+                const commentDiv = document.getElementById(`umbrellaComment${i}`);
+                if (commentDiv) commentDiv.classList.add('show');
+            }
+            
+            const uvClipField = form[`uv_clip_pressing_${i}`];
+            if (uvClipField && uvClipField.value === 'NOK') {
+                const commentDiv = document.getElementById(`uvClipComment${i}`);
+                if (commentDiv) commentDiv.classList.add('show');
+            }
+            
+            const binField = form[`bin_contamination_check_${i}`];
+            if (binField && binField.value === 'No') {
+                const commentDiv = document.getElementById(`binComment${i}`);
+                if (commentDiv) commentDiv.classList.add('show');
+            }
+        }
+        
+        const workstationField = form['workstation_clean'];
+        if (workstationField && workstationField.value === 'No') {
+            const commentDiv = document.getElementById('workstationComment');
+            if (commentDiv) commentDiv.classList.add('show');
+        }
+    }
+    
+    // Real-time validation
+    function validateField(fieldName, value, min, max, index) {
+        const field = form[fieldName];
+        const commentDiv = document.getElementById(`${fieldName.replace('_test_', '').replace('_value_', '').replace(/\d+$/, '')}Comment${index}`);
+        
+        if (value !== '' && (parseFloat(value) < min || parseFloat(value) > max)) {
+            if (field) field.classList.add('out-of-range');
+            if (commentDiv) commentDiv.classList.add('show');
+            return false;
+        } else {
+            if (field) field.classList.remove('out-of-range');
+            if (commentDiv) commentDiv.classList.remove('show');
+            return true;
+        }
+    }
+    
+    function updateWarnings() {
         document.getElementById('uv_vacuum_warning').textContent = '';
         document.getElementById('uv_flow_warning').textContent = '';
         
-        // Check UV vacuum test readings (5 readings)
+        let uvVacuumWarnings = [];
+        let uvFlowWarnings = [];
+        
         for (let i = 1; i <= 5; i++) {
-            const uvVacuum = parseFloat(form[`uv_vacuum_test_${i}`].value);
+            const uvVacVal = form[`uv_vacuum_test_${i}`].value;
+            validateField(`uv_vacuum_test_${i}`, uvVacVal, -43, -35, i);
+            
+            const uvVacuum = parseFloat(uvVacVal);
             if (!isNaN(uvVacuum) && (uvVacuum < -43 || uvVacuum > -35)) {
-                warningMessages.push(`UV Vacuum Reading ${i}: ${uvVacuum} kPa is outside range`);
+                uvVacuumWarnings.push(`Reading ${i}: ${uvVacuum} kPa is outside range`);
             }
-        }
-        
-        // Check UV flow value readings (5 readings)
-        for (let i = 1; i <= 5; i++) {
-            const uvFlow = parseFloat(form[`uv_flow_value_${i}`].value);
+            
+            const uvFlowVal = form[`uv_flow_value_${i}`].value;
+            validateField(`uv_flow_value_${i}`, uvFlowVal, 30, 40, i);
+            
+            const uvFlow = parseFloat(uvFlowVal);
             if (!isNaN(uvFlow) && (uvFlow < 30 || uvFlow > 40)) {
-                warningMessages.push(`UV Flow Reading ${i}: ${uvFlow} LPM is outside range`);
+                uvFlowWarnings.push(`Reading ${i}: ${uvFlow} LPM is outside range`);
             }
         }
         
-        // Display warnings
-        if (warningMessages.length > 0) {
-            document.getElementById('uv_vacuum_warning').textContent = 
-                warningMessages.filter(msg => msg.includes('UV Vacuum')).join(', ');
-            document.getElementById('uv_flow_warning').textContent = 
-                warningMessages.filter(msg => msg.includes('UV Flow')).join(', ');
+        if (uvVacuumWarnings.length > 0) {
+            document.getElementById('uv_vacuum_warning').textContent = uvVacuumWarnings.join(', ');
+        }
+        if (uvFlowWarnings.length > 0) {
+            document.getElementById('uv_flow_warning').textContent = uvFlowWarnings.join(', ');
         }
     }
 
-    // Add real-time warning updates for all measurement fields
+    // Add event listeners
     for (let i = 1; i <= 5; i++) {
         const uvVacuumField = form[`uv_vacuum_test_${i}`];
         const uvFlowField = form[`uv_flow_value_${i}`];
@@ -366,49 +594,49 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Form submission handling
+    // Handle NOK/No selections
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', function() {
+            const name = this.name;
+            let commentDiv = null;
+            
+            if (name.includes('umbrella_valve_assembly_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`umbrellaComment${index}`);
+            } else if (name.includes('uv_clip_pressing_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`uvClipComment${index}`);
+            } else if (name === 'workstation_clean') {
+                commentDiv = document.getElementById('workstationComment');
+            } else if (name.includes('bin_contamination_check_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`binComment${index}`);
+            }
+            
+            if (commentDiv) {
+                if (this.value === 'NOK' || this.value === 'No') {
+                    commentDiv.classList.add('show');
+                } else {
+                    commentDiv.classList.remove('show');
+                }
+            }
+        });
+    });
+    
+    // Form submission
     form.addEventListener('submit', function(e) {
         let warningMessages = [];
         
-        // Check all UV vacuum test readings
         for (let i = 1; i <= 5; i++) {
             const uvVacuum = parseFloat(form[`uv_vacuum_test_${i}`].value);
             if (!isNaN(uvVacuum) && (uvVacuum < -43 || uvVacuum > -35)) {
                 warningMessages.push(`UV Vacuum Test Reading ${i}: ${uvVacuum} kPa is outside recommended range (-43 to -35 kPa)`);
             }
-        }
-        
-        // Check all UV flow value readings
-        for (let i = 1; i <= 5; i++) {
+            
             const uvFlow = parseFloat(form[`uv_flow_value_${i}`].value);
             if (!isNaN(uvFlow) && (uvFlow < 30 || uvFlow > 40)) {
                 warningMessages.push(`UV Flow Value Reading ${i}: ${uvFlow} LPM is outside recommended range (30-40 LPM)`);
             }
-        }
-
-        // Check for consistency warnings - UPDATED FOR SINGLE WORKSTATION
-        let umbrellaValues = [];
-        let uvClipValues = [];
-        let binValues = [];
-        
-        for (let i = 1; i <= 5; i++) {
-            umbrellaValues.push(form[`umbrella_valve_assembly_${i}`].value);
-            uvClipValues.push(form[`uv_clip_pressing_${i}`].value);
-            binValues.push(form[`bin_contamination_check_${i}`].value);
-        }
-        
-        // Get single workstation value (no consistency check needed)
-        const workstationValue = form['workstation_clean'].value;
-        
-        // Check consistency for multi-reading fields only
-        if (new Set(umbrellaValues.filter(v => v !== '')).size > 1) {
-            warningMessages.push('Warning: Umbrella Valve Assembly readings are not consistent');
-        }
-        if (new Set(uvClipValues.filter(v => v !== '')).size > 1) {
-            warningMessages.push('Warning: UV Clip Pressing readings are not consistent');
-        }
-        if (new Set(binValues.filter(v => v !== '')).size > 1) {
-            warningMessages.push('Warning: Bin Contamination Check readings are not consistent');
         }
 
         if (warningMessages.length > 0) {
@@ -424,7 +652,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Run initial validation
+    // Initialize on load
+    initializeCommentFields();
     updateWarnings();
 });
 </script>

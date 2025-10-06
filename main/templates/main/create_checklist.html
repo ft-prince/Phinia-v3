@@ -101,7 +101,7 @@
                                 <div class="form-label-col"><label for="oring_condition" class="form-label"><div class="label-text">O-ring condition (UV Flow check sealing area)</div><div class="help-text text-secondary">O-ring सील की स्थिति सही होनी चाहिए</div></label></div>
                                 <div class="form-input-col">{{ form.oring_condition }}</div>
                             </div>
-                            <div class="form-row">
+                            {% comment %} <div class="form-row">
                                 <div class="form-label-col"><label for="master_verification_lvdt" class="form-label"><div class="label-text">Master Verification for LVDT</div><div class="help-text text-secondary">LVDT के लिए मास्टर वेरिफिकेशन करें</div></label></div>
                                 <div class="form-input-col">{{ form.master_verification_lvdt }}</div>
                             </div>
@@ -112,7 +112,7 @@
                             <div class="form-row">
                                 <div class="form-label-col"><label for="tool_alignment" class="form-label"><div class="label-text">Tool Alignment (Top & Bottom)</div><div class="help-text text-secondary">Tool Alignment सही होना चाहिए</div></label></div>
                                 <div class="form-input-col">{{ form.tool_alignment }}</div>
-                            </div>
+                            </div> {% endcomment %}
                         </div>
 
                         <div class="form-section">
@@ -124,7 +124,7 @@
                             <div class="form-row"><div class="form-label-col"><label for="uv_clip_part_no" class="form-label"><div class="label-text">UV Clip Part No</div><div class="help-text text-muted">42000829 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">यूवी क्लिप पार्ट नंबर</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.uv_clip_part_no }}</div>{{ form.uv_clip_part_no_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
                             <div class="form-row"><div class="form-label-col"><label for="umbrella_part_no" class="form-label"><div class="label-text">Umbrella Part No</div><div class="help-text text-muted">25094588 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">अम्ब्रेला पार्ट नंबर</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.umbrella_part_no }}</div>{{ form.umbrella_part_no_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
                             <div class="form-row"><div class="form-label-col"><label for="retainer_id_lubrication" class="form-label"><div class="label-text">Retainer ID Lubrication - Visual Check</div><div class="help-text text-secondary">रिटेनर आईडी लुब्रिकेशन - दृश्य जांच</div></label></div><div class="form-input-col">{{ form.retainer_id_lubrication }}</div></div>
-                            <div class="form-row"><div class="form-label-col"><label for="error_proofing_verification" class="form-label"><div class="label-text">All Error proofing / Error detection verification done</div><div class="help-text text-secondary">सभी एरर प्रूफिंग / एरर डिटेक्शन वेरिफिकेशन पूरी हो गई है</div></label></div><div class="form-input-col">{{ form.error_proofing_verification }}</div></div>
+                            {% comment %} <div class="form-row"><div class="form-label-col"><label for="error_proofing_verification" class="form-label"><div class="label-text">All Error proofing / Error detection verification done</div><div class="help-text text-secondary">सभी एरर प्रूफिंग / एरर डिटेक्शन वेरिफिकेशन पूरी हो गई है</div></label></div><div class="form-input-col">{{ form.error_proofing_verification }}</div></div> {% endcomment %}
                         </div>
 
                         <div id="dynamicFieldsContainer"></div>

@@ -116,6 +116,16 @@
         text-align: center;
     }
     
+    .time-badge {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        margin-right: 5px;
+        display: inline-block;
+    }
+    
     .form-control, .form-select {
         background-color: #111111;
         color: #ffffff;
@@ -161,6 +171,11 @@
         transform: rotate(15deg);
         text-transform: uppercase;
     }
+    
+    .time-entries-list {
+        margin-top: 5px;
+        padding-left: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -205,7 +220,7 @@
                     </li>
                     <li>
                         <span class="detail-label">Production/Shift:</span>
-                        <span class="detail-value">{{ ftq_record.production_per_shift }}</span>
+                        <span class="detail-value">{{ ftq_record.production_per_shift|default:"N/A" }}</span>
                     </li>
                     <li>
                         <span class="detail-label">Created By:</span>
@@ -240,15 +255,15 @@
                     </li>
                     <li>
                         <span class="detail-label">Good Units:</span>
-                        <span class="detail-value">{{ ftq_record.total_inspected|add:"-"|add:ftq_record.total_defects }}</span>
+                        <span class="detail-value">{{ ftq_record.total_inspected|add:ftq_record.total_defects|add:"-0" }}</span>
                     </li>
                     <li>
                         <span class="detail-label">Defect Rate:</span>
                         <span class="detail-value">
                             {% if ftq_record.total_inspected > 0 %}
-                                {{ ftq_record.total_defects|divisibleby:ftq_record.total_inspected|floatformat:2 }}%
+                                {% widthratio ftq_record.total_defects ftq_record.total_inspected 100 %}%
                             {% else %}
-                                0.00%
+                                0%
                             {% endif %}
                         </span>
                     </li>
@@ -260,15 +275,16 @@
         <div class="col-md-8">
             <!-- Default Defects Card -->
             <div class="verify-card">
-                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Default Defects</h5>
+                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Default Defects (Time-Based)</h5>
                 {% if default_defects %}
                 <div class="table-responsive">
                     <table class="defect-table">
                         <thead>
                             <tr>
                                 <th width="10%">S.No.</th>
-                                <th width="65%">Defect Description</th>
-                                <th width="25%" class="text-center">Count</th>
+                                <th width="50%">Defect Description</th>
+                                <th width="20%">Time Entries</th>
+                                <th width="20%" class="text-center">Total Count</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -280,6 +296,13 @@
                                     {% if defect.defect_type.is_critical %}
                                     <span class="badge bg-danger ms-2">Critical</span>
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <div class="time-entries-list">
+                                        {% for entry in defect.entries %}
+                                        <span class="time-badge">{{ entry.time }}: {{ entry.count }}</span>
+                                        {% endfor %}
+                                    </div>
                                 </td>
                                 <td class="text-center">
                                     <span class="defect-count">{{ defect.count }}</span>
@@ -298,15 +321,16 @@
             
             <!-- Custom Defects Card -->
             <div class="verify-card">
-                <h5 class="card-title"><i class="fas fa-plus-circle me-2"></i>Additional Defects</h5>
+                <h5 class="card-title"><i class="fas fa-plus-circle me-2"></i>Additional Defects (Time-Based)</h5>
                 {% if custom_defects %}
                 <div class="table-responsive">
                     <table class="defect-table">
                         <thead>
                             <tr>
                                 <th width="10%">S.No.</th>
-                                <th width="65%">Defect Description</th>
-                                <th width="25%" class="text-center">Count</th>
+                                <th width="50%">Defect Description</th>
+                                <th width="20%">Time Entries</th>
+                                <th width="20%" class="text-center">Total Count</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -314,6 +338,13 @@
                             <tr>
                                 <td>{{ forloop.counter }}</td>
                                 <td>{{ defect.defect_type_custom.name }}</td>
+                                <td>
+                                    <div class="time-entries-list">
+                                        {% for entry in defect.entries %}
+                                        <span class="time-badge">{{ entry.time }}: {{ entry.count }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </td>
                                 <td class="text-center">
                                     <span class="defect-count">{{ defect.count }}</span>
                                 </td>

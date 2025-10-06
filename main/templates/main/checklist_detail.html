@@ -788,7 +788,7 @@
                                         </td>
                                         <td class="text-muted">No damage / wear out</td>
                                     </tr>
-                                    <tr>
+                                    {% comment %} <tr>
                                         <td>
                                             Master Verification for LVDT
                                             <span class="hindi-text">LVDT वेरिफिकेशन</span>
@@ -823,7 +823,7 @@
                                             </span>
                                         </td>
                                         <td class="text-muted">Should be OK</td>
-                                    </tr>
+                                    </tr> {% endcomment %}
                                 </tbody>
                             </table>
                         </div>
@@ -933,7 +933,7 @@
                                             </span>
                                         </td>
                                     </tr>
-                                    <tr>
+                                    {% comment %} <tr>
                                         <td>
                                             Error Proofing Verification
                                             <span class="hindi-text">एरर प्रूफिंग</span>
@@ -943,7 +943,7 @@
                                                 {{ checklist.error_proofing_verification }}
                                             </span>
                                         </td>
-                                    </tr>
+                                    </tr> {% endcomment %}
                                 </tbody>
                             </table>
                         </div>
@@ -1319,19 +1319,31 @@
 
                                     <!-- Actions -->
                                     <td class="text-center">
-                                        <a href="{% url 'edit_subgroup' checklist.id subgroup.id %}" 
-                                           class="btn btn-sm   {% if user.user_type != 'operator' or checklist.status != 'pending' %}disabled{% endif %}">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        
-                                        {% if subgroup.has_been_edited %}
-                                            <br>
-                                            <small style="color: orange;">
-                                                <i class="fas fa-user"></i> {{ subgroup.edited_by.username }}<br>
-                                                <i class="fas fa-clock"></i> {{ subgroup.last_edited_at|timesince }} ago
-                                            </small>
-                                        {% endif %}
+                                        <div class="d-flex flex-column gap-1">
+                                            <!-- Edit Button -->
+                                            <a href="{% url 'edit_subgroup' checklist.id subgroup.id %}" 
+                                            class="btn btn-sm btn-outline-primary {% if user.user_type != 'operator' or checklist.status != 'pending' %}disabled{% endif %}">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                            
+                                            <!-- More Detail Button - Shows when there are NOK values or comments -->
+                                            {% if not subgroup.all_checks_passed or subgroup.has_been_edited or subgroup.is_after_maintenance %}
+                                                <button type="button" class="btn btn-sm btn-outline-info" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#detailModal{{ subgroup.id }}">
+                                                    <i class="fas fa-info-circle"></i> More Detail
+                                                </button>
+                                            {% endif %}
+                                            
+                                            {% if subgroup.has_been_edited %}
+                                                <small style="color: orange;">
+                                                    <i class="fas fa-user"></i> {{ subgroup.edited_by.username }}<br>
+                                                    <i class="fas fa-clock"></i> {{ subgroup.last_edited_at|timesince }} ago
+                                                </small>
+                                            {% endif %}
+                                        </div>
                                     </td>
+
                                 </tr>
                                 
                                 <!-- Show maintenance comment row if exists -->
@@ -1407,9 +1419,388 @@
                                     {% endfor %}
                                 {% endif %}
                             </tbody>
-                        </table>
+
+
+
+
+                       </table>
                     </div>
 
+<!-- Detail Modals for each subgroup -->
+{% for subgroup in subgroups %}
+<div class="modal fade" id="detailModal{{ subgroup.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ subgroup.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #111; color: white; border: 2px solid white;">
+            <div class="modal-header" style="border-bottom: 2px solid white;">
+                <h5 class="modal-title" id="detailModalLabel{{ subgroup.id }}">
+                    <i class="fas fa-clipboard-list"></i> Subgroup #{{ subgroup.subgroup_number }} Details
+                    {% if subgroup.has_been_edited %}
+                        <span class="badge bg-warning text-dark"><i class="fas fa-edit"></i> Edited</span>
+                    {% endif %}
+                    {% if subgroup.is_after_maintenance %}
+                        <span class="badge" style="background-color: #FFA500;"><i class="fas fa-tools"></i> Post-Maintenance</span>
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-2">
+                
+                <!-- Compact Status Overview -->
+                <div class="alert {% if subgroup.all_checks_passed %}alert-success{% else %}alert-danger{% endif %} mb-2 py-2">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <strong>Time:</strong> {{ subgroup.timestamp|date:"Y-m-d H:i" }} | 
+                            <strong>Status:</strong> {% if subgroup.all_checks_passed %}✓ Passed{% else %}✗ Has Issues{% endif %}
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <strong>Completion:</strong> {{ subgroup.total_readings_count }}/21 ({{ subgroup.completion_percentage|floatformat:0 }}%)
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UV Vacuum Test -->
+                <div class="card mb-2" style="background-color: #1a1a1a;">
+                    <div class="card-header py-1" style="background-color: {% if subgroup.validation_status.uv_vacuum_test_ok %}#28a745{% else %}#dc3545{% endif %};">
+                        <small><strong>UV Vacuum Test (kPa)</strong> - Range: -43 to -35 | Avg: 
+                            <span class="badge bg-dark">{{ subgroup.uv_vacuum_average|floatformat:2 }}</span>
+                        </small>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="row g-1">
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_1 and -43 <= subgroup.uv_vacuum_test_1 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#1</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_vacuum_test_1|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_vacuum_test_1_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_vacuum_test_1_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_2 and -43 <= subgroup.uv_vacuum_test_2 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#2</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_vacuum_test_2|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_vacuum_test_2_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_vacuum_test_2_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_3 and -43 <= subgroup.uv_vacuum_test_3 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#3</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_vacuum_test_3|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_vacuum_test_3_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_vacuum_test_3_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_4 and -43 <= subgroup.uv_vacuum_test_4 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#4</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_vacuum_test_4|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_vacuum_test_4_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_vacuum_test_4_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_5 and -43 <= subgroup.uv_vacuum_test_5 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#5</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_vacuum_test_5|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_vacuum_test_5_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_vacuum_test_5_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- UV Flow Value -->
+                <div class="card mb-2" style="background-color: #1a1a1a;">
+                    <div class="card-header py-1" style="background-color: {% if subgroup.validation_status.uv_flow_value_ok %}#28a745{% else %}#dc3545{% endif %};">
+                        <small><strong>UV Flow Value (LPM)</strong> - Range: 30-40 | Avg: 
+                            <span class="badge bg-dark">{{ subgroup.uv_flow_average|floatformat:2 }}</span>
+                        </small>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="row g-1">
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_flow_value_1 and 30 <= subgroup.uv_flow_value_1 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#1</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_flow_value_1|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_flow_value_1_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_flow_value_1_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_flow_value_2 and 30 <= subgroup.uv_flow_value_2 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#2</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_flow_value_2|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_flow_value_2_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_flow_value_2_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_flow_value_3 and 30 <= subgroup.uv_flow_value_3 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#3</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_flow_value_3|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_flow_value_3_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_flow_value_3_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_flow_value_4 and 30 <= subgroup.uv_flow_value_4 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#4</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_flow_value_4|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_flow_value_4_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_flow_value_4_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="text-center p-1 {% if subgroup.uv_flow_value_5 and 30 <= subgroup.uv_flow_value_5 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                    <small class="d-block"><strong>#5</strong></small>
+                                    <small class="d-block">{{ subgroup.uv_flow_value_5|floatformat:2|default:"-" }}</small>
+                                    {% if subgroup.uv_flow_value_5_comment %}
+                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
+                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
+                                            {{ subgroup.uv_flow_value_5_comment|truncatewords:5 }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- OK/NOK Checks -->
+                <div class="row g-1 mb-2">
+                    <!-- Umbrella Valve -->
+                    <div class="col-md-6">
+                        <div class="card h-100" style="background-color: #1a1a1a;">
+                            <div class="card-header py-1" style="background-color: {% if subgroup.umbrella_valve_ok_count == 5 %}#28a745{% else %}#dc3545{% endif %};">
+                                <small><strong>Umbrella Valve</strong> ({{ subgroup.umbrella_valve_ok_count }}/5 OK)</small>
+                            </div>
+                            <div class="card-body p-1">
+                                <div class="d-flex gap-1">
+                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_1 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_1|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_2 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_2|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_3 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_3|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_4 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_4|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_5 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_5|default:"-" }}</small>
+                                    </div>
+                                </div>
+                                {% if subgroup.umbrella_valve_comment %}
+                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
+                                    <small class="text-warning d-block" style="font-size: 10px;">
+                                        <strong>Comment:</strong> {{ subgroup.umbrella_valve_comment }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- UV Clip -->
+                    <div class="col-md-6">
+                        <div class="card h-100" style="background-color: #1a1a1a;">
+                            <div class="card-header py-1" style="background-color: {% if subgroup.uv_clip_ok_count == 5 %}#28a745{% else %}#dc3545{% endif %};">
+                                <small><strong>UV Clip Pressing</strong> ({{ subgroup.uv_clip_ok_count }}/5 OK)</small>
+                            </div>
+                            <div class="card-body p-1">
+                                <div class="d-flex gap-1">
+                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_1 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.uv_clip_pressing_1|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_2 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.uv_clip_pressing_2|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_3 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.uv_clip_pressing_3|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_4 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.uv_clip_pressing_4|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_5 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.uv_clip_pressing_5|default:"-" }}</small>
+                                    </div>
+                                </div>
+                                {% if subgroup.uv_clip_comment %}
+                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
+                                    <small class="text-warning d-block" style="font-size: 10px;">
+                                        <strong>Comment:</strong> {{ subgroup.uv_clip_comment }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cleanliness -->
+                <div class="row g-1 mb-2">
+                    <div class="col-md-4">
+                        <div class="card" style="background-color: #1a1a1a;">
+                            <div class="card-header py-1 bg-secondary">
+                                <small><strong>Workstation</strong></small>
+                            </div>
+                            <div class="card-body p-2 text-center">
+                                <span class="badge {% if subgroup.workstation_clean == 'Yes' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ subgroup.workstation_clean|default:"-" }}
+                                </span>
+                                {% if subgroup.workstation_comment %}
+                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
+                                    <small class="text-warning d-block" style="font-size: 10px;">
+                                        {{ subgroup.workstation_comment }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="card" style="background-color: #1a1a1a;">
+                            <div class="card-header py-1 bg-secondary">
+                                <small><strong>Bin Contamination</strong> ({{ subgroup.bin_contamination_yes_count }}/5 Yes)</small>
+                            </div>
+                            <div class="card-body p-1">
+                                <div class="d-flex gap-1">
+                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_1 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.bin_contamination_check_1|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_2 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.bin_contamination_check_2|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_3 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.bin_contamination_check_3|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_4 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.bin_contamination_check_4|default:"-" }}</small>
+                                    </div>
+                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_5 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
+                                        <small class="d-block">{{ subgroup.bin_contamination_check_5|default:"-" }}</small>
+                                    </div>
+                                </div>
+                                {% if subgroup.bin_comment %}
+                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
+                                    <small class="text-warning d-block" style="font-size: 10px;">
+                                        <strong>Comment:</strong> {{ subgroup.bin_comment }}
+                                    </small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maintenance Info -->
+                {% if subgroup.is_after_maintenance %}
+                <div class="alert alert-warning py-2 mb-2">
+                    <small>
+                        <strong><i class="fas fa-tools"></i> Maintenance:</strong> {{ subgroup.maintenance_comment }}
+                        {% if subgroup.effectiveness_comment %}
+                        <br><strong>Effectiveness:</strong> {{ subgroup.effectiveness_comment }}
+                        {% endif %}
+                    </small>
+                </div>
+                {% endif %}
+
+                <!-- Edit History -->
+                {% if subgroup.has_been_edited %}
+                <div class="card" style="background-color: #1a1a1a;">
+                    <div class="card-header py-1 bg-warning text-dark">
+                        <small><strong><i class="fas fa-history"></i> Edit History</strong> - Last: {{ subgroup.last_edited_at|timesince }} ago by {{ subgroup.edited_by.username }}</small>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="table-responsive" style="max-height: 150px; overflow-y: auto;">
+                            <table class="table table-sm table-dark table-striped mb-0">
+                                <thead class="sticky-top" style="background-color: #1a1a1a;">
+                                    <tr>
+                                        <th style="font-size: 11px;">Field</th>
+                                        <th style="font-size: 11px;">From → To</th>
+                                        <th style="font-size: 11px;">By</th>
+                                        <th style="font-size: 11px;">When</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for edit in subgroup.edit_history.all|slice:":10" %}
+                                    <tr>
+                                        <td style="font-size: 10px;">{{ edit.field_name }}</td>
+                                        <td style="font-size: 10px;">
+                                            <span class="badge bg-secondary">{{ edit.old_value|default:"—" }}</span>
+                                            <i class="fas fa-arrow-right" style="font-size: 8px;"></i>
+                                            <span class="badge bg-primary">{{ edit.new_value|default:"—" }}</span>
+                                        </td>
+                                        <td style="font-size: 10px;">{{ edit.edited_by.username }}</td>
+                                        <td style="font-size: 10px;">{{ edit.edited_at|timesince }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+            <div class="modal-footer py-2" style="border-top: 2px solid white;">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+ 
                     <!-- Maintenance & Quality Tracking Summary -->
                     {% if maintenance_subgroups or nok_approval_subgroups %}
                     <div class="mt-3 mb-3">
@@ -1795,5 +2186,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+ // Initialize tooltips for comments
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+});
+
 </script>
 {% endblock %}

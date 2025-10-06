@@ -732,11 +732,11 @@ def add_subgroup(request, checklist_id):
         messages.error(request, 'Cannot add subgroups to a verified checklist')
         return redirect('checklist_detail', checklist_id=checklist.id)
     
-    # Use shift-based timing check with frequency config
+    # Use shift-based timing check
     can_add, next_allowed_time, available_slots = check_time_gap_shift_based(checklist)
     
     # Get max subgroups from frequency config
-    max_subgroups = 6  # Default
+    max_subgroups = 6
     if checklist.frequency_config:
         max_subgroups = checklist.frequency_config.max_subgroups
     
@@ -760,19 +760,18 @@ def add_subgroup(request, checklist_id):
         messages.error(request, f'Maximum number of subgroups ({max_subgroups}) reached')
         return redirect('checklist_detail', checklist_id=checklist.id)
     
-    # Show timing information based on shift schedule
+    # Show timing information
     timing_info = None
     if available_slots > checklist.subgroup_entries.count():
         slots_available = available_slots - checklist.subgroup_entries.count()
         timing_info = f'You can add {slots_available} more subgroup(s) based on shift timing'
         
-        # Show expected times - FIX #1: Pass checklist instead of max_subgroups
         if checklist.verification_status and checklist.verification_status.shift:
             current_date = timezone.localtime(timezone.now()).date()
             expected_times = get_expected_subgroup_times(
                 checklist.verification_status.shift.shift_type, 
                 current_date,
-                checklist  # ✅ CHANGED from max_subgroups to checklist
+                checklist
             )
             time_schedule = []
             for i, expected_time in enumerate(expected_times[:max_subgroups], 1):
@@ -788,65 +787,78 @@ def add_subgroup(request, checklist_id):
                 subgroup = form.save(commit=False)
                 subgroup.checklist = checklist
                 subgroup.subgroup_number = current_subgroup
-                
-                # Set the editing user for tracking
                 subgroup._editing_user = request.user
-                
                 subgroup.save()
                 
-                # Check for out-of-range values and NOK/No entries
+                # Collect warnings and comments
                 warnings = []
-                nok_warnings = []
+                comment_summary = []
                 
-                # Check UV vacuum test readings (5 readings)
+                # Check UV vacuum test readings
                 for i in range(1, 6):
                     field_name = f'uv_vacuum_test_{i}'
                     comment_field = f'uv_vacuum_test_{i}_comment'
                     
                     if form.cleaned_data.get(field_name):
                         uv_vacuum = float(form.cleaned_data[field_name])
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        
                         if not (-43 <= uv_vacuum <= -35):
-                            warnings.append(f'UV vacuum test reading {i}: {uv_vacuum} kPa is outside recommended range (-43 to -35 kPa)')
-                            if form.cleaned_data.get(comment_field):
-                                nok_warnings.append(f'Comment provided for UV vacuum test {i}: {form.cleaned_data[comment_field]}')
+                            warning_msg = f'UV vacuum test {i}: {uv_vacuum} kPa is outside range (-43 to -35 kPa)'
+                            if comment:
+                                warning_msg += f' - Comment: {comment}'
+                            warnings.append(warning_msg)
+                        elif comment:
+                            comment_summary.append(f'UV vacuum test {i} comment: {comment}')
                 
-                # Check UV flow value readings (5 readings)
+                # Check UV flow value readings
                 for i in range(1, 6):
                     field_name = f'uv_flow_value_{i}'
                     comment_field = f'uv_flow_value_{i}_comment'
                     
                     if form.cleaned_data.get(field_name):
                         uv_flow = float(form.cleaned_data[field_name])
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        
                         if not (30 <= uv_flow <= 40):
-                            warnings.append(f'UV flow value reading {i}: {uv_flow} LPM is outside recommended range (30-40 LPM)')
-                            if form.cleaned_data.get(comment_field):
-                                nok_warnings.append(f'Comment provided for UV flow value {i}: {form.cleaned_data[comment_field]}')
+                            warning_msg = f'UV flow value {i}: {uv_flow} LPM is outside range (30-40 LPM)'
+                            if comment:
+                                warning_msg += f' - Comment: {comment}'
+                            warnings.append(warning_msg)
+                        elif comment:
+                            comment_summary.append(f'UV flow value {i} comment: {comment}')
                 
-                # Check for NOK values in umbrella valve
+                # Check NOK values - Umbrella valve
                 for i in range(1, 6):
                     field_name = f'umbrella_valve_assembly_{i}'
                     comment_field = f'umbrella_valve_assembly_{i}_comment'
                     
                     if form.cleaned_data.get(field_name) == 'NOK':
-                        nok_warnings.append(f'Umbrella valve {i} marked as NOK')
-                        if form.cleaned_data.get(comment_field):
-                            nok_warnings.append(f'Comment: {form.cleaned_data[comment_field]}')
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        warning_msg = f'Umbrella valve {i} marked as NOK'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
                 
-                # Check for NOK values in UV clip
+                # Check NOK values - UV clip
                 for i in range(1, 6):
                     field_name = f'uv_clip_pressing_{i}'
                     comment_field = f'uv_clip_pressing_{i}_comment'
                     
                     if form.cleaned_data.get(field_name) == 'NOK':
-                        nok_warnings.append(f'UV clip pressing {i} marked as NOK')
-                        if form.cleaned_data.get(comment_field):
-                            nok_warnings.append(f'Comment: {form.cleaned_data[comment_field]}')
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        warning_msg = f'UV clip pressing {i} marked as NOK'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
                 
                 # Check workstation cleanliness
                 if form.cleaned_data.get('workstation_clean') == 'No':
-                    nok_warnings.append('Workstation marked as not clean')
-                    if form.cleaned_data.get('workstation_clean_comment'):
-                        nok_warnings.append(f'Comment: {form.cleaned_data["workstation_clean_comment"]}')
+                    comment = form.cleaned_data.get('workstation_clean_comment', '').strip()
+                    warning_msg = 'Workstation marked as not clean'
+                    if comment:
+                        warning_msg += f' - Comment: {comment}'
+                    warnings.append(warning_msg)
                 
                 # Check bin contamination
                 for i in range(1, 6):
@@ -854,63 +866,56 @@ def add_subgroup(request, checklist_id):
                     comment_field = f'bin_contamination_check_{i}_comment'
                     
                     if form.cleaned_data.get(field_name) == 'No':
-                        nok_warnings.append(f'Bin contamination check {i} marked as No')
-                        if form.cleaned_data.get(comment_field):
-                            nok_warnings.append(f'Comment: {form.cleaned_data[comment_field]}')
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        warning_msg = f'Bin contamination check {i} marked as No'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
                 
-                # Calculate and show averages for measurement fields
-                uv_vacuum_avg = subgroup.uv_vacuum_average
-                uv_flow_avg = subgroup.uv_flow_average
-                
-                # Add summary information
+                # Summary information
                 summary_info = [
-                    f'UV Vacuum Test Average: {uv_vacuum_avg:.2f} kPa',
-                    f'UV Flow Value Average: {uv_flow_avg:.2f} LPM',
+                    f'UV Vacuum Test Average: {subgroup.uv_vacuum_average:.2f} kPa',
+                    f'UV Flow Value Average: {subgroup.uv_flow_average:.2f} LPM',
                     f'Umbrella Valve OK Count: {subgroup.umbrella_valve_ok_count}/5',
                     f'UV Clip OK Count: {subgroup.uv_clip_ok_count}/5',
                     f'Workstation Clean Status: {subgroup.workstation_status}',
                     f'Bin Contamination Check Yes Count: {subgroup.bin_contamination_yes_count}/5'
                 ]
                 
-                # Add maintenance info if applicable
                 if subgroup.is_after_maintenance:
                     summary_info.append('⚠️ This subgroup is marked as after maintenance/ME activity')
                 
-                # Add NOK approval requirement info
                 if subgroup.requires_nok_approval:
                     summary_info.append('⚠️ This subgroup contains NOK/No entries and requires supervisor approval')
                 
-                # Add timing information
                 if timing_info:
                     summary_info.append(timing_info)
                 
                 # For AJAX requests
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    response_data = {
+                    return JsonResponse({
                         'status': 'success',
                         'message': f'Subgroup {current_subgroup} added successfully with 21 readings',
                         'subgroup_id': subgroup.id,
                         'subgroup_number': current_subgroup,
                         'warnings': warnings,
-                        'nok_warnings': nok_warnings,
+                        'comments': comment_summary,
                         'summary': summary_info,
                         'available_slots': available_slots,
                         'can_add_more': (available_slots > current_subgroup),
                         'requires_approval': subgroup.requires_nok_approval
-                    }
-                    return JsonResponse(response_data)
+                    })
                 
-                # For regular requests, show flash messages
+                # For regular requests
                 for warning in warnings:
                     messages.warning(request, warning)
                 
-                for nok_warning in nok_warnings:
-                    messages.warning(request, nok_warning)
+                for comment in comment_summary:
+                    messages.info(request, comment)
                 
                 for info in summary_info:
                     messages.info(request, info)
                 
-                # Check if there are more slots available
                 if available_slots > current_subgroup:
                     remaining_slots = available_slots - current_subgroup
                     messages.success(request, f'Subgroup {current_subgroup} added successfully! You can add {remaining_slots} more subgroup(s) based on shift timing.')
@@ -933,7 +938,7 @@ def add_subgroup(request, checklist_id):
                 messages.error(request, f'Error saving measurements: {error_message}')
                 return redirect('checklist_detail', checklist_id=checklist.id)
         else:
-            error_message = "Form validation failed - please check all required fields and comments"
+            error_message = "Form validation failed - please check all required fields"
             print(f"Form errors: {form.errors}")
             
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -949,20 +954,17 @@ def add_subgroup(request, checklist_id):
                 
             messages.error(request, error_message)
     else:
-        # Create form with checklist parameter
         form = SubgroupEntryForm(checklist=checklist)
         
-        # Show informational messages
         if timing_info:
             messages.info(request, timing_info)
             
-        # Show expected schedule - FIX #2: Pass checklist instead of max_subgroups
         if checklist.verification_status and checklist.verification_status.shift:
             current_date = timezone.localtime(timezone.now()).date()
             expected_times = get_expected_subgroup_times(
                 checklist.verification_status.shift.shift_type, 
                 current_date,
-                checklist  # ✅ CHANGED from max_subgroups to checklist
+                checklist
             )
             schedule_info = []
             current_time = timezone.localtime(timezone.now())
@@ -980,14 +982,12 @@ def add_subgroup(request, checklist_id):
             
             messages.info(request, f"Shift schedule: {' | '.join(schedule_info)}")
     
-    # For AJAX GET requests
     if request.method == 'GET' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
             'status': 'error',
             'message': 'GET method not supported for AJAX requests to this endpoint'
         }, status=405)
     
-    # Get frequency info for display
     frequency_info = {
         'frequency_hours': checklist.frequency_config.frequency_hours if checklist.frequency_config else 2,
         'max_subgroups': max_subgroups
@@ -1001,7 +1001,8 @@ def add_subgroup(request, checklist_id):
         'can_add_more': (available_slots > current_subgroup) if available_slots else False,
         'max_subgroups': max_subgroups,
         'frequency_info': frequency_info
-    })
+    })    
+    
     
 @login_required
 def validate_subgroup(request):
@@ -1091,30 +1092,91 @@ def edit_subgroup(request, checklist_id, subgroup_id):
         form = SubgroupEntryForm(request.POST, instance=subgroup, checklist=checklist)
         if form.is_valid():
             try:
-                # Pass the current user to track changes
                 subgroup._editing_user = request.user
                 updated_subgroup = form.save()
                 
-                # Check for out-of-range values and add warnings for all 5 readings
+                # Collect warnings and comments
                 warnings = []
+                comment_summary = []
                 
-                # Check UV vacuum test readings (5 readings)
+                # Check UV vacuum test readings
                 for i in range(1, 6):
                     field_name = f'uv_vacuum_test_{i}'
-                    if hasattr(updated_subgroup, field_name):
-                        value = getattr(updated_subgroup, field_name)
-                        if value is not None and not (-43 <= value <= -35):
-                            warnings.append(f'UV vacuum test reading {i}: {value} kPa is outside recommended range (-43 to -35 kPa)')
+                    comment_field = f'uv_vacuum_test_{i}_comment'
+                    
+                    value = getattr(updated_subgroup, field_name, None)
+                    comment = form.cleaned_data.get(comment_field, '').strip()
+                    
+                    if value is not None and not (-43 <= value <= -35):
+                        warning_msg = f'UV vacuum test {i}: {value} kPa is outside range (-43 to -35 kPa)'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
+                    elif comment:
+                        comment_summary.append(f'UV vacuum test {i} comment: {comment}')
                 
-                # Check UV flow value readings (5 readings)
+                # Check UV flow value readings
+                # Check UV flow value readings
                 for i in range(1, 6):
                     field_name = f'uv_flow_value_{i}'
-                    if hasattr(updated_subgroup, field_name):
-                        value = getattr(updated_subgroup, field_name)
-                        if value is not None and not (30 <= value <= 40):
-                            warnings.append(f'UV flow value reading {i}: {value} LPM is outside recommended range (30-40 LPM)')
+                    comment_field = f'uv_flow_value_{i}_comment'
+                    
+                    value = getattr(updated_subgroup, field_name, None)
+                    comment = form.cleaned_data.get(comment_field, '').strip()
+                    
+                    if value is not None and not (30 <= value <= 40):
+                        warning_msg = f'UV flow value {i}: {value} LPM is outside range (30-40 LPM)'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
+                    elif comment:
+                        comment_summary.append(f'UV flow value {i} comment: {comment}')
                 
-                # Calculate and show summary statistics - UPDATED for single workstation field
+                # Check NOK values - Umbrella valve
+                for i in range(1, 6):
+                    field_name = f'umbrella_valve_assembly_{i}'
+                    comment_field = f'umbrella_valve_assembly_{i}_comment'
+                    
+                    if getattr(updated_subgroup, field_name, None) == 'NOK':
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        warning_msg = f'Umbrella valve {i} marked as NOK'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
+                
+                # Check NOK values - UV clip
+                for i in range(1, 6):
+                    field_name = f'uv_clip_pressing_{i}'
+                    comment_field = f'uv_clip_pressing_{i}_comment'
+                    
+                    if getattr(updated_subgroup, field_name, None) == 'NOK':
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        warning_msg = f'UV clip pressing {i} marked as NOK'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
+                
+                # Check workstation cleanliness
+                if updated_subgroup.workstation_clean == 'No':
+                    comment = form.cleaned_data.get('workstation_clean_comment', '').strip()
+                    warning_msg = 'Workstation marked as not clean'
+                    if comment:
+                        warning_msg += f' - Comment: {comment}'
+                    warnings.append(warning_msg)
+                
+                # Check bin contamination
+                for i in range(1, 6):
+                    field_name = f'bin_contamination_check_{i}'
+                    comment_field = f'bin_contamination_check_{i}_comment'
+                    
+                    if getattr(updated_subgroup, field_name, None) == 'No':
+                        comment = form.cleaned_data.get(comment_field, '').strip()
+                        warning_msg = f'Bin contamination check {i} marked as No'
+                        if comment:
+                            warning_msg += f' - Comment: {comment}'
+                        warnings.append(warning_msg)
+                
+                # Calculate and show summary statistics
                 summary_info = []
                 if updated_subgroup.uv_vacuum_average > 0:
                     summary_info.append(f'UV Vacuum Test Average: {updated_subgroup.uv_vacuum_average:.2f} kPa')
@@ -1124,19 +1186,21 @@ def edit_subgroup(request, checklist_id, subgroup_id):
                 summary_info.extend([
                     f'Umbrella Valve OK Count: {updated_subgroup.umbrella_valve_ok_count}/5',
                     f'UV Clip OK Count: {updated_subgroup.uv_clip_ok_count}/5',
-                    f'Workstation Clean Status: {updated_subgroup.workstation_status}',  # Changed from count to status
+                    f'Workstation Clean Status: {updated_subgroup.workstation_status}',
                     f'Bin Contamination Check Yes Count: {updated_subgroup.bin_contamination_yes_count}/5'
                 ])
                 
-                # Show warnings if any
+                # Show all warnings and comments
                 for warning in warnings:
                     messages.warning(request, warning)
                 
-                # Show summary statistics
+                for comment in comment_summary:
+                    messages.info(request, comment)
+                
                 for info in summary_info:
                     messages.info(request, info)
                 
-                # Check completion status - UPDATED for 21 total readings
+                # Check completion status
                 if updated_subgroup.is_complete:
                     messages.success(request, f'Subgroup {subgroup.subgroup_number} updated successfully - All 21 readings complete!')
                 else:
@@ -1147,7 +1211,8 @@ def edit_subgroup(request, checklist_id, subgroup_id):
                 
             except Exception as e:
                 error_message = str(e)
-                print(f"Error updating subgroup: {error_message}")
+                import traceback
+                print(f"Error updating subgroup: {traceback.format_exc()}")
                 messages.error(request, f'Error updating subgroup: {error_message}')
         else:
             # Form validation failed
@@ -1163,7 +1228,7 @@ def edit_subgroup(request, checklist_id, subgroup_id):
     # Get edit history for this subgroup
     edit_history = subgroup.edit_history.all()[:10]  # Last 10 changes
     
-    # Add current subgroup statistics to context - UPDATED for single workstation field
+    # Add current subgroup statistics to context
     context = {
         'form': form,
         'checklist': checklist,
@@ -1176,12 +1241,14 @@ def edit_subgroup(request, checklist_id, subgroup_id):
             'uv_flow_average': subgroup.uv_flow_average if subgroup.uv_flow_average > 0 else None,
             'umbrella_ok_count': subgroup.umbrella_valve_ok_count,
             'uv_clip_ok_count': subgroup.uv_clip_ok_count,
-            'workstation_status': subgroup.workstation_status,  # Changed from count to status
+            'workstation_status': subgroup.workstation_status,
             'bin_yes_count': subgroup.bin_contamination_yes_count,
         }
     }
     
-    return render(request, 'main/edit_subgroup.html', context)   
+    return render(request, 'main/edit_subgroup.html', context)                
+                
+                
                 
 @login_required
 @user_passes_test(lambda u: u.user_type == 'shift_supervisor')
@@ -2318,6 +2385,9 @@ def checklist_detail(request, checklist_id):
     }
     
     return render(request, 'main/checklist_detail.html', context)
+
+
+
 
 def process_subgroups(subgroups):
     """Process and validate subgroups - handles None values and comments"""
@@ -3733,6 +3803,18 @@ def defect_type_delete(request, pk):
         'defect_type': defect_type
     })
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from django.db import transaction
+from django.db.models import Sum
+from .models import (
+    FTQRecord, TimeBasedDefectEntry, DefectType, CustomDefectType, 
+    OperationNumber, DailyVerificationStatus, ChecklistBase
+)
+from .forms import FTQRecordForm
+
 # FTQ Record Views
 @login_required
 def ftq_list(request):
@@ -3754,8 +3836,13 @@ def ftq_list(request):
     except (ValueError, TypeError):
         end_date = timezone.now().date()
     
-    # Query FTQ records - FIXED
-    ftq_records = FTQRecord.objects.select_related('created_by', 'verified_by')
+    # Query FTQ records with prefetch for time-based defects
+    ftq_records = FTQRecord.objects.select_related(
+        'created_by', 
+        'verified_by'
+    ).prefetch_related(
+        'time_based_defects'
+    )
     
     # Apply filters
     ftq_records = ftq_records.filter(date__range=[start_date, end_date])
@@ -3774,10 +3861,17 @@ def ftq_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get summary statistics
+    # Calculate summary statistics manually (since total_defects is a property)
+    total_inspected = 0
+    total_defects = 0
+    
+    for record in ftq_records:
+        total_inspected += record.total_inspected
+        total_defects += record.total_defects  # This uses the property
+    
     stats = {
-        'total_inspected': ftq_records.aggregate(total=Sum('total_inspected'))['total'] or 0,
-        'total_defects': ftq_records.aggregate(total=Sum('total_defects'))['total'] or 0,
+        'total_inspected': total_inspected,
+        'total_defects': total_defects,
         'record_count': ftq_records.count()
     }
     
@@ -3794,7 +3888,7 @@ def ftq_list(request):
         'page_obj': page_obj,
         'stats': stats,
         'model_choices': model_choices,
-        'shift_choices': FTQRecord.SHIFT_CHOICES,
+        'shift_choices': FTQRecord.SHIFTS,  # Fixed: use SHIFTS not SHIFT_CHOICES
         'filters': {
             'start_date': start_date,
             'end_date': end_date,
@@ -3803,19 +3897,18 @@ def ftq_list(request):
         },
         'title': 'FTQ Records'
     })
-    
-    
+
+
+
 @login_required
 def ftq_record_create(request):
-    """Create a new FTQ record with defects, pre-filled from active verification"""
-    # Get the active verification status if available
+    """Create a new FTQ record with time-based defect tracking"""
     active_verification = DailyVerificationStatus.objects.filter(
         created_by=request.user,
         date=timezone.now().date(),
         status__in=['pending', 'in_progress']
     ).first()
     
-    # Get active checklist if verification exists
     active_checklist = None
     if active_verification:
         active_checklist = ChecklistBase.objects.filter(
@@ -3824,88 +3917,94 @@ def ftq_record_create(request):
     
     initial_data = {}
     if active_checklist:
-        # Pre-fill form fields from the checklist and verification status
-        shift_type_mapping = {
-            'day': 'A',  # Day shift (6 AM - 6 PM) maps to shift A
-            'night': 'B'  # Night shift (6 PM - 6 AM) maps to shift B
-            # You might need to adjust this mapping according to your business logic
-        }
-        
         initial_data = {
             'date': active_verification.date,
-            'shift_type': shift_type_mapping.get(active_verification.shift.shift_type, 'A'),
+            'shift_type': active_verification.shift.shift_type,
             'model_name': active_checklist.selected_model,
-            'julian_date': active_verification.date  # This might need conversion to Julian date
+            'julian_date': active_verification.date
         }
     
     if request.method == 'POST':
         form = FTQRecordForm(request.POST)
         if form.is_valid():
-            ftq_record = form.save(commit=False)
-            ftq_record.created_by = request.user
-            
-            # Link to verification status if available
-            if active_verification:
-                ftq_record.verification_status = active_verification
-            
-            ftq_record.save()
-            
-            # Handle default defect types
             try:
-                operation = OperationNumber.objects.get(number='OP#35')  # Assuming OP#35 is the default
-                default_defects = DefectType.objects.filter(
-                    operation_number=operation,
-                    is_default=True
-                ).order_by('order')[:10]
-                
-                # Create defect records for default defect types
-                for defect_type in default_defects:
-                    count = request.POST.get(f'defect_{defect_type.id}', 0)
-                    if count and int(count) > 0:
-                        DefectRecord.objects.create(
-                            ftq_record=ftq_record,
-                            defect_type=defect_type,
-                            count=count
-                        )
-                
-                # Handle custom defects if any
-                custom_defect_count = int(request.POST.get('custom_defect_count', 0))
-                for i in range(custom_defect_count):
-                    defect_name = request.POST.get(f'custom_defect_name_{i}', '')
-                    defect_count = request.POST.get(f'custom_defect_count_{i}', 0)
+                with transaction.atomic():
+                    ftq_record = form.save(commit=False)
+                    ftq_record.created_by = request.user
                     
-                    if defect_name and int(defect_count) > 0:
-                        # Create custom defect type
-                        custom_defect = CustomDefectType.objects.create(
-                            ftq_record=ftq_record,
-                            name=defect_name,
-                            operation_number=operation,
-                            added_by=request.user
-                        )
-                        
-                        # Create defect record for this custom type
-                        DefectRecord.objects.create(
-                            ftq_record=ftq_record,
-                            defect_type_custom=custom_defect,
-                            count=defect_count
-                        )
-                
-                # Update total defects count
-                ftq_record.total_defects = ftq_record.calculate_total_defects
-                ftq_record.save()
-                
-                messages.success(request, 'FTQ record created successfully')
-                return redirect('operator_dashboard')
-                
+                    if active_verification:
+                        ftq_record.verification_status = active_verification
+                    
+                    ftq_record.save()
+                    
+                    # Get operation number
+                    operation = OperationNumber.objects.get(number='OP#35')
+                    
+                    # Process time-based defect entries
+                    defect_data = {}
+                    
+                    # Parse all defect entries from POST data
+                    for key in request.POST:
+                        if key.startswith('defect_time_'):
+                            parts = key.split('_')
+                            defect_id = parts[2]
+                            time_index = parts[3]
+                            
+                            time_value = request.POST.get(key)
+                            count_key = f'defect_count_{defect_id}_{time_index}'
+                            count_value = request.POST.get(count_key, 0)
+                            
+                            if time_value and int(count_value) > 0:
+                                if defect_id not in defect_data:
+                                    defect_data[defect_id] = []
+                                
+                                defect_data[defect_id].append({
+                                    'time': time_value,
+                                    'count': int(count_value)
+                                })
+                    
+                    # Create TimeBasedDefectEntry records
+                    for defect_id, entries in defect_data.items():
+                        if defect_id.startswith('custom_'):
+                            custom_name = request.POST.get(f'custom_defect_name_{defect_id}')
+                            if custom_name:
+                                custom_defect = CustomDefectType.objects.create(
+                                    ftq_record=ftq_record,
+                                    name=custom_name,
+                                    operation_number=operation,
+                                    added_by=request.user
+                                )
+                                
+                                for entry in entries:
+                                    TimeBasedDefectEntry.objects.create(
+                                        ftq_record=ftq_record,
+                                        defect_type_custom=custom_defect,
+                                        recorded_at=entry['time'],
+                                        count=entry['count']
+                                    )
+                        else:
+                            try:
+                                defect_type = DefectType.objects.get(id=int(defect_id))
+                                for entry in entries:
+                                    TimeBasedDefectEntry.objects.create(
+                                        ftq_record=ftq_record,
+                                        defect_type=defect_type,
+                                        recorded_at=entry['time'],
+                                        count=entry['count']
+                                    )
+                            except DefectType.DoesNotExist:
+                                continue
+                    
+                    messages.success(request, 'FTQ record created successfully with time-based defect tracking')
+                    return redirect('operator_dashboard')
+                    
             except Exception as e:
-                messages.warning(request, f'FTQ record created, but there was an issue with defect records: {str(e)}')
-                return redirect('operator_dashboard')
+                messages.error(request, f'Error creating FTQ record: {str(e)}')
                 
     else:
-        # Create form with initial data from checklist
         form = FTQRecordForm(initial=initial_data)
     
-    # Get default defect types for OP#35
+    # Get default defect types
     try:
         operation = OperationNumber.objects.get(number='OP#35')
         default_defects = DefectType.objects.filter(
@@ -3924,185 +4023,212 @@ def ftq_record_create(request):
     }
     
     return render(request, 'main/operations/ftq_record_form.html', context)
-    
-    
-# Add this import at the top of your views.py file
-from django.db import models
 
-# Then your view function should work correctly
+
 @login_required
 def ftq_record_edit(request, pk):
-    """Edit an FTQ record with defects"""
+    """Edit an FTQ record with time-based defects"""
     ftq_record = get_object_or_404(FTQRecord, pk=pk)
     
-    # Check if user has permission to edit
     if not (request.user.user_type in ['shift_supervisor', 'quality_supervisor'] or 
             request.user.is_superuser or request.user == ftq_record.created_by):
         messages.error(request, 'You do not have permission to edit this record')
         return redirect('ftq_list')
     
-    # Get existing defect records
-    defect_records = DefectRecord.objects.filter(ftq_record=ftq_record).select_related(
-        'defect_type', 'defect_type_custom'
-    )
+    # Get existing time-based entries organized by defect type
+    time_entries = TimeBasedDefectEntry.objects.filter(
+        ftq_record=ftq_record
+    ).select_related('defect_type', 'defect_type_custom').order_by('recorded_at')
     
-    # Create dictionaries for defect counts
-    defect_counts = {}
-    custom_defect_records = []
+    # Organize existing entries by defect type
+    standard_defect_entries = {}
+    custom_defect_entries = {}
     
-    # Populate dictionaries with existing data
-    for record in defect_records:
-        if record.defect_type:
-            defect_counts[record.defect_type.id] = record.count
-        elif record.defect_type_custom:
-            custom_defect_records.append({
-                'custom_defect': record.defect_type_custom,
-                'count': record.count
+    for entry in time_entries:
+        if entry.defect_type:
+            key = entry.defect_type.id
+            if key not in standard_defect_entries:
+                standard_defect_entries[key] = []
+            standard_defect_entries[key].append({
+                'time': entry.recorded_at.strftime('%H:%M'),
+                'count': entry.count
+            })
+        else:
+            key = entry.defect_type_custom.id
+            if key not in custom_defect_entries:
+                custom_defect_entries[key] = {
+                    'name': entry.defect_type_custom.name,
+                    'entries': []
+                }
+            custom_defect_entries[key]['entries'].append({
+                'time': entry.recorded_at.strftime('%H:%M'),
+                'count': entry.count
             })
     
     if request.method == 'POST':
         form = FTQRecordForm(request.POST, instance=ftq_record)
         if form.is_valid():
-            ftq_record = form.save()
-            
-            # Update default defect records
             try:
-                operation = OperationNumber.objects.get(number='OP#35')
-                default_defects = DefectType.objects.filter(
-                    operation_number=operation,
-                    is_default=True
-                ).order_by('order')[:10]
-                
-                # Update or create defect records for default types
-                for defect_type in default_defects:
-                    count = request.POST.get(f'defect_{defect_type.id}', 0)
-                    if count and int(count) > 0:
-                        DefectRecord.objects.update_or_create(
-                            ftq_record=ftq_record,
-                            defect_type=defect_type,
-                            defaults={'count': int(count)}
-                        )
-                    else:
-                        # Delete if count is zero
-                        DefectRecord.objects.filter(
-                            ftq_record=ftq_record,
-                            defect_type=defect_type
-                        ).delete()
-                
-                # Handle custom defects
-                # First existing ones
-                for custom_record in custom_defect_records:
-                    custom_defect = custom_record['custom_defect']
-                    count = request.POST.get(f'custom_defect_{custom_defect.id}', 0)
-                    if count and int(count) > 0:
-                        DefectRecord.objects.update_or_create(
-                            ftq_record=ftq_record,
-                            defect_type_custom=custom_defect,
-                            defaults={'count': int(count)}
-                        )
-                    else:
-                        # Delete if count is zero
-                        DefectRecord.objects.filter(
-                            ftq_record=ftq_record,
-                            defect_type_custom=custom_defect
-                        ).delete()
-                        custom_defect.delete()
-                
-                # Then new ones
-                custom_defect_count = int(request.POST.get('custom_defect_count', 0))
-                for i in range(custom_defect_count):
-                    defect_name = request.POST.get(f'custom_defect_name_{i}', '')
-                    defect_count = request.POST.get(f'custom_defect_count_{i}', 0)
+                with transaction.atomic():
+                    ftq_record = form.save()
                     
-                    if defect_name and int(defect_count) > 0:
-                        # Create custom defect type
-                        custom_defect = CustomDefectType.objects.create(
-                            ftq_record=ftq_record,
-                            name=defect_name,
-                            operation_number=operation,
-                            added_by=request.user
-                        )
-                        
-                        # Create defect record
-                        DefectRecord.objects.create(
-                            ftq_record=ftq_record,
-                            defect_type_custom=custom_defect,
-                            count=int(defect_count)
-                        )
-                
-                # Update total defects count
-                total_defects = DefectRecord.objects.filter(ftq_record=ftq_record).aggregate(
-                    total=models.Sum('count')
-                )['total'] or 0
-                
-                ftq_record.total_defects = total_defects
-                ftq_record.save()
-                
+                    # Delete all existing time-based entries
+                    TimeBasedDefectEntry.objects.filter(ftq_record=ftq_record).delete()
+                    
+                    # Delete existing custom defect types for this record
+                    CustomDefectType.objects.filter(ftq_record=ftq_record).delete()
+                    
+                    # Get operation number
+                    operation = OperationNumber.objects.get(number='OP#35')
+                    
+                    # Process time-based defect entries
+                    defect_data = {}
+                    
+                    for key in request.POST:
+                        if key.startswith('defect_time_'):
+                            parts = key.split('_')
+                            defect_id = parts[2]
+                            time_index = parts[3]
+                            
+                            time_value = request.POST.get(key)
+                            count_key = f'defect_count_{defect_id}_{time_index}'
+                            count_value = request.POST.get(count_key, 0)
+                            
+                            if time_value and int(count_value) > 0:
+                                if defect_id not in defect_data:
+                                    defect_data[defect_id] = []
+                                
+                                defect_data[defect_id].append({
+                                    'time': time_value,
+                                    'count': int(count_value)
+                                })
+                    
+                    # Create new TimeBasedDefectEntry records
+                    for defect_id, entries in defect_data.items():
+                        if defect_id.startswith('custom_'):
+                            custom_name = request.POST.get(f'custom_defect_name_{defect_id}')
+                            if custom_name:
+                                custom_defect = CustomDefectType.objects.create(
+                                    ftq_record=ftq_record,
+                                    name=custom_name,
+                                    operation_number=operation,
+                                    added_by=request.user
+                                )
+                                
+                                for entry in entries:
+                                    TimeBasedDefectEntry.objects.create(
+                                        ftq_record=ftq_record,
+                                        defect_type_custom=custom_defect,
+                                        recorded_at=entry['time'],
+                                        count=entry['count']
+                                    )
+                        else:
+                            try:
+                                defect_type = DefectType.objects.get(id=int(defect_id))
+                                for entry in entries:
+                                    TimeBasedDefectEntry.objects.create(
+                                        ftq_record=ftq_record,
+                                        defect_type=defect_type,
+                                        recorded_at=entry['time'],
+                                        count=entry['count']
+                                    )
+                            except DefectType.DoesNotExist:
+                                continue
+                    
+                    messages.success(request, 'FTQ record updated successfully with time-based defect tracking')
+                    return redirect('ftq_record_detail', pk=ftq_record.pk)
+                    
             except Exception as e:
-                messages.warning(request, f'FTQ record updated, but there was an issue with defect records: {str(e)}')
-            
-            messages.success(request, 'FTQ record updated successfully')
-            return redirect('ftq_record_detail', pk=ftq_record.pk)
+                messages.error(request, f'Error updating FTQ record: {str(e)}')
     else:
         form = FTQRecordForm(instance=ftq_record)
     
-    # Get default defect types and set current counts
+    # Get default defect types with their entries
     try:
         operation = OperationNumber.objects.get(number='OP#35')
-        default_defects = DefectType.objects.filter(
+        default_defects_qs = DefectType.objects.filter(
             operation_number=operation,
             is_default=True
         ).order_by('order')[:10]
         
-        # Add current counts to defect objects
-        for defect in default_defects:
-            defect.current_count = defect_counts.get(defect.id, 0)
-            
+        # Add entries JSON to each defect
+        default_defects = []
+        for defect in default_defects_qs:
+            entries = standard_defect_entries.get(defect.id, [])
+            import json
+            defect.entries_json = json.dumps(entries)
+            default_defects.append(defect)
     except OperationNumber.DoesNotExist:
         default_defects = []
+    
+    # Get existing custom defects for this record with their entries
+    existing_custom_defects = []
+    for custom in CustomDefectType.objects.filter(ftq_record=ftq_record):
+        entries = custom_defect_entries.get(custom.id, {}).get('entries', [])
+        import json
+        existing_custom_defects.append({
+            'id': custom.id,
+            'name': custom.name,
+            'entries_json': json.dumps(entries)
+        })
     
     return render(request, 'main/operations/ftq_record_edit.html', {
         'form': form,
         'default_defects': default_defects,
-        'custom_defect_records': custom_defect_records,
+        'standard_defect_entries': standard_defect_entries,
+        'custom_defect_entries': custom_defect_entries,
+        'existing_custom_defects': existing_custom_defects,
         'ftq_record': ftq_record,
         'title': 'Edit FTQ Record'
-    })
-    
-    
+    })    
     
 @login_required
 def ftq_record_detail(request, pk):
+    """View FTQ record with time-based defect details"""
     ftq_record = get_object_or_404(FTQRecord, pk=pk)
     
-    # Get defect records for this FTQ record with related objects
-    defect_records = DefectRecord.objects.filter(ftq_record=ftq_record).select_related(
-        'defect_type', 'defect_type_custom'
-    )
+    # Organize defects by type with their time entries
+    defect_summary = {}
     
-    # Split into default and custom defects
-    default_defects = []
-    custom_defects = []
+    for entry in ftq_record.time_based_defects.all():
+        if entry.defect_type:
+            key = f"standard_{entry.defect_type.id}"
+            name = entry.defect_type.name
+            is_critical = entry.defect_type.is_critical
+        else:
+            key = f"custom_{entry.defect_type_custom.id}"
+            name = entry.defect_type_custom.name
+            is_critical = False
+        
+        if key not in defect_summary:
+            defect_summary[key] = {
+                'name': name,
+                'is_critical': is_critical,
+                'entries': [],
+                'total_count': 0
+            }
+        
+        defect_summary[key]['entries'].append({
+            'time': entry.recorded_at,
+            'count': entry.count
+        })
+        defect_summary[key]['total_count'] += entry.count
     
-    for record in defect_records:
-        if record.defect_type:
-            default_defects.append(record)
-        elif record.defect_type_custom:
-            custom_defects.append(record)
+    # Check if user can verify
+    can_verify = (
+        request.user.user_type in ['shift_supervisor', 'quality_supervisor'] or 
+        request.user.is_superuser
+    ) and not ftq_record.verified_by
     
-    # Calculate FTQ percentage
-    if ftq_record.total_inspected > 0:
-        ftq_percentage = ((ftq_record.total_inspected - ftq_record.total_defects) / ftq_record.total_inspected) * 100
-    else:
-        ftq_percentage = 0
-    
-    return render(request, 'main/operations/ftq_record_detail.html', {
+    context = {
         'ftq_record': ftq_record,
-        'default_defects': default_defects,
-        'custom_defects': custom_defects,
-        'ftq_percentage': ftq_percentage,
-        'title': f'FTQ Record - {ftq_record.date} {ftq_record.get_shift_type_display()}'
-    })
+        'defect_summary': defect_summary,
+        'can_verify': can_verify,
+        'title': 'FTQ Record Details'
+    }
+    
+    return render(request, 'main/operations/ftq_record_detail.html', context)
+
 
 
 @login_required
@@ -4116,14 +4242,69 @@ def ftq_record_verify(request, pk):
         return redirect('ftq_record_detail', pk=ftq_record.pk)
     
     if request.method == 'POST':
-        ftq_record.verified_by = request.user
-        ftq_record.save()
-        messages.success(request, 'FTQ record verified successfully')
-        return redirect('ftq_record_detail', pk=ftq_record.pk)
+        action = request.POST.get('action')
+        comments = request.POST.get('comments', '')
+        
+        if action == 'approve':
+            ftq_record.verified_by = request.user
+            ftq_record.save()
+            messages.success(request, f'FTQ record approved successfully. Comments: {comments}' if comments else 'FTQ record approved successfully')
+            return redirect('ftq_record_detail', pk=ftq_record.pk)
+        elif action == 'reject':
+            messages.warning(request, f'FTQ record rejected. Reason: {comments}' if comments else 'FTQ record rejected')
+            return redirect('ftq_list')
+    
+    # Get time-based defect entries grouped by defect type
+    time_entries = TimeBasedDefectEntry.objects.filter(
+        ftq_record=ftq_record
+    ).select_related('defect_type', 'defect_type_custom').order_by('defect_type', 'defect_type_custom', 'recorded_at')
+    
+    # Organize defects by type with aggregated counts
+    standard_defects = {}
+    custom_defects = {}
+    
+    for entry in time_entries:
+        if entry.defect_type:
+            if entry.defect_type.id not in standard_defects:
+                standard_defects[entry.defect_type.id] = {
+                    'defect_type': entry.defect_type,
+                    'count': 0,
+                    'entries': []
+                }
+            standard_defects[entry.defect_type.id]['count'] += entry.count
+            standard_defects[entry.defect_type.id]['entries'].append({
+                'time': entry.recorded_at.strftime('%H:%M'),
+                'count': entry.count
+            })
+        else:
+            if entry.defect_type_custom.id not in custom_defects:
+                custom_defects[entry.defect_type_custom.id] = {
+                    'defect_type_custom': entry.defect_type_custom,
+                    'count': 0,
+                    'entries': []
+                }
+            custom_defects[entry.defect_type_custom.id]['count'] += entry.count
+            custom_defects[entry.defect_type_custom.id]['entries'].append({
+                'time': entry.recorded_at.strftime('%H:%M'),
+                'count': entry.count
+            })
+    
+    # Convert to lists for template
+    default_defects = list(standard_defects.values())
+    custom_defects_list = list(custom_defects.values())
+    
+    # Calculate FTQ percentage
+    ftq_percentage = ftq_record.ftq_percentage
     
     return render(request, 'main/operations/ftq_record_verify.html', {
-        'ftq_record': ftq_record
+        'ftq_record': ftq_record,
+        'default_defects': default_defects,
+        'custom_defects': custom_defects_list,
+        'ftq_percentage': ftq_percentage,
+        'title': 'Verify FTQ Record'
     })
+
+
 
 @login_required
 def ftq_record_delete(request, pk):
@@ -4251,7 +4432,7 @@ def update_defect_count(request):
 # Dashboard and Reports
 @login_required
 def ftq_dashboard(request):
-    """FTQ Dashboard with charts and statistics"""
+    """FTQ Dashboard with charts and statistics using time-based defects"""
     # Get date range filters
     today = timezone.now().date()
     
@@ -4263,28 +4444,33 @@ def ftq_dashboard(request):
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
             end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-            days = (end_date - start_date).days + 1  # +1 to include end date
+            days = (end_date - start_date).days + 1
         except ValueError:
-            # Default if date parsing fails
             days = int(request.GET.get('days', 30))
             end_date = today
-            start_date = end_date - timedelta(days=days-1)  # -1 to include today
+            start_date = end_date - timedelta(days=days-1)
     else:
-        # Use days parameter if no custom date range
         days = int(request.GET.get('days', 30))
         end_date = today
-        start_date = end_date - timedelta(days=days-1)  # -1 to include today
+        start_date = end_date - timedelta(days=days-1)
     
     # Get FTQ records in range
     ftq_records = FTQRecord.objects.filter(
         date__range=[start_date, end_date]
-    ).order_by('date')
+    ).prefetch_related('time_based_defects').order_by('date')
     
-    # Calculate summary statistics
+    # Calculate summary statistics manually (since total_defects is a property)
+    total_inspected = 0
+    total_defects = 0
+    
+    for record in ftq_records:
+        total_inspected += record.total_inspected
+        total_defects += record.total_defects
+    
     stats = {
         'total_records': ftq_records.count(),
-        'total_inspected': ftq_records.aggregate(total=Sum('total_inspected'))['total'] or 0,
-        'total_defects': ftq_records.aggregate(total=Sum('total_defects'))['total'] or 0,
+        'total_inspected': total_inspected,
+        'total_defects': total_defects,
     }
     
     if stats['total_inspected'] > 0:
@@ -4292,102 +4478,78 @@ def ftq_dashboard(request):
     else:
         stats['ftq_percentage'] = 0
     
-    # Determine the correct model field name by checking model fields
-    model_field_name = None
+    # Get model-wise statistics
+    model_data = {}
+    for record in ftq_records:
+        model = record.model_name
+        if model not in model_data:
+            model_data[model] = {'total_inspected': 0, 'total_defects': 0}
+        model_data[model]['total_inspected'] += record.total_inspected
+        model_data[model]['total_defects'] += record.total_defects
     
-    # You may need to adjust these field names based on your actual model
-    possible_model_fields = ['model_name', 'model', 'product_model', 'product_name']
-    
-    for field_name in possible_model_fields:
-        if hasattr(FTQRecord, field_name) or field_name in [f.name for f in FTQRecord._meta.get_fields()]:
-            model_field_name = field_name
-            break
-    
-    if not model_field_name:
-        # If no model field name is found, create mock data
-        model_stats = [
-            {'model_name': 'Model A', 'total_inspected': 1000, 'total_defects': 20, 'ftq_percentage': 98.0},
-            {'model_name': 'Model B', 'total_inspected': 800, 'total_defects': 12, 'ftq_percentage': 98.5},
-            {'model_name': 'Model C', 'total_inspected': 600, 'total_defects': 15, 'ftq_percentage': 97.5}
-        ]
-    else:
-        # Get model-wise statistics using the correct field name
-        model_stats = ftq_records.values(model_field_name).annotate(
-            total_inspected=Sum('total_inspected'),
-            total_defects=Sum('total_defects')
-        ).order_by(model_field_name)
+    model_stats = []
+    for model, data in model_data.items():
+        if data['total_inspected'] > 0:
+            ftq_pct = round(((data['total_inspected'] - data['total_defects']) / data['total_inspected']) * 100, 2)
+        else:
+            ftq_pct = 0
         
-        # Calculate FTQ percentage for each model
-        for model in model_stats:
-            # Rename the field to 'model_name' for consistency in the template
-            model['model_name'] = model.pop(model_field_name)
-            
-            if model['total_inspected'] > 0:
-                model['ftq_percentage'] = round(((model['total_inspected'] - model['total_defects']) / model['total_inspected']) * 100, 2)
-            else:
-                model['ftq_percentage'] = 0
+        model_stats.append({
+            'model_name': model,
+            'total_inspected': data['total_inspected'],
+            'total_defects': data['total_defects'],
+            'ftq_percentage': ftq_pct
+        })
     
-    # Determine the correct shift field name
-    shift_field_name = None
-    possible_shift_fields = ['shift_type', 'shift', 'work_shift']
+    # Get shift-wise statistics
+    shift_data = {}
+    for record in ftq_records:
+        shift = record.get_shift_type_display() if record.shift_type else 'Unknown'
+        if shift not in shift_data:
+            shift_data[shift] = {'total_inspected': 0, 'total_defects': 0}
+        shift_data[shift]['total_inspected'] += record.total_inspected
+        shift_data[shift]['total_defects'] += record.total_defects
     
-    for field_name in possible_shift_fields:
-        if hasattr(FTQRecord, field_name) or field_name in [f.name for f in FTQRecord._meta.get_fields()]:
-            shift_field_name = field_name
-            break
-    
-    if not shift_field_name:
-        # If no shift field name is found, create mock data
-        shift_stats = [
-            {'shift_type': 'Morning', 'total_inspected': 800, 'total_defects': 16, 'ftq_percentage': 98.0},
-            {'shift_type': 'Afternoon', 'total_inspected': 900, 'total_defects': 20, 'ftq_percentage': 97.8},
-            {'shift_type': 'Night', 'total_inspected': 700, 'total_defects': 11, 'ftq_percentage': 98.4}
-        ]
-    else:
-        # Get shift-wise statistics using the correct field name
-        shift_stats = ftq_records.values(shift_field_name).annotate(
-            total_inspected=Sum('total_inspected'),
-            total_defects=Sum('total_defects')
-        ).order_by(shift_field_name)
+    shift_stats = []
+    for shift, data in shift_data.items():
+        if data['total_inspected'] > 0:
+            ftq_pct = round(((data['total_inspected'] - data['total_defects']) / data['total_inspected']) * 100, 2)
+        else:
+            ftq_pct = 0
         
-        # Calculate FTQ percentage for each shift
-        for shift in shift_stats:
-            # Rename the field to 'shift_type' for consistency in the template
-            shift['shift_type'] = shift.pop(shift_field_name)
-            
-            if shift['total_inspected'] > 0:
-                shift['ftq_percentage'] = round(((shift['total_inspected'] - shift['total_defects']) / shift['total_inspected']) * 100, 2)
-            else:
-                shift['ftq_percentage'] = 0
+        shift_stats.append({
+            'shift_type': shift,
+            'total_inspected': data['total_inspected'],
+            'total_defects': data['total_defects'],
+            'ftq_percentage': ftq_pct
+        })
     
-    # Get top defects
-    try:
-        top_defects = DefectRecord.objects.filter(
-            ftq_record__date__range=[start_date, end_date]
-        ).values(
-            'defect_type__name'
-        ).annotate(
-            total_count=Sum('count')
-        ).order_by('-total_count')[:10]
-    except:
-        # If DefectRecord model doesn't exist or has different structure, create mock data
-        top_defects = [
-            {'defect_type__name': 'Alignment Issue', 'total_count': 15},
-            {'defect_type__name': 'Surface Scratch', 'total_count': 12},
-            {'defect_type__name': 'Component Missing', 'total_count': 10},
-            {'defect_type__name': 'Wrong Assembly', 'total_count': 8},
-            {'defect_type__name': 'Color Mismatch', 'total_count': 7}
-        ]
+    # Get top defects from time-based entries
+    defect_counts = {}
+    
+    for record in ftq_records:
+        for entry in record.time_based_defects.all():
+            if entry.defect_type:
+                defect_name = entry.defect_type.name
+            else:
+                defect_name = entry.defect_type_custom.name
+            
+            if defect_name not in defect_counts:
+                defect_counts[defect_name] = 0
+            defect_counts[defect_name] += entry.count
+    
+    # Sort and get top 10
+    top_defects = [
+        {'defect_type__name': name, 'total_count': count}
+        for name, count in sorted(defect_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    ]
     
     # Prepare chart data for daily FTQ trend
     daily_data = {}
     for record in ftq_records:
         date_str = record.date.strftime('%Y-%m-%d')
         if date_str not in daily_data:
-            daily_data[date_str] = {
-                'total_inspected': 0,
-                'total_defects': 0
-            }
+            daily_data[date_str] = {'total_inspected': 0, 'total_defects': 0}
         daily_data[date_str]['total_inspected'] += record.total_inspected
         daily_data[date_str]['total_defects'] += record.total_defects
     
@@ -4413,31 +4575,23 @@ def ftq_dashboard(request):
         defect_name = defect['defect_type__name']
         daily_defect_data[defect_name] = {}
         
-        # Initialize with zeros for all dates
+        # Initialize with zeros
         for date_str in chart_dates:
             daily_defect_data[defect_name][date_str] = 0
     
-    # Try to populate daily defect data from database
-    try:
-        daily_defects = DefectRecord.objects.filter(
-            ftq_record__date__range=[start_date, end_date],
-            defect_type__name__in=[defect['defect_type__name'] for defect in top_defects]
-        ).values(
-            'defect_type__name', 'ftq_record__date'
-        ).annotate(
-            daily_count=Sum('count')
-        ).order_by('ftq_record__date')
-        
-        for daily_defect in daily_defects:
-            defect_name = daily_defect['defect_type__name']
-            date_str = daily_defect['ftq_record__date'].strftime('%Y-%m-%d')
-            if date_str in daily_defect_data.get(defect_name, {}):
-                daily_defect_data[defect_name][date_str] = daily_defect['daily_count']
-    except:
-        # If query fails, leave as zeros (already initialized)
-        pass
+    # Populate daily defect data
+    for record in ftq_records:
+        date_str = record.date.strftime('%Y-%m-%d')
+        for entry in record.time_based_defects.all():
+            if entry.defect_type:
+                defect_name = entry.defect_type.name
+            else:
+                defect_name = entry.defect_type_custom.name
+            
+            if defect_name in daily_defect_data and date_str in daily_defect_data[defect_name]:
+                daily_defect_data[defect_name][date_str] += entry.count
     
-    # Calculate defect trends (increase/decrease over last 7 days)
+    # Calculate defect trends
     defect_trends = {}
     for defect_name, date_data in daily_defect_data.items():
         dates = sorted(date_data.keys())
@@ -4456,53 +4610,43 @@ def ftq_dashboard(request):
                 'direction': 'up' if percent_change > 5 else ('down' if percent_change < -5 else 'stable')
             }
         else:
-            defect_trends[defect_name] = {
-                'percent_change': 0,
-                'direction': 'stable'
-            }
+            defect_trends[defect_name] = {'percent_change': 0, 'direction': 'stable'}
     
-    # Create mock data for defect model and shift correlations
+    # Find most common model and shift for each defect
     defect_common_models = {}
     defect_common_shifts = {}
     
     for defect in top_defects:
         defect_name = defect['defect_type__name']
-        # Assign random models and shifts for demonstration
-        defect_common_models[defect_name] = model_stats[0]['model_name'] if model_stats else 'Model A'
-        defect_common_shifts[defect_name] = shift_stats[0]['shift_type'] if shift_stats else 'Morning'
-    
-    # Try to get real data for model and shift correlations
-    try:
-        model_defect_stats = DefectRecord.objects.filter(
-            ftq_record__date__range=[start_date, end_date]
-        ).values(
-            'defect_type__name', f'ftq_record__{model_field_name}'
-        ).annotate(
-            total_count=Sum('count')
-        ).order_by('defect_type__name', '-total_count')
+        model_defect_counts = {}
+        shift_defect_counts = {}
         
-        shift_defect_stats = DefectRecord.objects.filter(
-            ftq_record__date__range=[start_date, end_date]
-        ).values(
-            'defect_type__name', f'ftq_record__{shift_field_name}'
-        ).annotate(
-            total_count=Sum('count')
-        ).order_by('defect_type__name', '-total_count')
+        for record in ftq_records:
+            for entry in record.time_based_defects.all():
+                entry_name = entry.defect_type.name if entry.defect_type else entry.defect_type_custom.name
+                
+                if entry_name == defect_name:
+                    # Count by model
+                    if record.model_name not in model_defect_counts:
+                        model_defect_counts[record.model_name] = 0
+                    model_defect_counts[record.model_name] += entry.count
+                    
+                    # Count by shift
+                    shift = record.get_shift_type_display() if record.shift_type else 'Unknown'
+                    if shift not in shift_defect_counts:
+                        shift_defect_counts[shift] = 0
+                    shift_defect_counts[shift] += entry.count
         
-        # Prepare common defects by model and shift
-        for defect_name in [defect['defect_type__name'] for defect in top_defects]:
-            # Find most common model for this defect
-            model_stats_for_defect = [stat for stat in model_defect_stats if stat['defect_type__name'] == defect_name]
-            if model_stats_for_defect:
-                defect_common_models[defect_name] = model_stats_for_defect[0][f'ftq_record__{model_field_name}']
+        # Find most common
+        if model_defect_counts:
+            defect_common_models[defect_name] = max(model_defect_counts, key=model_defect_counts.get)
+        else:
+            defect_common_models[defect_name] = 'N/A'
             
-            # Find most common shift for this defect
-            shift_stats_for_defect = [stat for stat in shift_defect_stats if stat['defect_type__name'] == defect_name]
-            if shift_stats_for_defect:
-                defect_common_shifts[defect_name] = shift_stats_for_defect[0][f'ftq_record__{shift_field_name}']
-    except:
-        # If query fails, use the mock data already created
-        pass
+        if shift_defect_counts:
+            defect_common_shifts[defect_name] = max(shift_defect_counts, key=shift_defect_counts.get)
+        else:
+            defect_common_shifts[defect_name] = 'N/A'
     
     # Prepare chart data
     chart_data = {
@@ -4532,11 +4676,14 @@ def ftq_dashboard(request):
         'shift_stats': shift_stats,
         'top_defects': top_defects,
         'chart_data': json.dumps(chart_data),
+        'chart_ftq': chart_ftq,
         'days': days,
         'start_date': start_date,
         'end_date': end_date,
         'title': 'FTQ Dashboard'
     })
+
+
 @login_required
 def ftq_report(request, report_type='daily'):
     """Generate FTQ reports (daily, weekly, monthly)"""

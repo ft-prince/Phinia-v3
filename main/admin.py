@@ -11,7 +11,11 @@ from .models import (
     ChecksheetContentConfig, DailyVerificationStatus, 
     ErrorPreventionCheck, ErrorPreventionMechanism, 
     ErrorPreventionMechanismStatus, ErrorPreventionCheckHistory,
-    ErrorPreventionMechanismHistory
+    ErrorPreventionMechanismHistory,
+        # FTQ-related models
+    FTQRecord, OperationNumber, DefectCategory, DefectType,
+    TimeBasedDefectEntry, DefectRecord, CustomDefectType,
+
 )
 
 
@@ -162,19 +166,19 @@ class ChecklistBaseAdmin(admin.ModelAdmin):
             'fields': ('line_pressure', 'uv_flow_input_pressure', 'test_pressure_vacuum')
         }),
         ('Status Checks', {
-            'fields': ('oring_condition', 'master_verification_lvdt', 'good_bad_master_verification', 'tool_alignment')
+            'fields': ('oring_condition',  )
         }),
         ('Tool Information', {
             'fields': ('top_tool_id', 'top_tool_id_status', 'bottom_tool_id', 'bottom_tool_id_status',
                       'uv_assy_stage_id', 'uv_assy_stage_id_status', 'retainer_part_no', 'retainer_part_no_status',
                       'uv_clip_part_no', 'uv_clip_part_no_status', 'umbrella_part_no', 'umbrella_part_no_status',
-                      'retainer_id_lubrication', 'error_proofing_verification')
+                      'retainer_id_lubrication')
         })
     )
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('verification_status')
-
+   
 
 @admin.register(SubgroupEntry)
 class SubgroupEntryAdmin(admin.ModelAdmin):
@@ -940,6 +944,430 @@ class DTPMVerificationHistoryAdmin(admin.ModelAdmin):
             return format_html('<i class="fas fa-comment" style="color: #17a2b8;" title="{}"></i>', obj.comments[:100])
         return format_html('<span style="color: #999;">—</span>')
     has_comments.short_description = 'Comments'
+
+
+# ============ FTQ ADMIN SECTION ============
+
+class TimeBasedDefectEntryInline(admin.TabularInline):
+    """Inline editor for time-based defect entries"""
+    model = TimeBasedDefectEntry
+    extra = 1
+    fields = ['defect_type', 'defect_type_custom', 'recorded_at', 'count', 'notes']
+    readonly_fields = []
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "defect_type":
+            # Only show active defect types
+            kwargs["queryset"] = DefectType.objects.filter(
+                category__is_active=True
+            ).select_related('operation_number', 'category')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+class CustomDefectTypeInline(admin.TabularInline):
+    """Inline editor for custom defect types"""
+    model = CustomDefectType
+    extra = 0
+    fields = ['name', 'operation_number', 'added_by']
+    readonly_fields = ['added_by', 'created_at']
+    can_delete = False
+
+
+@admin.register(FTQRecord)
+class FTQRecordAdmin(admin.ModelAdmin):
+    """Admin interface for FTQ Records"""
+    
+    list_display = [
+        'id',
+        'date',
+        'shift_display',
+        'model_name',
+        'operator_name',
+        'total_inspected',
+        'total_defects_display',
+        'ftq_percentage_display',
+        'verification_badge',
+        'verification_status_link'
+    ]
+    
+    list_filter = [
+        'date',
+        'shift_type',
+        'model_name',
+        'created_by',
+        'verified_by'
+    ]
+    
+    search_fields = [
+        'created_by__username',
+        'verified_by__username',
+        'model_name'
+    ]
+    
+    date_hierarchy = 'date'
+    
+    readonly_fields = [
+        'created_at',
+        'updated_at',
+        'total_defects_display',
+        'ftq_percentage_display',
+        'defect_summary'
+    ]
+    
+    inlines = [TimeBasedDefectEntryInline, CustomDefectTypeInline]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('date', 'shift_type', 'model_name', 'julian_date', 'verification_status')
+        }),
+        ('Production Data', {
+            'fields': ('total_inspected', 'production_per_shift')
+        }),
+        ('Quality Metrics', {
+            'fields': ('total_defects_display', 'ftq_percentage_display', 'defect_summary'),
+            'classes': ('collapse',)
+        }),
+        ('Personnel', {
+            'fields': ('created_by', 'verified_by')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    actions = ['mark_as_verified', 'export_to_excel']
+    
+    def shift_display(self, obj):
+        """Display shift with full name"""
+        shift_dict = dict(FTQRecord.SHIFTS)
+        return shift_dict.get(obj.shift_type, obj.shift_type) if obj.shift_type else 'N/A'
+    shift_display.short_description = 'Shift'
+    
+    def operator_name(self, obj):
+        """Display operator username"""
+        return obj.created_by.username if obj.created_by else 'N/A'
+    operator_name.short_description = 'Operator'
+    
+    def total_defects_display(self, obj):
+        """Display total defects with color coding"""
+        total = obj.total_defects
+        color = '#28a745' if total == 0 else '#ffc107' if total < 5 else '#dc3545'
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 3px 10px; border-radius: 3px; font-weight: bold;">{}</span>',
+            color, total
+        )
+    total_defects_display.short_description = 'Total Defects'
+    
+    def ftq_percentage_display(self, obj):
+        """Display FTQ percentage with color coding and progress bar"""
+        percentage = obj.ftq_percentage
+        
+        if percentage >= 98:
+            color = '#28a745'  # Green
+        elif percentage >= 95:
+            color = '#ffc107'  # Yellow
+        else:
+            color = '#dc3545'  # Red
+        
+        # Format the percentage BEFORE passing to format_html
+        percentage_formatted = f"{percentage:.2f}"
+        
+        return format_html(
+            '<div style="display: flex; align-items: center; gap: 10px;">'
+            '<div style="background: #f0f0f0; border-radius: 10px; overflow: hidden; width: 100px; height: 20px;">'
+            '<div style="background: {}; width: {}%; height: 100%;"></div>'
+            '</div>'
+            '<span style="font-weight: bold; color: {};">{} %</span>'
+            '</div>',
+            color, percentage, color, percentage_formatted
+        )
+    ftq_percentage_display.short_description = 'FTQ %'
+
+    
+    def verification_badge(self, obj):
+        """Display verification status badge"""
+        if obj.verified_by:
+            return format_html(
+                '<span style="background-color: #28a745; color: white; padding: 3px 10px; border-radius: 3px;">'
+                '<i class="fas fa-check"></i> Verified by {}'
+                '</span>',
+                obj.verified_by.username
+            )
+        return format_html(
+            '<span style="background-color: #ffc107; color: white; padding: 3px 10px; border-radius: 3px;">'
+            '<i class="fas fa-clock"></i> Pending'
+            '</span>'
+        )
+    verification_badge.short_description = 'Verification'
+    
+    def verification_status_link(self, obj):
+        """Link to verification status"""
+        if obj.verification_status:
+            try:
+                url = reverse('admin:main_dailyverificationstatus_change', args=[obj.verification_status.id])
+                return format_html('<a href="{}">{}</a>', url, f"Verification #{obj.verification_status.id}")
+            except:
+                return f"Verification #{obj.verification_status.id}"
+        return format_html('<span style="color: #999;">N/A</span>')
+    verification_status_link.short_description = 'Verification Status'
+    
+    def defect_summary(self, obj):
+        """Display detailed defect summary"""
+        time_based = obj.time_based_defects.all()
+        
+        if not time_based.exists():
+            return format_html('<p style="color: #999;">No defects recorded</p>')
+        
+        html = '<div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px;">'
+        html += '<h4 style="margin-top: 0;">Defect Breakdown by Time</h4>'
+        html += '<table style="width: 100%; border-collapse: collapse;">'
+        html += '<tr style="background-color: #e9ecef;"><th style="padding: 5px; text-align: left;">Time</th><th style="padding: 5px; text-align: left;">Defect Type</th><th style="padding: 5px; text-align: right;">Count</th></tr>'
+        
+        for entry in time_based:
+            defect_name = entry.defect_type.name if entry.defect_type else entry.defect_type_custom.name if entry.defect_type_custom else 'Unknown'
+            html += f'<tr><td style="padding: 5px;">{entry.recorded_at.strftime("%H:%M")}</td><td style="padding: 5px;">{defect_name}</td><td style="padding: 5px; text-align: right; font-weight: bold;">{entry.count}</td></tr>'
+        
+        html += '</table>'
+        html += f'<p style="margin-top: 10px; font-weight: bold;">Total Defects: {obj.total_defects}</p>'
+        html += '</div>'
+        
+        return format_html(html)
+    defect_summary.short_description = 'Defect Summary'
+    
+    def mark_as_verified(self, request, queryset):
+        """Mark selected records as verified"""
+        updated = queryset.update(verified_by=request.user)
+        self.message_user(request, f'{updated} FTQ record(s) marked as verified')
+    mark_as_verified.short_description = 'Mark as verified by me'
+    
+    def export_to_excel(self, request, queryset):
+        """Export selected records to Excel"""
+        # This would require openpyxl or similar library
+        self.message_user(request, 'Excel export feature - implement as needed')
+    export_to_excel.short_description = 'Export to Excel'
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            'created_by',
+            'verified_by',
+            'verification_status'
+        ).prefetch_related('time_based_defects')
+
+
+@admin.register(OperationNumber)
+class OperationNumberAdmin(admin.ModelAdmin):
+    """Admin for operation numbers"""
+    list_display = ['number', 'name', 'description_short', 'defect_count']
+    search_fields = ['number', 'name', 'description']
+    ordering = ['number']
+    
+    def description_short(self, obj):
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_short.short_description = 'Description'
+    
+    def defect_count(self, obj):
+        count = obj.defect_types.count()
+        return format_html(
+            '<span style="background-color: #e0e0e0; padding: 3px 8px; border-radius: 3px;">{} types</span>',
+            count
+        )
+    defect_count.short_description = 'Defect Types'
+
+
+@admin.register(DefectCategory)
+class DefectCategoryAdmin(admin.ModelAdmin):
+    """Admin for defect categories"""
+    list_display = ['name', 'is_active', 'defect_type_count', 'description_short']
+    list_filter = ['is_active']
+    search_fields = ['name', 'description']
+    list_editable = ['is_active']
+    
+    def defect_type_count(self, obj):
+        count = obj.defect_types.count()
+        return format_html(
+            '<span style="background-color: #007bff; color: white; padding: 3px 8px; border-radius: 3px;">{}</span>',
+            count
+        )
+    defect_type_count.short_description = 'Defect Types'
+    
+    def description_short(self, obj):
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_short.short_description = 'Description'
+
+
+@admin.register(DefectType)
+class DefectTypeAdmin(admin.ModelAdmin):
+    """Admin for defect types"""
+    list_display = [
+        'name',
+        'operation_display',
+        'category',
+        'is_critical_badge',
+        'is_default',
+        'order',
+        'usage_count'
+    ]
+    list_filter = ['is_critical', 'is_default', 'category', 'operation_number']
+    search_fields = ['name', 'description']
+    list_editable = ['is_default', 'order']
+    ordering = ['operation_number', 'order', 'name']
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('name', 'operation_number', 'category', 'description')
+        }),
+        ('Settings', {
+            'fields': ('is_critical', 'is_default', 'order')
+        })
+    )
+    
+    def operation_display(self, obj):
+        return f"{obj.operation_number.number} - {obj.operation_number.name}"
+    operation_display.short_description = 'Operation'
+    
+    def is_critical_badge(self, obj):
+        if obj.is_critical:
+            return format_html(
+                '<span style="background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 3px;">'
+                '<i class="fas fa-exclamation-triangle"></i> Critical'
+                '</span>'
+            )
+        return format_html('<span style="color: #999;">—</span>')
+    is_critical_badge.short_description = 'Critical'
+    
+    def usage_count(self, obj):
+        # Count from TimeBasedDefectEntry
+        count = TimeBasedDefectEntry.objects.filter(defect_type=obj).count()
+        return format_html(
+            '<span style="background-color: #e0e0e0; padding: 3px 8px; border-radius: 3px;">{} uses</span>',
+            count
+        )
+    usage_count.short_description = 'Usage'
+
+
+@admin.register(TimeBasedDefectEntry)
+class TimeBasedDefectEntryAdmin(admin.ModelAdmin):
+    """Admin for time-based defect entries"""
+    list_display = [
+        'ftq_record_link',
+        'recorded_time',
+        'defect_display',
+        'count_badge',
+        'notes_preview'
+    ]
+    list_filter = ['recorded_at', 'ftq_record__date']
+    search_fields = ['defect_type__name', 'defect_type_custom__name', 'notes']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('FTQ Record', {
+            'fields': ('ftq_record',)
+        }),
+        ('Defect Information', {
+            'fields': ('defect_type', 'defect_type_custom', 'recorded_at', 'count')
+        }),
+        ('Additional Details', {
+            'fields': ('notes',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def ftq_record_link(self, obj):
+        if obj.ftq_record:
+            try:
+                url = reverse('admin:main_ftqrecord_change', args=[obj.ftq_record.id])
+                return format_html(
+                    '<a href="{}">{} - {}</a>',
+                    url,
+                    obj.ftq_record.date,
+                    obj.ftq_record.model_name
+                )
+            except:
+                return f"{obj.ftq_record.date} - {obj.ftq_record.model_name}"
+        return 'N/A'
+    ftq_record_link.short_description = 'FTQ Record'
+    
+    def recorded_time(self, obj):
+        return obj.recorded_at.strftime('%H:%M')
+    recorded_time.short_description = 'Time'
+    
+    def defect_display(self, obj):
+        if obj.defect_type:
+            return format_html(
+                '<strong>{}</strong><br><small style="color: #666;">{}</small>',
+                obj.defect_type.name,
+                f"Op {obj.defect_type.operation_number.number}"
+            )
+        elif obj.defect_type_custom:
+            return format_html(
+                '<strong>{}</strong> <span style="background-color: #ffc107; color: white; padding: 2px 5px; border-radius: 3px; font-size: 10px;">CUSTOM</span>',
+                obj.defect_type_custom.name
+            )
+        return 'Unknown'
+    defect_display.short_description = 'Defect Type'
+    
+    def count_badge(self, obj):
+        color = '#28a745' if obj.count == 0 else '#ffc107' if obj.count < 3 else '#dc3545'
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 5px 12px; border-radius: 3px; font-weight: bold; font-size: 14px;">{}</span>',
+            color, obj.count
+        )
+    count_badge.short_description = 'Count'
+    
+    def notes_preview(self, obj):
+        if obj.notes:
+            preview = obj.notes[:50] + '...' if len(obj.notes) > 50 else obj.notes
+            return format_html('<small title="{}">{}</small>', obj.notes, preview)
+        return format_html('<span style="color: #999;">—</span>')
+    notes_preview.short_description = 'Notes'
+
+
+@admin.register(CustomDefectType)
+class CustomDefectTypeAdmin(admin.ModelAdmin):
+    """Admin for custom defect types"""
+    list_display = [
+        'name',
+        'operation_display',
+        'ftq_record_link',
+        'added_by',
+        'created_at'
+    ]
+    list_filter = ['operation_number', 'created_at']
+    search_fields = ['name', 'added_by__username']
+    readonly_fields = ['added_by', 'created_at']
+    
+    def operation_display(self, obj):
+        return f"{obj.operation_number.number} - {obj.operation_number.name}"
+    operation_display.short_description = 'Operation'
+    
+    def ftq_record_link(self, obj):
+        if obj.ftq_record:
+            try:
+                url = reverse('admin:main_ftqrecord_change', args=[obj.ftq_record.id])
+                return format_html('<a href="{}">{}</a>', url, f"FTQ #{obj.ftq_record.id}")
+            except:
+                return f"FTQ #{obj.ftq_record.id}"
+        return 'N/A'
+    ftq_record_link.short_description = 'FTQ Record'
+
+
+
+
+
+
+
+
+
+
+
 
 # ============ CUSTOMIZE ADMIN SITE ============
 
