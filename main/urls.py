@@ -156,5 +156,28 @@ path('verify-subgroup-ajax/', views.verify_subgroup_ajax, name='verify_subgroup_
     path('dtpm/new/<int:pk>/verify/', views.dtpm_new_verify, name='dtpm_new_verify'),
     path('dtpm/new/<int:pk>/supervisor-verify/', views.dtpm_new_supervisor_verify, name='dtpm_new_supervisor_verify'),
     path('dtpm/new/<int:pk>/quality-verify/', views.dtpm_new_quality_verify, name='dtpm_new_quality_verify'),
+    
+    
+    
+    
+    # 
+    
+        # Checksheet URLs
+    path('checksheets/', views.checksheet_list, name='checksheet_list'),
+    path('checksheets/<int:checksheet_id>/create/', views.create_checksheet_response, name='create_checksheet_response'),
+    
+    # Response URLs
+    path('responses/', views.checksheet_responses_list, name='checksheet_responses_list'),
+    path('responses/<int:response_id>/', views.checksheet_response_detail, name='checksheet_response_detail'),
+    path('responses/<int:response_id>/edit/', views.edit_checksheet_response, name='edit_checksheet_response'),
+    path('responses/<int:response_id>/delete/', views.delete_checksheet_response, name='delete_checksheet_response'),
+    
+    # Approval URLs
+    path('responses/<int:response_id>/supervisor-approve/', views.supervisor_approve_response, name='supervisor_approve_response'),
+    path('responses/<int:response_id>/quality-approve/', views.quality_approve_response, name='quality_approve_response'),
+    
+    # AJAX URLs
+    path('ajax/autofill/', views.get_autofill_value, name='get_autofill_value'),
+
 
 ]

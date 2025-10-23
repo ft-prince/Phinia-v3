@@ -1,0 +1,160 @@
+{% extends 'checksheets/base.html' %}
+
+{% block page_icon %}fas fa-file-alt{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="submitted" {% if selected_status == 'submitted' %}selected{% endif %}>Submitted</option>
+                    <option value="supervisor_approved" {% if selected_status == 'supervisor_approved' %}selected{% endif %}>Supervisor Approved</option>
+                    <option value="quality_approved" {% if selected_status == 'quality_approved' %}selected{% endif %}>Quality Approved</option>
+                    <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Checksheet</label>
+                <select name="checksheet" class="form-select">
+                    <option value="">All Checksheets</option>
+                    {% for cs in checksheets %}
+                    <option value="{{ cs.id }}" {% if selected_checksheet == cs.id|stringformat:"s" %}selected{% endif %}>
+                        {{ cs.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <a href="{% url 'checksheet_responses_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Responses Table -->
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Checksheet</th>
+                        <th>Status</th>
+                        <th>Filled By</th>
+                        <th>Created</th>
+                        <th>Submitted</th>
+                        <th>Completion</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for response in responses %}
+                    <tr>
+                        <td><strong>#{{ response.id }}</strong></td>
+                        <td>
+                            {{ response.checksheet.name }}
+                            {% if response.checksheet.name_hindi %}
+                            <br><small class="hindi-text">{{ response.checksheet.name_hindi }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge status-badge status-{{ response.status }}">
+                                {{ response.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ response.filled_by.username }}</td>
+                        <td>{{ response.created_at|date:"Y-m-d H:i" }}</td>
+                        <td>
+                            {% if response.submitted_at %}
+                            {{ response.submitted_at|date:"Y-m-d H:i" }}
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 25px;">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ response.completion_percentage }}%;" 
+                                     aria-valuenow="{{ response.completion_percentage }}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    {{ response.completion_percentage }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="{% url 'checksheet_response_detail' response.id %}" 
+                               class="btn btn-sm btn-info" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if response.can_be_edited and response.filled_by == user %}
+                            <a href="{% url 'edit_checksheet_response' response.id %}" 
+                               class="btn btn-sm btn-primary" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No responses found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                        <i class="fas fa-angle-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                        <i class="fas fa-angle-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

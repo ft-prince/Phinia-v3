@@ -1,0 +1,55 @@
+{% extends 'checksheets/base.html' %}
+
+{% block page_icon %}fas fa-list{% endblock %}
+
+{% block content %}
+<div class="row">
+    {% for checksheet in checksheets %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="fas fa-clipboard-check"></i> {{ checksheet.name }}
+            </div>
+            <div class="card-body">
+                {% if checksheet.name_hindi %}
+                <p class="hindi-text mb-3">{{ checksheet.name_hindi }}</p>
+                {% endif %}
+                
+                {% if checksheet.description %}
+                <p class="text-muted mb-3">{{ checksheet.description|truncatewords:20 }}</p>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge bg-info">
+                            <i class="fas fa-layer-group"></i> {{ checksheet.total_sections }} Sections
+                        </span>
+                        <span class="badge bg-secondary ms-1">
+                            <i class="fas fa-tasks"></i> {{ checksheet.total_fields }} Fields
+                        </span>
+                    </div>
+                </div>
+                
+                {% if checksheet.applicable_models %}
+                <div class="mb-3">
+                    <small class="text-muted">
+                        <i class="fas fa-tags"></i> Models: {{ checksheet.applicable_models }}
+                    </small>
+                </div>
+                {% endif %}
+                
+                <a href="{% url 'create_checksheet_response' checksheet.id %}" class="btn btn-primary w-100">
+                    <i class="fas fa-plus-circle"></i> Create New Response
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No active checksheets available.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

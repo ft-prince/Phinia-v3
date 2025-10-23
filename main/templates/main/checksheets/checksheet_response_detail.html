@@ -1,0 +1,441 @@
+{% extends 'checksheets/base.html' %}
+
+{% block page_icon %}fas fa-file-alt{% endblock %}
+
+{% block content %}
+<!-- Quality Status Bar -->
+<div class="quality-status-bar">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h4 class="mb-1">
+                <i class="fas fa-clipboard-check"></i> {{ response.checksheet.name }}
+            </h4>
+            <p class="text-muted mb-0">Response ID: #{{ response.id }}</p>
+        </div>
+        <div>
+            <span class="badge status-badge status-{{ response.status }} fs-5">
+                {{ response.get_status_display }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Status Timeline -->
+    <div class="status-timeline">
+        <!-- Submitted -->
+        <div class="timeline-item">
+            <div class="timeline-icon {% if response.status == 'submitted' or response.status == 'supervisor_approved' or response.status == 'quality_approved' %}active{% elif response.status == 'draft' %}pending{% else %}pending{% endif %}">
+                <i class="fas fa-file-upload"></i>
+            </div>
+            <div class="timeline-label">
+                Submitted
+                {% if response.submitted_at %}
+                <br><small>{{ response.submitted_at|date:"Y-m-d H:i" }}</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Supervisor Approval -->
+        <div class="timeline-item">
+            <div class="timeline-icon {% if response.status == 'supervisor_approved' or response.status == 'quality_approved' %}active{% elif response.status == 'submitted' %}current{% else %}pending{% endif %}">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div class="timeline-label">
+                Supervisor Approved
+                {% if response.supervisor_approved_at %}
+                <br><small>{{ response.supervisor_approved_at|date:"Y-m-d H:i" }}</small>
+                <br><small class="text-muted">by {{ response.supervisor_approved_by.username }}</small>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quality Approval -->
+        <div class="timeline-item">
+            <div class="timeline-icon {% if response.status == 'quality_approved' %}active{% elif response.status == 'supervisor_approved' %}current{% else %}pending{% endif %}">
+                <i class="fas fa-certificate"></i>
+            </div>
+            <div class="timeline-label">
+                Quality Approved
+                {% if response.quality_approved_at %}
+                <br><small>{{ response.quality_approved_at|date:"Y-m-d H:i" }}</small>
+                <br><small class="text-muted">by {{ response.quality_approved_by.username }}</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Rejection Notice -->
+    {% if response.status == 'rejected' %}
+    <div class="alert alert-danger mt-3">
+        <h5><i class="fas fa-exclamation-triangle"></i> Response Rejected</h5>
+        <p class="mb-0"><strong>Reason:</strong> {{ response.rejection_reason }}</p>
+        {% if can_edit %}
+        <hr>
+        <a href="{% url 'edit_checksheet_response' response.id %}" class="btn btn-warning">
+            <i class="fas fa-edit"></i> Edit and Resubmit
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Metadata -->
+    <hr>
+    <div class="row text-center">
+        <div class="col-md-3">
+            <small class="text-muted">Filled By</small>
+            <p class="mb-0"><strong>{{ response.filled_by.username }}</strong></p>
+            <small class="text-muted">{{ response.filled_by.get_user_type }}</small>
+        </div>
+        <div class="col-md-3">
+            <small class="text-muted">Created At</small>
+            <p class="mb-0"><strong>{{ response.created_at|date:"Y-m-d H:i" }}</strong></p>
+        </div>
+        <div class="col-md-3">
+            <small class="text-muted">Last Updated</small>
+            <p class="mb-0"><strong>{{ response.updated_at|date:"Y-m-d H:i" }}</strong></p>
+        </div>
+        <div class="col-md-3">
+            <small class="text-muted">Completion</small>
+            <p class="mb-0">
+                <strong class="text-success">{{ response.completion_percentage }}%</strong>
+            </p>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar bg-success" role="progressbar" 
+                     style="width: {{ response.completion_percentage }}%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row g-2">
+            {% if can_edit %}
+            <div class="col-md-4">
+                <a href="{% url 'edit_checksheet_response' response.id %}" class="btn btn-primary w-100">
+                    <i class="fas fa-edit"></i> Edit Response
+                </a>
+            </div>
+            {% endif %}
+
+            {% if can_approve_supervisor %}
+            <div class="col-md-4">
+                <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#supervisorApprovalModal">
+                    <i class="fas fa-check-circle"></i> Approve (Supervisor)
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#supervisorRejectModal">
+                    <i class="fas fa-times-circle"></i> Reject
+                </button>
+            </div>
+            {% endif %}
+
+            {% if can_approve_quality %}
+            <div class="col-md-4">
+                <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#qualityApprovalModal">
+                    <i class="fas fa-award"></i> Approve (Quality)
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#qualityRejectModal">
+                    <i class="fas fa-times-circle"></i> Reject
+                </button>
+            </div>
+            {% endif %}
+
+            <div class="col-md-4">
+                <a href="{% url 'checksheet_responses_list' %}" class="btn btn-secondary w-100">
+                    <i class="fas fa-arrow-left"></i> Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comments Section -->
+{% if response.supervisor_comments or response.quality_comments or response.notes %}
+<div class="card mb-4">
+    <div class="card-header">
+        <i class="fas fa-comments"></i> Comments & Notes
+    </div>
+    <div class="card-body">
+        {% if response.supervisor_comments %}
+        <div class="alert alert-info">
+            <h6><i class="fas fa-user-tie"></i> Supervisor Comments:</h6>
+            <p class="mb-0">{{ response.supervisor_comments }}</p>
+        </div>
+        {% endif %}
+
+        {% if response.quality_comments %}
+        <div class="alert alert-success">
+            <h6><i class="fas fa-certificate"></i> Quality Comments:</h6>
+            <p class="mb-0">{{ response.quality_comments }}</p>
+        </div>
+        {% endif %}
+
+        {% if response.notes %}
+        <div class="alert alert-secondary">
+            <h6><i class="fas fa-sticky-note"></i> Notes:</h6>
+            <p class="mb-0">{{ response.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Response Data -->
+{% for section_data in sections_data %}
+<div class="form-section">
+    <div class="form-section-header">
+        <i class="fas fa-folder-open"></i> 
+        {{ section_data.section.order }}. {{ section_data.section.name }}
+        {% if section_data.section.name_hindi %}
+        <span style="opacity: 0.9; font-weight: 400; font-size: 0.95rem;">
+            ({{ section_data.section.name_hindi }})
+        </span>
+        {% endif %}
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Field</th>
+                    <th style="width: 30%;">Value</th>
+                    <th style="width: 15%;">Status</th>
+                    <th style="width: 15%;">Comment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field_response in section_data.field_responses %}
+                <tr>
+                    <td>
+                        <strong>{{ field_response.field.label }}</strong>
+                        {% if field_response.field.label_hindi %}
+                        <br><span class="hindi-text">{{ field_response.field.label_hindi }}</span>
+                        {% endif %}
+                        {% if field_response.field.unit %}
+                        <br><small class="text-muted">Unit: {{ field_response.field.unit }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if field_response.value %}
+                            {% if field_response.field.field_type == 'number' or field_response.field.field_type == 'decimal' %}
+                                <strong class="text-primary">{{ field_response.value }} {% if field_response.field.unit %}{{ field_response.field.unit }}{% endif %}</strong>
+                                {% if field_response.field.min_value or field_response.field.max_value %}
+                                <br><small class="text-muted">Range: {{ field_response.field.min_value|default:'−∞' }} - {{ field_response.field.max_value|default:'+∞' }}</small>
+                                {% endif %}
+                            {% else %}
+                                <strong>{{ field_response.value }}</strong>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if field_response.status %}
+                            {% if field_response.status == 'OK' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> OK
+                                </span>
+                            {% else %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times-circle"></i> NOK
+                                </span>
+                            {% endif %}
+                        {% elif field_response.field.field_type == 'ok_nok' %}
+                            {% if field_response.value == 'OK' %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> OK
+                                </span>
+                            {% elif field_response.value == 'NOK' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times-circle"></i> NOK
+                                </span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if field_response.comment %}
+                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="tooltip" title="{{ field_response.comment }}">
+                                <i class="fas fa-comment"></i>
+                            </button>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Supervisor Approval Modal -->
+{% if can_approve_supervisor %}
+<div class="modal fade" id="supervisorApprovalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'supervisor_approve_response' response.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle"></i> Approve Checksheet
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to approve this checksheet as a supervisor?</p>
+                    <div class="mb-3">
+                        <label class="form-label">Comments (Optional)</label>
+                        <textarea class="form-control" name="comments" rows="3" placeholder="Add your comments here..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="action" value="approve" class="btn btn-success">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Supervisor Reject Modal -->
+<div class="modal fade" id="supervisorRejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'supervisor_approve_response' response.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-times-circle"></i> Reject Checksheet
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please provide a reason for rejection:</p>
+                    <div class="mb-3">
+                        <label class="form-label required-field">Rejection Reason</label>
+                        <textarea class="form-control" name="comments" rows="4" required placeholder="Explain why this checksheet is being rejected..."></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> The operator will be able to edit and resubmit after rejection.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quality Approval Modal -->
+{% if can_approve_quality %}
+<div class="modal fade" id="qualityApprovalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'quality_approve_response' response.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-award"></i> Quality Approval
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to approve this checksheet as quality supervisor?</p>
+                    <div class="mb-3">
+                        <label class="form-label">Comments (Optional)</label>
+                        <textarea class="form-control" name="comments" rows="3" placeholder="Add your quality approval comments..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="action" value="approve" class="btn btn-success">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Quality Reject Modal -->
+<div class="modal fade" id="qualityRejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'quality_approve_response' response.id %}">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-times-circle"></i> Reject Checksheet
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please provide a reason for rejection:</p>
+                    <div class="mb-3">
+                        <label class="form-label required-field">Rejection Reason</label>
+                        <textarea class="form-control" name="comments" rows="4" required placeholder="Explain why this checksheet is being rejected..."></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> The operator will be able to edit and resubmit after rejection.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" name="action" value="reject" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+});
+
+// Print functionality
+function printChecksheet() {
+    window.print();
+}
+</script>
+
+<style>
+@media print {
+    .navbar, .page-header, .card .btn, .modal, footer {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none !important;
+        page-break-inside: avoid;
+    }
+    
+    .form-section {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}

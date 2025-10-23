@@ -309,7 +309,22 @@ from django.utils import timezone
 
 
 
-# Updated operator_dashboard view
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Q, Count, Prefetch
+from django.utils import timezone
+from datetime import timedelta
+from .models import (
+    Checksheet, ChecksheetSection, ChecksheetField,
+    ChecksheetResponse, ChecksheetFieldResponse,
+    DailyVerificationStatus, Shift, User,
+    ChecklistBase, FTQRecord, ErrorPreventionCheck, 
+    DTPMChecklistFMA03New, SubgroupFrequencyConfig
+)
+
+
 @login_required
 def operator_dashboard(request):
     current_datetime = timezone.localtime(timezone.now())
@@ -329,7 +344,7 @@ def operator_dashboard(request):
             verification_status=active_verification
         ).select_related('frequency_config').prefetch_related('subgroup_entries').first()
 
-    # Get frequency configuration - NEW
+    # Get frequency configuration
     frequency_hours = 2  # Default
     max_subgroups = 6    # Default
     
@@ -338,7 +353,6 @@ def operator_dashboard(request):
             frequency_hours = active_checklist.frequency_config.frequency_hours
             max_subgroups = active_checklist.frequency_config.max_subgroups
         else:
-            # Try to get config based on model
             try:
                 config = SubgroupFrequencyConfig.objects.get(
                     model_name=active_checklist.selected_model,
@@ -349,7 +363,7 @@ def operator_dashboard(request):
             except SubgroupFrequencyConfig.DoesNotExist:
                 pass
 
-    # Calculate next subgroup time and remaining time based on shift timing
+    # Calculate next subgroup time
     next_subgroup_time = None
     time_remaining = None
     time_remaining_formatted = None
@@ -358,7 +372,6 @@ def operator_dashboard(request):
     expected_schedule = []
     
     if active_checklist:
-        # Use the shift-based logic with frequency config
         can_add_subgroup, next_allowed_time, available_slots = check_time_gap_shift_based(active_checklist)
         
         if next_allowed_time and not can_add_subgroup:
@@ -377,12 +390,11 @@ def operator_dashboard(request):
                     
                 time_remaining_formatted = " ".join(time_parts)
         
-        # Get expected subgroup schedule for display - UPDATED to pass checklist
         if active_verification and active_verification.shift:
             expected_times = get_expected_subgroup_times(
                 active_verification.shift.shift_type, 
                 current_date,
-                active_checklist  # Pass the checklist for frequency config
+                active_checklist
             )
             for i, expected_time in enumerate(expected_times, 1):
                 expected_schedule.append({
@@ -391,6 +403,58 @@ def operator_dashboard(request):
                     'is_available': current_datetime >= expected_time,
                     'is_completed': active_checklist.subgroup_entries.filter(subgroup_number=i).exists()
                 })
+
+    # ============ CHECKSHEET INTEGRATION ============
+    
+    # Get active checksheets
+    active_checksheets = Checksheet.objects.filter(is_active=True).annotate(
+        total_sections=Count('sections', filter=Q(sections__is_active=True)),
+        total_fields=Count('sections__fields', filter=Q(sections__is_active=True, sections__fields__is_active=True))
+    ).order_by('name')
+    
+    # Get today's checksheet responses for this user
+    today_checksheet_responses = ChecksheetResponse.objects.filter(
+        filled_by=request.user,
+        created_at__date=current_date
+    ).select_related('checksheet').order_by('-created_at')
+    
+    # Get pending checksheet responses (draft or submitted but not approved)
+    pending_checksheet_responses = ChecksheetResponse.objects.filter(
+        filled_by=request.user,
+        status__in=['draft', 'submitted', 'supervisor_approved']
+    ).exclude(
+        created_at__date=current_date
+    ).select_related('checksheet').order_by('-created_at')[:5]
+    
+    # Check if there are any checksheets that need to be filled today
+    checksheets_need_filling = []
+    for checksheet in active_checksheets:
+        # Check if already filled today
+        already_filled = today_checksheet_responses.filter(checksheet=checksheet).exists()
+        if not already_filled:
+            checksheets_need_filling.append(checksheet)
+    
+    # Checksheet statistics
+    checksheet_stats = {
+        'total_active': active_checksheets.count(),
+        'filled_today': today_checksheet_responses.count(),
+        'pending': pending_checksheet_responses.count(),
+        'need_filling': len(checksheets_need_filling),
+        'completion_rate': 0
+    }
+    
+    if checksheet_stats['total_active'] > 0:
+        checksheet_stats['completion_rate'] = int(
+            (checksheet_stats['filled_today'] / checksheet_stats['total_active']) * 100
+        )
+    
+    # Recent checksheet responses (last 7 days)
+    recent_checksheet_responses = ChecksheetResponse.objects.filter(
+        filled_by=request.user,
+        created_at__gte=current_datetime - timedelta(days=7)
+    ).select_related('checksheet').order_by('-created_at')[:10]
+
+    # ============ END CHECKSHEET INTEGRATION ============
 
     # Debug info
     debug_info = {
@@ -407,16 +471,15 @@ def operator_dashboard(request):
         'available_slots': available_slots,
         'current_time': current_datetime.strftime('%H:%M:%S'),
         'shift_type': active_verification.shift.shift_type if active_verification and active_verification.shift else None,
-        'frequency_hours': frequency_hours,  # NEW
-        'max_subgroups': max_subgroups,      # NEW
+        'frequency_hours': frequency_hours,
+        'max_subgroups': max_subgroups,
     }
     
-    # Add expected times to debug info - UPDATED to pass checklist
     if active_checklist and active_verification and active_verification.shift:
         expected_times = get_expected_subgroup_times(
             active_verification.shift.shift_type, 
             current_date,
-            active_checklist  # Pass the checklist
+            active_checklist
         )
         debug_info['expected_subgroup_times'] = [
             t.strftime('%H:%M') for t in expected_times
@@ -451,7 +514,6 @@ def operator_dashboard(request):
         date=current_date
     )
     
-    # Updated FTQ matching logic
     today_ftq = None
     if active_verification:
         today_ftq = today_ftq_query.filter(verification_status=active_verification).first()
@@ -565,15 +627,23 @@ def operator_dashboard(request):
         'dtpm_checklist_stats': dtpm_checklist_stats,
         'show_workflow_modal': show_workflow_modal,
         'debug_info': debug_info,
-        'frequency_hours': frequency_hours,  # NEW - for template display
-        'max_subgroups': max_subgroups,      # NEW - for template display
+        'frequency_hours': frequency_hours,
+        'max_subgroups': max_subgroups,
+        'current_subgroup_count': active_checklist.subgroup_entries.count() if active_checklist else 0,
         
-         'current_subgroup_count': active_checklist.subgroup_entries.count() if active_checklist else 0,
-
+        # Checksheet context
+        'active_checksheets': active_checksheets,
+        'today_checksheet_responses': today_checksheet_responses,
+        'pending_checksheet_responses': pending_checksheet_responses,
+        'checksheets_need_filling': checksheets_need_filling,
+        'checksheet_stats': checksheet_stats,
+        'recent_checksheet_responses': recent_checksheet_responses,
     }
     
     return render(request, 'main/operator_dashboard.html', context)
-   
+
+
+
 
 
 @login_required
@@ -8062,3 +8132,527 @@ def dtpm_image_view(request, image_id):
         # Log the error for debugging
         print(f"Error serving image: {str(e)}")
         raise Http404("Image not found")        
+    
+    
+    
+    
+    
+    
+    
+# New CheckSheet  views 
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.db.models import Q, Count, Prefetch
+from django.utils import timezone
+from django.core.paginator import Paginator
+from .models import (
+    Checksheet, ChecksheetSection, ChecksheetField,
+    ChecksheetResponse, ChecksheetFieldResponse,
+    DailyVerificationStatus, Shift, User
+)
+import json
+
+
+# ============ CHECKSHEET LIST VIEW ============
+
+@login_required
+def checksheet_list(request):
+    """Display list of all active checksheets"""
+    checksheets = Checksheet.objects.filter(is_active=True).annotate(
+        total_sections=Count('sections', filter=Q(sections__is_active=True)),
+        total_fields=Count('sections__fields', filter=Q(sections__is_active=True, sections__fields__is_active=True))
+    ).order_by('name')
+    
+    context = {
+        'checksheets': checksheets,
+        'page_title': 'Available Checksheets'
+    }
+    return render(request, 'checksheets/checksheet_list.html', context)
+
+
+# ============ CHECKSHEET RESPONSES LIST ============
+
+@login_required
+def checksheet_responses_list(request):
+    """Display list of all checksheet responses"""
+    responses = ChecksheetResponse.objects.select_related(
+        'checksheet', 'filled_by', 'supervisor_approved_by', 'quality_approved_by'
+    ).order_by('-created_at')
+    
+    # Filters
+    status_filter = request.GET.get('status')
+    checksheet_filter = request.GET.get('checksheet')
+    
+    if status_filter:
+        responses = responses.filter(status=status_filter)
+    
+    if checksheet_filter:
+        responses = responses.filter(checksheet_id=checksheet_filter)
+    
+    # Filter based on user role
+    if request.user.user_type == 'operator':
+        responses = responses.filter(filled_by=request.user)
+    
+    # Pagination
+    paginator = Paginator(responses, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Get all checksheets for filter
+    checksheets = Checksheet.objects.filter(is_active=True).order_by('name')
+    
+    context = {
+        'page_obj': page_obj,
+        'responses': page_obj,
+        'checksheets': checksheets,
+        'selected_status': status_filter,
+        'selected_checksheet': checksheet_filter,
+        'page_title': 'Checksheet Responses'
+    }
+    return render(request, 'checksheets/responses_list.html', context)
+
+
+# ============ CREATE CHECKSHEET RESPONSE ============
+
+@login_required
+def create_checksheet_response(request, checksheet_id):
+    """Create a new checksheet response"""
+    checksheet = get_object_or_404(
+        Checksheet.objects.prefetch_related(
+            Prefetch('sections', queryset=ChecksheetSection.objects.filter(is_active=True).order_by('order')),
+            Prefetch('sections__fields', queryset=ChecksheetField.objects.filter(is_active=True).order_by('order'))
+        ),
+        pk=checksheet_id,
+        is_active=True
+    )
+    
+    if request.method == 'POST':
+        # Create response
+        response = ChecksheetResponse.objects.create(
+            checksheet=checksheet,
+            filled_by=request.user,
+            status='draft'
+        )
+        
+        # Process form data
+        selected_model = None
+        errors = []
+        
+        # First pass: collect selected model
+        for section in checksheet.sections.filter(is_active=True):
+            for field in section.fields.filter(is_active=True):
+                if 'Program selection' in field.label or 'program' in field.label.lower():
+                    field_key = f'field_{field.id}'
+                    selected_model = request.POST.get(field_key, '')
+                    break
+        
+        # Second pass: process all fields
+        for section in checksheet.sections.filter(is_active=True).order_by('order'):
+            for field in section.fields.filter(is_active=True).order_by('order'):
+                field_key = f'field_{field.id}'
+                status_key = f'status_{field.id}'
+                comment_key = f'comment_{field.id}'
+                
+                value = request.POST.get(field_key, '').strip()
+                status = request.POST.get(status_key, '')
+                comment = request.POST.get(comment_key, '').strip()
+                
+                # Auto-fill based on model
+                if field.auto_fill_based_on_model and selected_model and field.model_value_mapping:
+                    auto_value = field.get_value_for_model(selected_model)
+                    if auto_value:
+                        value = auto_value
+                
+                # Validation
+                if field.is_required:
+                    if field.field_type == 'ok_nok':
+                        if not status:
+                            errors.append(f"{field.label} is required")
+                    elif not value:
+                        errors.append(f"{field.label} is required")
+                
+                # Check if comment is required
+                if field.requires_comment_if_nok:
+                    if status == 'NOK' and not comment:
+                        errors.append(f"Comment is required for '{field.label}' when status is NOK")
+                    if field.field_type == 'ok_nok' and value == 'NOK' and not comment:
+                        errors.append(f"Comment is required for '{field.label}' when NOK")
+                
+                # Validate numeric ranges
+                if field.field_type in ['number', 'decimal'] and value:
+                    try:
+                        numeric_value = float(value)
+                        if field.min_value is not None and numeric_value < field.min_value:
+                            errors.append(f"{field.label} must be at least {field.min_value} {field.unit}")
+                        if field.max_value is not None and numeric_value > field.max_value:
+                            errors.append(f"{field.label} must be at most {field.max_value} {field.unit}")
+                    except ValueError:
+                        errors.append(f"{field.label} must be a valid number")
+                
+                # Create field response
+                ChecksheetFieldResponse.objects.create(
+                    response=response,
+                    field=field,
+                    value=value,
+                    status=status,
+                    comment=comment,
+                    filled_by=request.user
+                )
+        
+        if errors:
+            # If there are errors, show them and delete the response
+            for error in errors:
+                messages.error(request, error)
+            response.delete()
+            # Re-render form with data
+            context = {
+                'checksheet': checksheet,
+                'sections': checksheet.sections.filter(is_active=True).order_by('order'),
+                'page_title': f'Create {checksheet.name}',
+                'is_edit': False,
+                'form_data': request.POST
+            }
+            return render(request, 'checksheets/checksheet_form.html', context)
+        
+        # Check if user wants to submit or save as draft
+        action = request.POST.get('action')
+        if action == 'submit':
+            response.status = 'submitted'
+            response.submitted_at = timezone.now()
+            response.save()
+            messages.success(request, 'Checksheet submitted successfully! Waiting for supervisor approval.')
+            return redirect('checksheet_response_detail', response_id=response.id)
+        else:
+            messages.success(request, 'Checksheet saved as draft!')
+            return redirect('edit_checksheet_response', response_id=response.id)
+    
+    # GET request - show form
+    sections = checksheet.sections.filter(is_active=True).order_by('order')
+    
+    context = {
+        'checksheet': checksheet,
+        'sections': sections,
+        'page_title': f'Create {checksheet.name}',
+        'is_edit': False
+    }
+    return render(request, 'checksheets/checksheet_form.html', context)
+
+
+# ============ EDIT CHECKSHEET RESPONSE ============
+
+@login_required
+def edit_checksheet_response(request, response_id):
+    """Edit an existing checksheet response"""
+    response = get_object_or_404(
+        ChecksheetResponse.objects.select_related('checksheet', 'filled_by')
+        .prefetch_related('field_responses__field__section'),
+        pk=response_id
+    )
+    
+    # Check permissions
+    if response.filled_by != request.user and not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to edit this response')
+        return redirect('checksheet_responses_list')
+    
+    # Check if response can be edited
+    if not response.can_be_edited:
+        messages.error(request, f'Cannot edit response with status: {response.get_status_display()}')
+        return redirect('checksheet_response_detail', response_id=response.id)
+    
+    checksheet = response.checksheet
+    
+    if request.method == 'POST':
+        # Get existing field responses
+        existing_responses = {fr.field_id: fr for fr in response.field_responses.all()}
+        
+        selected_model = None
+        errors = []
+        
+        # First pass: collect selected model
+        for section in checksheet.sections.filter(is_active=True):
+            for field in section.fields.filter(is_active=True):
+                if 'Program selection' in field.label or 'program' in field.label.lower():
+                    field_key = f'field_{field.id}'
+                    selected_model = request.POST.get(field_key, '')
+                    break
+        
+        # Second pass: process all fields
+        for section in checksheet.sections.filter(is_active=True).order_by('order'):
+            for field in section.fields.filter(is_active=True).order_by('order'):
+                field_key = f'field_{field.id}'
+                status_key = f'status_{field.id}'
+                comment_key = f'comment_{field.id}'
+                
+                value = request.POST.get(field_key, '').strip()
+                status = request.POST.get(status_key, '')
+                comment = request.POST.get(comment_key, '').strip()
+                
+                # Auto-fill based on model
+                if field.auto_fill_based_on_model and selected_model and field.model_value_mapping:
+                    auto_value = field.get_value_for_model(selected_model)
+                    if auto_value:
+                        value = auto_value
+                
+                # Validation
+                if field.is_required:
+                    if field.field_type == 'ok_nok':
+                        if not status:
+                            errors.append(f"{field.label} is required")
+                    elif not value:
+                        errors.append(f"{field.label} is required")
+                
+                # Check if comment is required
+                if field.requires_comment_if_nok:
+                    if status == 'NOK' and not comment:
+                        errors.append(f"Comment is required for '{field.label}' when status is NOK")
+                
+                # Validate numeric ranges
+                if field.field_type in ['number', 'decimal'] and value:
+                    try:
+                        numeric_value = float(value)
+                        if field.min_value is not None and numeric_value < field.min_value:
+                            errors.append(f"{field.label} must be at least {field.min_value} {field.unit}")
+                        if field.max_value is not None and numeric_value > field.max_value:
+                            errors.append(f"{field.label} must be at most {field.max_value} {field.unit}")
+                    except ValueError:
+                        errors.append(f"{field.label} must be a valid number")
+                
+                # Update or create field response
+                if field.id in existing_responses:
+                    field_response = existing_responses[field.id]
+                    field_response.value = value
+                    field_response.status = status
+                    field_response.comment = comment
+                    field_response.filled_by = request.user
+                    field_response.save()
+                else:
+                    ChecksheetFieldResponse.objects.create(
+                        response=response,
+                        field=field,
+                        value=value,
+                        status=status,
+                        comment=comment,
+                        filled_by=request.user
+                    )
+        
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            # Re-render form with data
+            context = {
+                'checksheet': checksheet,
+                'sections': checksheet.sections.filter(is_active=True).order_by('order'),
+                'response': response,
+                'page_title': f'Edit {checksheet.name}',
+                'is_edit': True,
+                'form_data': request.POST
+            }
+            return render(request, 'checksheets/checksheet_form.html', context)
+        
+        # Update response metadata
+        response.updated_at = timezone.now()
+        
+        # Check if user wants to submit or save as draft
+        action = request.POST.get('action')
+        if action == 'submit':
+            response.status = 'submitted'
+            response.submitted_at = timezone.now()
+            response.save()
+            messages.success(request, 'Checksheet submitted successfully! Waiting for supervisor approval.')
+            return redirect('checksheet_response_detail', response_id=response.id)
+        else:
+            response.save()
+            messages.success(request, 'Checksheet updated successfully!')
+            return redirect('edit_checksheet_response', response_id=response.id)
+    
+    # GET request - show form with existing data
+    sections = checksheet.sections.filter(is_active=True).order_by('order')
+    
+    # Get existing responses
+    existing_responses = {fr.field_id: fr for fr in response.field_responses.all()}
+    
+    context = {
+        'checksheet': checksheet,
+        'sections': sections,
+        'response': response,
+        'existing_responses': existing_responses,
+        'page_title': f'Edit {checksheet.name}',
+        'is_edit': True
+    }
+    return render(request, 'checksheets/checksheet_form.html', context)
+
+
+# ============ VIEW CHECKSHEET RESPONSE ============
+
+@login_required
+def checksheet_response_detail(request, response_id):
+    """View checksheet response details"""
+    response = get_object_or_404(
+        ChecksheetResponse.objects.select_related(
+            'checksheet', 'filled_by', 'supervisor_approved_by', 'quality_approved_by'
+        ).prefetch_related(
+            'field_responses__field__section'
+        ),
+        pk=response_id
+    )
+    
+    # Check permissions
+    if not request.user.is_superuser:
+        if request.user.user_type == 'operator' and response.filled_by != request.user:
+            messages.error(request, 'You do not have permission to view this response')
+            return redirect('checksheet_responses_list')
+    
+    # Group responses by section
+    sections_data = []
+    for section in response.checksheet.sections.filter(is_active=True).order_by('order'):
+        field_responses = response.field_responses.filter(
+            field__section=section
+        ).select_related('field').order_by('field__order')
+        
+        if field_responses.exists():
+            sections_data.append({
+                'section': section,
+                'field_responses': field_responses
+            })
+    
+    context = {
+        'response': response,
+        'sections_data': sections_data,
+        'page_title': f'{response.checksheet.name} - Details',
+        'can_approve_supervisor': request.user.user_type == 'shift_supervisor' and response.can_be_approved_by_supervisor,
+        'can_approve_quality': request.user.user_type == 'quality_supervisor' and response.can_be_approved_by_quality,
+        'can_edit': response.can_be_edited and response.filled_by == request.user
+    }
+    return render(request, 'checksheets/checksheet_response_detail.html', context)
+
+
+# ============ SUPERVISOR APPROVAL ============
+
+@login_required
+def supervisor_approve_response(request, response_id):
+    """Supervisor approves a checksheet response"""
+    if request.user.user_type != 'shift_supervisor' and not request.user.is_superuser:
+        messages.error(request, 'Only shift supervisors can approve checksheets')
+        return redirect('checksheet_responses_list')
+    
+    response = get_object_or_404(ChecksheetResponse, pk=response_id)
+    
+    if not response.can_be_approved_by_supervisor:
+        messages.error(request, f'Cannot approve response with status: {response.get_status_display()}')
+        return redirect('checksheet_response_detail', response_id=response.id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        comments = request.POST.get('comments', '').strip()
+        
+        if action == 'approve':
+            response.status = 'supervisor_approved'
+            response.supervisor_approved_by = request.user
+            response.supervisor_approved_at = timezone.now()
+            response.supervisor_comments = comments
+            response.save()
+            messages.success(request, 'Checksheet approved by supervisor successfully!')
+        elif action == 'reject':
+            if not comments:
+                messages.error(request, 'Please provide a reason for rejection')
+                return redirect('checksheet_response_detail', response_id=response.id)
+            
+            response.status = 'rejected'
+            response.rejection_reason = comments
+            response.supervisor_comments = comments
+            response.save()
+            messages.warning(request, 'Checksheet rejected. Operator can now re-submit after corrections.')
+        
+        return redirect('checksheet_response_detail', response_id=response.id)
+    
+    return redirect('checksheet_response_detail', response_id=response.id)
+
+
+# ============ QUALITY APPROVAL ============
+
+@login_required
+def quality_approve_response(request, response_id):
+    """Quality supervisor approves a checksheet response"""
+    if request.user.user_type != 'quality_supervisor' and not request.user.is_superuser:
+        messages.error(request, 'Only quality supervisors can approve checksheets')
+        return redirect('checksheet_responses_list')
+    
+    response = get_object_or_404(ChecksheetResponse, pk=response_id)
+    
+    if not response.can_be_approved_by_quality:
+        messages.error(request, f'Cannot approve response with status: {response.get_status_display()}')
+        return redirect('checksheet_response_detail', response_id=response.id)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        comments = request.POST.get('comments', '').strip()
+        
+        if action == 'approve':
+            response.status = 'quality_approved'
+            response.quality_approved_by = request.user
+            response.quality_approved_at = timezone.now()
+            response.quality_comments = comments
+            response.save()
+            messages.success(request, 'Checksheet approved by quality successfully!')
+        elif action == 'reject':
+            if not comments:
+                messages.error(request, 'Please provide a reason for rejection')
+                return redirect('checksheet_response_detail', response_id=response.id)
+            
+            response.status = 'rejected'
+            response.rejection_reason = comments
+            response.quality_comments = comments
+            response.save()
+            messages.warning(request, 'Checksheet rejected. Operator can now re-submit after corrections.')
+        
+        return redirect('checksheet_response_detail', response_id=response.id)
+    
+    return redirect('checksheet_response_detail', response_id=response.id)
+
+
+# ============ DELETE CHECKSHEET RESPONSE ============
+
+@login_required
+def delete_checksheet_response(request, response_id):
+    """Delete a checksheet response"""
+    response = get_object_or_404(ChecksheetResponse, pk=response_id)
+    
+    # Check permissions
+    if response.filled_by != request.user and not request.user.is_superuser:
+        messages.error(request, 'You do not have permission to delete this response')
+        return redirect('checksheet_responses_list')
+    
+    # Only allow deletion of drafts
+    if response.status != 'draft':
+        messages.error(request, 'Only draft responses can be deleted')
+        return redirect('checksheet_response_detail', response_id=response.id)
+    
+    if request.method == 'POST':
+        checksheet_name = response.checksheet.name
+        response.delete()
+        messages.success(request, f'{checksheet_name} response deleted successfully!')
+        return redirect('checksheet_responses_list')
+    
+    return redirect('checksheet_response_detail', response_id=response.id)
+
+
+# ============ AJAX: GET FIELD AUTO-FILL VALUE ============
+
+@login_required
+def get_autofill_value(request):
+    """AJAX endpoint to get auto-fill value for a field based on model"""
+    field_id = request.GET.get('field_id')
+    model = request.GET.get('model')
+    
+    if not field_id or not model:
+        return JsonResponse({'error': 'Missing parameters'}, status=400)
+    
+    try:
+        field = ChecksheetField.objects.get(pk=field_id)
+        value = field.get_value_for_model(model)
+        return JsonResponse({'value': value})
+    except ChecksheetField.DoesNotExist:
+        return JsonResponse({'error': 'Field not found'}, status=404)
