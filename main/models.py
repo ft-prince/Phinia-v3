@@ -2216,3 +2216,241 @@ def create_check_results(sender, instance, created, **kwargs):
                 checkpoint=checkpoint,
                 status='NG'  # Default status
             )
+            
+            
+            
+
+
+
+# New Checksheet  
+from django.db import models
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+class Checksheet(models.Model):
+    """Main checksheet template that can be created and managed by admin"""
+    name = models.CharField(max_length=200, unique=True, verbose_name="Checksheet Name")
+    name_hindi = models.CharField(max_length=200, blank=True, verbose_name="Checksheet Name (Hindi)")
+    description = models.TextField(blank=True, verbose_name="Description")
+    is_active = models.BooleanField(default=True, verbose_name="Active")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_checksheets')
+    
+    applicable_models = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Comma-separated model names (e.g., P703,U704) or leave blank for all models"
+    )
+    
+    class Meta:
+        ordering = ['-is_active', 'name']
+        verbose_name = "Checksheet Template"
+        verbose_name_plural = "Checksheet Templates"
+    
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.name} ({status})"
+    
+    @property
+    def section_count(self):
+        return self.sections.count()
+    
+    @property
+    def field_count(self):
+        return ChecksheetField.objects.filter(section__checksheet=self).count()
+
+
+class ChecksheetSection(models.Model):
+    """Sections/Headers within a checksheet"""
+    checksheet = models.ForeignKey(Checksheet, on_delete=models.CASCADE, related_name='sections')
+    name = models.CharField(max_length=200, verbose_name="Section Name")
+    name_hindi = models.CharField(max_length=200, blank=True, verbose_name="Section Name (Hindi)")
+    description = models.TextField(blank=True, verbose_name="Section Description")
+    order = models.PositiveIntegerField(default=0, verbose_name="Display Order")
+    is_active = models.BooleanField(default=True, verbose_name="Active")
+    
+    class Meta:
+        ordering = ['checksheet', 'order', 'name']
+        unique_together = ['checksheet', 'name']
+        verbose_name = "Checksheet Section"
+        verbose_name_plural = "Checksheet Sections"
+    
+    def __str__(self):
+        return f"{self.checksheet.name} - {self.name}"
+    
+    @property
+    def field_count(self):
+        return self.fields.count()
+
+
+class ChecksheetField(models.Model):
+    """Individual fields/parameters within a section"""
+    FIELD_TYPE_CHOICES = [
+        ('text', 'Text Input'),
+        ('number', 'Number Input'),
+        ('decimal', 'Decimal Input'),
+        ('dropdown', 'Dropdown Select'),
+        ('ok_nok', 'OK/NOK'),
+        ('yes_no', 'Yes/No'),
+        ('date', 'Date'),
+        ('time', 'Time'),
+        ('datetime', 'Date & Time'),
+        ('checkbox', 'Checkbox'),
+        ('textarea', 'Text Area'),
+    ]
+    
+    section = models.ForeignKey(ChecksheetSection, on_delete=models.CASCADE, related_name='fields')
+    label = models.CharField(max_length=300, verbose_name="Field Label")
+    label_hindi = models.CharField(max_length=300, blank=True, verbose_name="Field Label (Hindi)")
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPE_CHOICES, default='text')
+    
+    choices = models.TextField(
+        blank=True,
+        verbose_name="Choices (comma-separated)",
+        help_text="For dropdown fields, enter choices separated by commas"
+    )
+    
+    is_required = models.BooleanField(default=True, verbose_name="Required Field")
+    min_value = models.FloatField(null=True, blank=True, verbose_name="Minimum Value")
+    max_value = models.FloatField(null=True, blank=True, verbose_name="Maximum Value")
+    unit = models.CharField(max_length=50, blank=True, verbose_name="Unit (e.g., bar, kPa, LPM)")
+    
+    help_text = models.CharField(max_length=500, blank=True, verbose_name="Help Text")
+    help_text_hindi = models.CharField(max_length=500, blank=True, verbose_name="Help Text (Hindi)")
+    default_value = models.CharField(max_length=200, blank=True, verbose_name="Default Value")
+    placeholder = models.CharField(max_length=200, blank=True, verbose_name="Placeholder Text")
+    
+    auto_fill_based_on_model = models.BooleanField(
+        default=False,
+        verbose_name="Auto-fill based on selected model"
+    )
+    model_value_mapping = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name="Model Value Mapping"
+    )
+    
+    has_status_field = models.BooleanField(
+        default=False,
+        verbose_name="Has Status Field (OK/NOK)"
+    )
+    
+    requires_comment_if_nok = models.BooleanField(
+        default=False,
+        verbose_name="Require comment if NOK/No"
+    )
+    
+    order = models.PositiveIntegerField(default=0, verbose_name="Display Order")
+    is_active = models.BooleanField(default=True, verbose_name="Active")
+    
+    class Meta:
+        ordering = ['section', 'order', 'label']
+        verbose_name = "Checksheet Field"
+        verbose_name_plural = "Checksheet Fields"
+    
+    def __str__(self):
+        return f"{self.section.name} - {self.label}"
+    
+    def get_choices_list(self):
+        """Convert comma-separated choices to list"""
+        if self.choices:
+            return [choice.strip() for choice in self.choices.split(',')]
+        return []
+    
+    def get_value_for_model(self, model_name):
+        """Get the auto-fill value for a specific model"""
+        if self.auto_fill_based_on_model and self.model_value_mapping:
+            return self.model_value_mapping.get(model_name, self.default_value)
+        return self.default_value
+
+
+class ChecksheetResponse(models.Model):
+    """Store responses to checksheet instances"""
+    checksheet = models.ForeignKey(Checksheet, on_delete=models.CASCADE, related_name='responses')
+    verification_status = models.ForeignKey(
+        DailyVerificationStatus,
+        on_delete=models.CASCADE,
+        related_name='checksheet_responses',
+        null=True,
+        blank=True
+    )
+    
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('submitted', 'Submitted'),
+        ('supervisor_approved', 'Supervisor Approved'),
+        ('quality_approved', 'Quality Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    filled_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='filled_checksheets')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    
+    supervisor_approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='supervisor_approved_checksheets'
+    )
+    supervisor_approved_at = models.DateTimeField(null=True, blank=True)
+    
+    quality_approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='quality_approved_checksheets'
+    )
+    quality_approved_at = models.DateTimeField(null=True, blank=True)
+    
+    rejection_reason = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Checksheet Response"
+        verbose_name_plural = "Checksheet Responses"
+    
+    def __str__(self):
+        return f"{self.checksheet.name} - {self.status}"
+
+
+class ChecksheetFieldResponse(models.Model):
+    """Store individual field responses"""
+    response = models.ForeignKey(
+        ChecksheetResponse,
+        on_delete=models.CASCADE,
+        related_name='field_responses'
+    )
+    field = models.ForeignKey(ChecksheetField, on_delete=models.CASCADE)
+    
+    value = models.TextField(blank=True, verbose_name="Field Value")
+    
+    status = models.CharField(
+        max_length=10,
+        choices=[('OK', 'OK'), ('NOK', 'NOK')],
+        blank=True,
+        verbose_name="Status"
+    )
+    
+    comment = models.TextField(blank=True, verbose_name="Comment")
+    
+    filled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    filled_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['response', 'field']
+        verbose_name = "Field Response"
+        verbose_name_plural = "Field Responses"
+    
+    def __str__(self):
+        return f"{self.response.checksheet.name} - {self.field.label}: {self.value}"

@@ -1366,11 +1366,702 @@ class CustomDefectTypeAdmin(admin.ModelAdmin):
 
 
 
+#  new cheeckshet 
 
+from django.contrib import admin
+from django.utils.html import format_html
+from django.urls import reverse
+from django.utils.safestring import mark_safe
+from django.db.models import Count
+from .models import (
+    User, Shift, DailyVerificationStatus, ChecklistBase,
+    SubgroupFrequencyConfig, Checksheet, ChecksheetSection,
+    ChecksheetField, ChecksheetResponse, ChecksheetFieldResponse
+)
+
+
+# ============ IMPROVED INLINE CLASSES ============
+
+class ChecksheetFieldInline(admin.TabularInline):
+    """Inline for adding fields directly within a section"""
+    model = ChecksheetField
+    extra = 0
+    classes = ['collapse']
+    
+    fields = [
+        'order', 
+        'label', 
+        'label_hindi', 
+        'field_type', 
+        'choices',
+        'min_value', 
+        'max_value', 
+        'unit',
+        'is_required',
+        'has_status_field',
+        'requires_comment_if_nok',
+        'auto_fill_based_on_model',
+        'is_active'
+    ]
+    
+    ordering = ['order']
+    
+    # Make it easier to read
+    verbose_name = "Field"
+    verbose_name_plural = "Fields (Add/Edit fields for this section)"
+
+
+class ChecksheetSectionInline(admin.StackedInline):
+    """Inline for adding sections directly within a checksheet"""
+    model = ChecksheetSection
+    extra = 0
+    classes = ['collapse']
+    
+    fields = [
+        'order', 
+        'name', 
+        'name_hindi', 
+        'description', 
+        'is_active',
+        'field_count_display'
+    ]
+    
+    readonly_fields = ['field_count_display']
+    show_change_link = True
+    ordering = ['order']
+    
+    verbose_name = "Section"
+    verbose_name_plural = "Sections (Click section name to add fields)"
+    
+    def field_count_display(self, obj):
+        if obj.pk:
+            count = obj.fields.count()
+            color = 'green' if count > 0 else 'orange'
+            # Create a link to edit fields
+            url = reverse('admin:main_checksheetsection_change', args=[obj.pk])
+            return format_html(
+                '<a href="{}" style="color: {}; font-weight: bold;">{} fields - Click to manage</a>',
+                url, color, count
+            )
+        return format_html('<span style="color: gray;">Save section first to add fields</span>')
+    
+    field_count_display.short_description = 'Fields'
+
+
+# ============ ENHANCED CHECKSHEET ADMIN ============
+
+@admin.register(Checksheet)
+class ChecksheetAdmin(admin.ModelAdmin):
+    """Main checksheet management interface"""
+    
+    list_display = [
+        'name_with_status',
+        'name_hindi', 
+        'section_count_display',
+        'field_count_display', 
+        'applicable_models',
+        'created_at',
+        'action_buttons'
+    ]
+    
+    list_filter = ['is_active', 'created_at', 'applicable_models']
+    search_fields = ['name', 'name_hindi', 'description']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'stats_display']
+    inlines = [ChecksheetSectionInline]
+    
+    fieldsets = (
+        ('📋 Basic Information', {
+            'fields': ('name', 'name_hindi', 'description', 'is_active'),
+            'description': 'Enter the checksheet name and description'
+        }),
+        ('⚙️ Configuration', {
+            'fields': ('applicable_models',),
+            'description': 'Comma-separated model names (e.g., P703,U704) or leave blank for all'
+        }),
+        ('📊 Statistics', {
+            'fields': ('stats_display',),
+            'classes': ('collapse',)
+        }),
+        ('ℹ️ Metadata', {
+            'fields': ('created_by', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def save_model(self, request, obj, form, change):
+        if not change:
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+    
+    def name_with_status(self, obj):
+        """Display name with active/inactive badge"""
+        if obj.is_active:
+            badge = '<span style="background-color: #28a745; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; margin-left: 8px;">ACTIVE</span>'
+        else:
+            badge = '<span style="background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; margin-left: 8px;">INACTIVE</span>'
+        return format_html('<strong>{}</strong> {}', obj.name, badge)
+    
+    name_with_status.short_description = 'Checksheet Name'
+    name_with_status.admin_order_field = 'name'
+    
+    def section_count_display(self, obj):
+        """Display section count with color"""
+        count = obj.section_count
+        if count == 0:
+            color = '#dc3545'  # Red
+            icon = '⚠️'
+        elif count < 3:
+            color = '#ffc107'  # Orange
+            icon = '📄'
+        else:
+            color = '#28a745'  # Green
+            icon = '✅'
+        
+        url = reverse('admin:main_checksheet_change', args=[obj.pk])
+        return format_html(
+            '<a href="{}" style="color: {}; font-weight: bold; text-decoration: none;">{} {} sections</a>',
+            url, color, icon, count
+        )
+    
+    section_count_display.short_description = 'Sections'
+    
+    def field_count_display(self, obj):
+        """Display total field count with color"""
+        count = obj.field_count
+        if count == 0:
+            color = '#dc3545'  # Red
+            icon = '⚠️'
+        elif count < 10:
+            color = '#ffc107'  # Orange
+            icon = '📝'
+        else:
+            color = '#28a745'  # Green
+            icon = '✅'
+        
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{} {} fields</span>',
+            color, icon, count
+        )
+    
+    field_count_display.short_description = 'Total Fields'
+    
+    def stats_display(self, obj):
+        """Display detailed statistics"""
+        if not obj.pk:
+            return "Save checksheet first to view statistics"
+        
+        sections = obj.sections.all()
+        total_fields = obj.field_count
+        required_fields = ChecksheetField.objects.filter(
+            section__checksheet=obj, 
+            is_required=True
+        ).count()
+        optional_fields = total_fields - required_fields
+        
+        html = f"""
+        <div style="padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+            <h3 style="margin-top: 0;">📊 Checksheet Statistics</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><strong>Total Sections:</strong></td>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">{sections.count()}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><strong>Total Fields:</strong></td>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">{total_fields}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><strong>Required Fields:</strong></td>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">{required_fields}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;"><strong>Optional Fields:</strong></td>
+                    <td style="padding: 8px; border-bottom: 1px solid #dee2e6;">{optional_fields}</td>
+                </tr>
+            </table>
+            <br>
+            <h4>Sections Breakdown:</h4>
+            <ul style="margin: 0; padding-left: 20px;">
+        """
+        
+        for section in sections:
+            html += f"<li><strong>{section.name}</strong>: {section.fields.count()} fields</li>"
+        
+        html += "</ul></div>"
+        
+        return format_html(html)
+    
+    stats_display.short_description = 'Detailed Statistics'
+    
+    def action_buttons(self, obj):
+        """Add quick action buttons"""
+        if not obj.pk:
+            return ""
+        
+        view_url = reverse('admin:main_checksheet_change', args=[obj.pk])
+        
+        buttons = f"""
+        <a href="{view_url}" style="
+            background-color: #007bff; 
+            color: white; 
+            padding: 5px 10px; 
+            border-radius: 3px; 
+            text-decoration: none;
+            font-size: 12px;
+            display: inline-block;
+            margin: 2px;
+        ">✏️ Edit</a>
+        """
+        
+        return format_html(buttons)
+    
+    action_buttons.short_description = 'Actions'
+    
+    class Media:
+        css = {
+            'all': ('admin/css/custom_checksheet.css',)
+        }
+
+
+# ============ ENHANCED SECTION ADMIN ============
+
+@admin.register(ChecksheetSection)
+class ChecksheetSectionAdmin(admin.ModelAdmin):
+    """Section management with inline field editing"""
+    
+    list_display = [
+        'section_name_display',
+        'checksheet_link',
+        'order',
+        'field_count_badge',
+        'is_active_badge',
+        'quick_actions'
+    ]
+    
+    list_filter = ['checksheet', 'is_active', 'checksheet__is_active']
+    search_fields = ['name', 'name_hindi', 'checksheet__name', 'description']
+    list_editable = ['order']
+    inlines = [ChecksheetFieldInline]
+    ordering = ['checksheet', 'order']
+    
+    fieldsets = (
+        ('📋 Section Information', {
+            'fields': ('checksheet', 'name', 'name_hindi', 'description'),
+            'description': 'Define the section details'
+        }),
+        ('⚙️ Settings', {
+            'fields': ('order', 'is_active'),
+            'description': 'Control display order and visibility'
+        }),
+    )
+    
+    def section_name_display(self, obj):
+        """Display section name with order"""
+        return format_html(
+            '<strong>{}.</strong> {} <span style="color: #6c757d; font-size: 12px;">({})</span>',
+            obj.order,
+            obj.name,
+            obj.name_hindi
+        )
+    
+    section_name_display.short_description = 'Section Name'
+    section_name_display.admin_order_field = 'name'
+    
+    def checksheet_link(self, obj):
+        """Link to parent checksheet"""
+        url = reverse('admin:main_checksheet_change', args=[obj.checksheet.pk])
+        return format_html(
+            '<a href="{}" style="text-decoration: none;">📋 {}</a>',
+            url,
+            obj.checksheet.name
+        )
+    
+    checksheet_link.short_description = 'Checksheet'
+    checksheet_link.admin_order_field = 'checksheet__name'
+    
+    def field_count_badge(self, obj):
+        """Display field count as a badge"""
+        count = obj.field_count
+        if count == 0:
+            color = '#dc3545'
+            text = 'No fields'
+        elif count < 5:
+            color = '#ffc107'
+            text = f'{count} fields'
+        else:
+            color = '#28a745'
+            text = f'{count} fields'
+        
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, text
+        )
+    
+    field_count_badge.short_description = 'Fields'
+    
+    def is_active_badge(self, obj):
+        """Display active status as badge"""
+        if obj.is_active:
+            return format_html(
+                '<span style="background-color: #28a745; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">✓ Active</span>'
+            )
+        return format_html(
+            '<span style="background-color: #dc3545; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px;">✗ Inactive</span>'
+        )
+    
+    is_active_badge.short_description = 'Status'
+    
+    def quick_actions(self, obj):
+        """Quick action buttons"""
+        edit_url = reverse('admin:main_checksheetsection_change', args=[obj.pk])
+        
+        return format_html(
+            '<a href="{}" style="background-color: #007bff; color: white; padding: 4px 8px; border-radius: 3px; text-decoration: none; font-size: 11px;">✏️ Edit Fields</a>',
+            edit_url
+        )
+    
+    quick_actions.short_description = 'Actions'
+
+
+# ============ ENHANCED FIELD ADMIN ============
+
+@admin.register(ChecksheetField)
+class ChecksheetFieldAdmin(admin.ModelAdmin):
+    """Individual field management"""
+    
+    list_display = [
+        'field_name_display',
+        'section_link',
+        'field_type_badge',
+        'validation_info',
+        'status_flags',
+        'order',
+        'is_active_badge'
+    ]
+    
+    list_filter = [
+        'section__checksheet',
+        'section',
+        'field_type',
+        'is_required',
+        'has_status_field',
+        'auto_fill_based_on_model',
+        'is_active'
+    ]
+    
+    search_fields = ['label', 'label_hindi', 'section__name', 'section__checksheet__name']
+    list_editable = ['order']
+    ordering = ['section__checksheet', 'section__order', 'order']
+    
+    fieldsets = (
+        ('📝 Field Information', {
+            'fields': ('section', 'label', 'label_hindi', 'field_type'),
+            'description': 'Basic field information'
+        }),
+        ('⚙️ Field Configuration', {
+            'fields': (
+                'is_required', 
+                'choices', 
+                'default_value', 
+                'placeholder',
+                'help_text', 
+                'help_text_hindi'
+            ),
+            'description': 'Configure field behavior and display'
+        }),
+        ('✅ Validation Rules', {
+            'fields': ('min_value', 'max_value', 'unit'),
+            'description': 'Set validation constraints for numeric fields'
+        }),
+        ('🔧 Advanced Features', {
+            'fields': (
+                'has_status_field', 
+                'requires_comment_if_nok',
+                'auto_fill_based_on_model', 
+                'model_value_mapping'
+            ),
+            'description': 'Advanced field features and auto-fill configuration',
+            'classes': ('collapse',)
+        }),
+        ('📊 Display Settings', {
+            'fields': ('order', 'is_active'),
+            'description': 'Control field order and visibility'
+        }),
+    )
+    
+    def field_name_display(self, obj):
+        """Display field name with order"""
+        return format_html(
+            '<strong>{}.</strong> {} <br><span style="color: #6c757d; font-size: 11px;">{}</span>',
+            obj.order,
+            obj.label,
+            obj.label_hindi
+        )
+    
+    field_name_display.short_description = 'Field Name'
+    
+    def section_link(self, obj):
+        """Link to parent section"""
+        section_url = reverse('admin:main_checksheetsection_change', args=[obj.section.pk])
+        checksheet_url = reverse('admin:main_checksheet_change', args=[obj.section.checksheet.pk])
+        
+        return format_html(
+            '<a href="{}" style="text-decoration: none;">📋 {}</a><br>'
+            '<a href="{}" style="text-decoration: none; color: #6c757d; font-size: 11px;">└─ {}</a>',
+            checksheet_url,
+            obj.section.checksheet.name,
+            section_url,
+            obj.section.name
+        )
+    
+    section_link.short_description = 'Checksheet / Section'
+    
+    def field_type_badge(self, obj):
+        """Display field type as colored badge"""
+        type_colors = {
+            'text': '#6c757d',
+            'number': '#007bff',
+            'decimal': '#17a2b8',
+            'dropdown': '#28a745',
+            'ok_nok': '#ffc107',
+            'yes_no': '#fd7e14',
+            'date': '#e83e8c',
+            'time': '#6f42c1',
+            'datetime': '#20c997',
+            'checkbox': '#6610f2',
+            'textarea': '#6c757d'
+        }
+        
+        color = type_colors.get(obj.field_type, '#6c757d')
+        
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>',
+            color,
+            obj.get_field_type_display()
+        )
+    
+    field_type_badge.short_description = 'Type'
+    
+    def validation_info(self, obj):
+        """Display validation information"""
+        if obj.field_type in ['number', 'decimal']:
+            if obj.min_value is not None or obj.max_value is not None:
+                range_text = f"{obj.min_value or '−∞'} to {obj.max_value or '+∞'}"
+                if obj.unit:
+                    range_text += f" {obj.unit}"
+                return format_html(
+                    '<span style="font-size: 11px; color: #6c757d;">Range: {}</span>',
+                    range_text
+                )
+        elif obj.field_type == 'dropdown' and obj.choices:
+            choice_count = len(obj.get_choices_list())
+            return format_html(
+                '<span style="font-size: 11px; color: #6c757d;">{} options</span>',
+                choice_count
+            )
+        
+        return format_html('<span style="font-size: 11px; color: #adb5bd;">—</span>')
+    
+    validation_info.short_description = 'Validation'
+    
+    def status_flags(self, obj):
+        """Display feature flags"""
+        flags = []
+        
+        if obj.is_required:
+            flags.append('<span style="background-color: #dc3545; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">REQUIRED</span>')
+        
+        if obj.has_status_field:
+            flags.append('<span style="background-color: #ffc107; color: black; padding: 2px 6px; border-radius: 3px; font-size: 10px;">OK/NOK</span>')
+        
+        if obj.auto_fill_based_on_model:
+            flags.append('<span style="background-color: #17a2b8; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">AUTO-FILL</span>')
+        
+        if obj.requires_comment_if_nok:
+            flags.append('<span style="background-color: #6610f2; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">COMMENT</span>')
+        
+        if not flags:
+            return format_html('<span style="font-size: 11px; color: #adb5bd;">—</span>')
+        
+        return format_html(' '.join(flags))
+    
+    status_flags.short_description = 'Features'
+    
+    def is_active_badge(self, obj):
+        """Display active status"""
+        if obj.is_active:
+            return format_html(
+                '<span style="color: #28a745; font-size: 16px;">✓</span>'
+            )
+        return format_html(
+            '<span style="color: #dc3545; font-size: 16px;">✗</span>'
+        )
+    
+    is_active_badge.short_description = 'Active'
+
+
+# ============ RESPONSE ADMIN ============
+
+class ChecksheetFieldResponseInline(admin.TabularInline):
+    """Inline for viewing field responses"""
+    model = ChecksheetFieldResponse
+    extra = 0
+    can_delete = False
+    
+    fields = ['field_label', 'value', 'status', 'comment', 'filled_by', 'filled_at']
+    readonly_fields = ['field_label', 'value', 'status', 'comment', 'filled_by', 'filled_at']
+    
+    def field_label(self, obj):
+        return f"{obj.field.section.name} → {obj.field.label}"
+    
+    field_label.short_description = 'Field'
+    
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ChecksheetResponse)
+class ChecksheetResponseAdmin(admin.ModelAdmin):
+    """Checksheet response viewing and management"""
+    
+    list_display = [
+        'response_id',
+        'checksheet_link',
+        'status_badge',
+        'filled_by',
+        'created_at',
+        'approval_status'
+    ]
+    
+    list_filter = ['status', 'checksheet', 'created_at', 'filled_by']
+    search_fields = [
+        'checksheet__name',
+        'filled_by__username',
+        'verification_status__date'
+    ]
+    
+    readonly_fields = [
+        'checksheet',
+        'verification_status',
+        'filled_by',
+        'created_at',
+        'updated_at',
+        'submitted_at',
+        'supervisor_approved_by',
+        'supervisor_approved_at',
+        'quality_approved_by',
+        'quality_approved_at',
+        'response_summary'
+    ]
+    
+    inlines = [ChecksheetFieldResponseInline]
+    
+    fieldsets = (
+        ('📋 Response Information', {
+            'fields': (
+                'checksheet',
+                'verification_status',
+                'status',
+                'filled_by',
+                'created_at',
+                'updated_at',
+                'submitted_at'
+            )
+        }),
+        ('📊 Response Summary', {
+            'fields': ('response_summary',),
+            'classes': ('collapse',)
+        }),
+        ('✅ Approval Information', {
+            'fields': (
+                'supervisor_approved_by',
+                'supervisor_approved_at',
+                'quality_approved_by',
+                'quality_approved_at'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('📝 Additional Information', {
+            'fields': ('rejection_reason', 'notes'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def response_id(self, obj):
+        return f"#{obj.pk}"
+    
+    response_id.short_description = 'ID'
+    
+    def checksheet_link(self, obj):
+        url = reverse('admin:main_checksheet_change', args=[obj.checksheet.pk])
+        return format_html(
+            '<a href="{}" style="text-decoration: none;">📋 {}</a>',
+            url,
+            obj.checksheet.name
+        )
+    
+    checksheet_link.short_description = 'Checksheet'
+    
+    def status_badge(self, obj):
+        status_colors = {
+            'draft': '#6c757d',
+            'submitted': '#007bff',
+            'supervisor_approved': '#ffc107',
+            'quality_approved': '#28a745',
+            'rejected': '#dc3545'
+        }
+        
+        color = status_colors.get(obj.status, '#6c757d')
+        
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    
+    status_badge.short_description = 'Status'
+    
+    def approval_status(self, obj):
+        """Show approval progress"""
+        html = ""
+        
+        if obj.supervisor_approved_by:
+            html += '<span style="color: #28a745;">✓ Supervisor</span><br>'
+        else:
+            html += '<span style="color: #dc3545;">✗ Supervisor</span><br>'
+        
+        if obj.quality_approved_by:
+            html += '<span style="color: #28a745;">✓ Quality</span>'
+        else:
+            html += '<span style="color: #dc3545;">✗ Quality</span>'
+        
+        return format_html(html)
+    
+    approval_status.short_description = 'Approvals'
+    
+    def response_summary(self, obj):
+        """Display response summary"""
+        if not obj.pk:
+            return "Save response first"
+        
+        total = obj.field_responses.count()
+        filled = obj.field_responses.exclude(value='').count()
+        
+        return format_html(
+            '<div style="padding: 10px; background-color: #f8f9fa; border-radius: 5px;">'
+            '<strong>Completion:</strong> {}/{} fields filled ({}%)'
+            '</div>',
+            filled, total, int((filled/total*100) if total > 0 else 0)
+        )
+    
+    response_summary.short_description = 'Summary'
 
 
 # ============ CUSTOMIZE ADMIN SITE ============
 
-admin.site.site_header = 'Checklist System Administration'
-admin.site.site_title = 'Checklist System Admin'
-admin.site.index_title = 'Checklist Management'
+admin.site.site_header = '🔧 Checklist System Administration'
+admin.site.site_title = 'Checklist System'
+admin.site.index_title = '📋 Checksheet & Checklist Management Dashboard'
+
+# Change the default empty text
+admin.site.empty_value_display = '—'
