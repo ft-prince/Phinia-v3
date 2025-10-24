@@ -1,4 +1,5 @@
 {% extends 'main/base.html' %}
+{% load checksheet_filters %}
 
 {% block title %}Operator Dashboard{% endblock %}
 
@@ -214,6 +215,322 @@
         </div>
     </div>
     {% endif %}
+
+
+
+    <!-- Add this to your operator_dashboard.html -->
+
+<!-- Checksheet Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clipboard-check"></i> Checksheets
+                    </h5>
+                    <a href="{% url 'checksheet_list' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-list"></i> View All
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Checksheet Statistics -->
+                <div class="row mb-4">
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
+                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
+                                {{ checksheet_stats.total_active }}
+                            </div>
+                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
+                                Active Checksheets
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 10px;">
+                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
+                                {{ checksheet_stats.filled_today }}
+                            </div>
+                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
+                                Filled Today
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); border-radius: 10px;">
+                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
+                                {{ checksheet_stats.need_filling }}
+                            </div>
+                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
+                                Need Filling
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3 col-6 mb-3">
+                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border-radius: 10px;">
+                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
+                                {{ checksheet_stats.completion_rate }}%
+                            </div>
+                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
+                                Completion Rate
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Checksheets Need Filling Alert -->
+                {% if checksheets_need_filling %}
+                <div class="alert alert-warning mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="alert-heading mb-1">Checksheets Pending</h6>
+                            <p class="mb-2">You have {{ checksheets_need_filling|length }} checksheet(s) that need to be filled today:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for checksheet in checksheets_need_filling %}
+                                <a href="{% url 'create_checksheet_response' checksheet.id %}" 
+                                   class="btn btn-warning btn-sm">
+                                    <i class="fas fa-plus-circle"></i> {{ checksheet.name }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Today's Checksheet Responses -->
+                {% if today_checksheet_responses %}
+                <div class="mb-4">
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-calendar-day"></i> Today's Checksheets
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Checksheet</th>
+                                    <th>Status</th>
+                                    <th>Submitted</th>
+                                    <th>Completion</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for response in today_checksheet_responses %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ response.checksheet.name }}</strong>
+                                        {% if response.checksheet.name_hindi %}
+                                        <br><small class="text-muted">{{ response.checksheet.name_hindi }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if response.status == 'draft' %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-file"></i> Draft
+                                        </span>
+                                        {% elif response.status == 'submitted' %}
+                                        <span class="badge bg-info">
+                                            <i class="fas fa-paper-plane"></i> Submitted
+                                        </span>
+                                        {% elif response.status == 'supervisor_approved' %}
+                                        <span class="badge bg-warning">
+                                            <i class="fas fa-user-check"></i> Supervisor Approved
+                                        </span>
+                                        {% elif response.status == 'quality_approved' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-certificate"></i> Quality Approved
+                                        </span>
+                                        {% elif response.status == 'rejected' %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times-circle"></i> Rejected
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if response.submitted_at %}
+                                        <small>{{ response.submitted_at|date:"H:i" }}</small>
+                                        {% else %}
+                                        <span class="text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px; min-width: 100px;">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {{ response.completion_percentage }}%;" 
+                                                 aria-valuenow="{{ response.completion_percentage }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                                {{ response.completion_percentage }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{% url 'checksheet_response_detail' response.id %}" 
+                                               class="btn btn-outline-info" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if response.can_be_edited %}
+                                            <a href="{% url 'edit_checksheet_response' response.id %}" 
+                                               class="btn btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+              <!-- Replace this section in the Available Checksheets area -->
+
+<!-- Available Checksheets -->
+{% if active_checksheets %}
+<div>
+    <h6 class="text-muted mb-3">
+        <i class="fas fa-clipboard-list"></i> Available Checksheets
+    </h6>
+    <div class="row">
+        {% for checksheet in active_checksheets %}
+        <div class="col-md-6 col-lg-4 mb-3">
+            <div class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-clipboard-check text-primary"></i>
+                        {{ checksheet.name }}
+                    </h6>
+                    {% if checksheet.name_hindi %}
+                    <p class="card-text text-muted small mb-2">{{ checksheet.name_hindi }}</p>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-layer-group"></i> {{ checksheet.total_sections }} sections
+                        </small>
+                        <small class="text-muted">
+                            <i class="fas fa-tasks"></i> {{ checksheet.total_fields }} fields
+                        </small>
+                    </div>
+                    
+                    <!-- Check if filled today -->
+                    {% with filled_today=False %}
+                        {% for response in today_checksheet_responses %}
+                            {% if response.checksheet.id == checksheet.id %}
+                                <div class="alert alert-success py-2 mb-2">
+                                    <small>
+                                        <i class="fas fa-check-circle"></i> Filled today
+                                        {% if response.status == 'quality_approved' %}
+                                        <span class="badge bg-success">Approved</span>
+                                        {% elif response.status == 'supervisor_approved' %}
+                                        <span class="badge bg-warning">Supervisor OK</span>
+                                        {% elif response.status == 'submitted' %}
+                                        <span class="badge bg-info">Submitted</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <a href="{% url 'checksheet_response_detail' response.id %}" 
+                                   class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="fas fa-eye"></i> View Response
+                                </a>
+                                {% with filled_today=True %}{% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if not filled_today %}
+                            {% for response in today_checksheet_responses %}
+                                {% if response.checksheet.id == checksheet.id %}
+                                {% else %}
+                                    {% if forloop.last %}
+                                    <a href="{% url 'create_checksheet_response' checksheet.id %}" 
+                                       class="btn btn-primary btn-sm w-100">
+                                        <i class="fas fa-plus-circle"></i> Create New Response
+                                    </a>
+                                    {% endif %}
+                                {% endif %}
+                            {% empty %}
+                            <a href="{% url 'create_checksheet_response' checksheet.id %}" 
+                               class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-plus-circle"></i> Create New Response
+                            </a>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="alert alert-info">
+    <i class="fas fa-info-circle"></i> No active checksheets available at this time.
+</div>
+{% endif %}
+
+                <!-- Recent Checksheet Activity -->
+                {% if recent_checksheet_responses %}
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-history"></i> Recent Activity (Last 7 Days)
+                    </h6>
+                    <div class="list-group">
+                        {% for response in recent_checksheet_responses|slice:":5" %}
+                        <a href="{% url 'checksheet_response_detail' response.id %}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ response.checksheet.name }}</h6>
+                                    <small class="text-muted">
+                                        {{ response.created_at|date:"M d, Y H:i" }}
+                                    </small>
+                                </div>
+                                <div>
+                                    {% if response.status == 'draft' %}
+                                    <span class="badge bg-secondary">Draft</span>
+                                    {% elif response.status == 'submitted' %}
+                                    <span class="badge bg-info">Submitted</span>
+                                    {% elif response.status == 'supervisor_approved' %}
+                                    <span class="badge bg-warning">Supervisor OK</span>
+                                    {% elif response.status == 'quality_approved' %}
+                                    <span class="badge bg-success">Quality OK</span>
+                                    {% elif response.status == 'rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 
     <!-- FTQ Information Card -->
     <div class="row mb-3">

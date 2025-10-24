@@ -8256,30 +8256,66 @@ def create_checksheet_response(request, checksheet_id):
                 status_key = f'status_{field.id}'
                 comment_key = f'comment_{field.id}'
                 
-                value = request.POST.get(field_key, '').strip()
-                status = request.POST.get(status_key, '')
+                # Initialize variables
+                value = ''
+                status = ''
                 comment = request.POST.get(comment_key, '').strip()
                 
-                # Auto-fill based on model
-                if field.auto_fill_based_on_model and selected_model and field.model_value_mapping:
+                # CRITICAL FIX: Handle different field types correctly
+                if field.field_type == 'ok_nok':
+                    if field.has_status_field:
+                        # For fields with status, the OK/NOK is in status_key and actual value is in field_key
+                        status = request.POST.get(status_key, '').strip()
+                        value = request.POST.get(field_key, '').strip()
+                    else:
+                        # For simple OK/NOK fields, the value IS the OK/NOK selection
+                        value = request.POST.get(field_key, '').strip()
+                        status = ''  # No separate status
+                elif field.field_type == 'yes_no':
+                    if field.has_status_field:
+                        status = request.POST.get(status_key, '').strip()
+                        value = request.POST.get(field_key, '').strip()
+                    else:
+                        value = request.POST.get(field_key, '').strip()
+                        status = ''
+                else:
+                    # For all other field types
+                    value = request.POST.get(field_key, '').strip()
+                    if field.has_status_field:
+                        status = request.POST.get(status_key, '').strip()
+                
+                # Auto-fill based on model (only if value is empty)
+                if field.auto_fill_based_on_model and selected_model and field.model_value_mapping and not value:
                     auto_value = field.get_value_for_model(selected_model)
                     if auto_value:
                         value = auto_value
                 
-                # Validation
+                # VALIDATION
+                # Check if field is required
                 if field.is_required:
-                    if field.field_type == 'ok_nok':
+                    # For OK/NOK fields without separate status, check the value
+                    if field.field_type == 'ok_nok' and not field.has_status_field:
+                        if not value:
+                            errors.append(f"{field.label} is required")
+                    # For fields with status field, check status
+                    elif field.has_status_field:
                         if not status:
                             errors.append(f"{field.label} is required")
-                    elif not value:
-                        errors.append(f"{field.label} is required")
+                    # For all other fields, check value
+                    else:
+                        if not value:
+                            errors.append(f"{field.label} is required")
                 
-                # Check if comment is required
+                # Check if comment is required when NOK/No
                 if field.requires_comment_if_nok:
-                    if status == 'NOK' and not comment:
-                        errors.append(f"Comment is required for '{field.label}' when status is NOK")
-                    if field.field_type == 'ok_nok' and value == 'NOK' and not comment:
-                        errors.append(f"Comment is required for '{field.label}' when NOK")
+                    # Check status field if it exists
+                    if field.has_status_field:
+                        if status in ['NOK', 'No'] and not comment:
+                            errors.append(f"Comment is required for '{field.label}' when {status}")
+                    # Otherwise check the value itself for OK/NOK or Yes/No fields
+                    elif field.field_type in ['ok_nok', 'yes_no']:
+                        if value in ['NOK', 'No'] and not comment:
+                            errors.append(f"Comment is required for '{field.label}' when {value}")
                 
                 # Validate numeric ranges
                 if field.field_type in ['number', 'decimal'] and value:
@@ -8307,10 +8343,16 @@ def create_checksheet_response(request, checksheet_id):
             for error in errors:
                 messages.error(request, error)
             response.delete()
+            
+            # Properly prefetch related fields for re-rendering
+            sections_with_fields = checksheet.sections.filter(is_active=True).prefetch_related(
+                Prefetch('fields', queryset=ChecksheetField.objects.filter(is_active=True).order_by('order'))
+            ).order_by('order')
+            
             # Re-render form with data
             context = {
                 'checksheet': checksheet,
-                'sections': checksheet.sections.filter(is_active=True).order_by('order'),
+                'sections': sections_with_fields,
                 'page_title': f'Create {checksheet.name}',
                 'is_edit': False,
                 'form_data': request.POST
@@ -8330,7 +8372,9 @@ def create_checksheet_response(request, checksheet_id):
             return redirect('edit_checksheet_response', response_id=response.id)
     
     # GET request - show form
-    sections = checksheet.sections.filter(is_active=True).order_by('order')
+    sections = checksheet.sections.filter(is_active=True).prefetch_related(
+        Prefetch('fields', queryset=ChecksheetField.objects.filter(is_active=True).order_by('order'))
+    ).order_by('order')
     
     context = {
         'checksheet': checksheet,
@@ -8341,33 +8385,35 @@ def create_checksheet_response(request, checksheet_id):
     return render(request, 'checksheets/checksheet_form.html', context)
 
 
-# ============ EDIT CHECKSHEET RESPONSE ============
-
 @login_required
 def edit_checksheet_response(request, response_id):
     """Edit an existing checksheet response"""
     response = get_object_or_404(
-        ChecksheetResponse.objects.select_related('checksheet', 'filled_by')
-        .prefetch_related('field_responses__field__section'),
+        ChecksheetResponse.objects.select_related('checksheet', 'filled_by'),
         pk=response_id
     )
     
-    # Check permissions
-    if response.filled_by != request.user and not request.user.is_superuser:
-        messages.error(request, 'You do not have permission to edit this response')
-        return redirect('checksheet_responses_list')
+    # Check if user is the one who filled it OR is a supervisor/admin
+    is_owner = response.filled_by == request.user
+    is_supervisor = request.user.user_type in ['shift_supervisor', 'quality_supervisor']
+    is_admin = request.user.is_superuser
     
-    # Check if response can be edited
-    if not response.can_be_edited:
-        messages.error(request, f'Cannot edit response with status: {response.get_status_display()}')
+    if not (is_owner or is_supervisor or is_admin):
+        messages.error(request, 'You do not have permission to edit this checksheet.')
+        return redirect('checksheet_response_detail', response_id=response.id)
+    
+    # Check status - allow editing for drafts, rejected, and submitted (if you're a supervisor)
+    editable_statuses = ['draft', 'rejected']
+    if is_supervisor or is_admin:
+        editable_statuses.extend(['submitted', 'supervisor_approved'])
+    
+    if response.status not in editable_statuses:
+        messages.error(request, f'This checksheet cannot be edited because it is {response.get_status_display()}.')
         return redirect('checksheet_response_detail', response_id=response.id)
     
     checksheet = response.checksheet
     
     if request.method == 'POST':
-        # Get existing field responses
-        existing_responses = {fr.field_id: fr for fr in response.field_responses.all()}
-        
         selected_model = None
         errors = []
         
@@ -8379,37 +8425,64 @@ def edit_checksheet_response(request, response_id):
                     selected_model = request.POST.get(field_key, '')
                     break
         
-        # Second pass: process all fields
+        # Second pass: update all fields
         for section in checksheet.sections.filter(is_active=True).order_by('order'):
             for field in section.fields.filter(is_active=True).order_by('order'):
                 field_key = f'field_{field.id}'
                 status_key = f'status_{field.id}'
                 comment_key = f'comment_{field.id}'
                 
-                value = request.POST.get(field_key, '').strip()
-                status = request.POST.get(status_key, '')
+                # Initialize variables
+                value = ''
+                status = ''
                 comment = request.POST.get(comment_key, '').strip()
                 
-                # Auto-fill based on model
-                if field.auto_fill_based_on_model and selected_model and field.model_value_mapping:
+                # Handle different field types correctly
+                if field.field_type == 'ok_nok':
+                    if field.has_status_field:
+                        status = request.POST.get(status_key, '').strip()
+                        value = request.POST.get(field_key, '').strip()
+                    else:
+                        value = request.POST.get(field_key, '').strip()
+                        status = ''
+                elif field.field_type == 'yes_no':
+                    if field.has_status_field:
+                        status = request.POST.get(status_key, '').strip()
+                        value = request.POST.get(field_key, '').strip()
+                    else:
+                        value = request.POST.get(field_key, '').strip()
+                        status = ''
+                else:
+                    value = request.POST.get(field_key, '').strip()
+                    if field.has_status_field:
+                        status = request.POST.get(status_key, '').strip()
+                
+                # Auto-fill based on model (only if value is empty)
+                if field.auto_fill_based_on_model and selected_model and field.model_value_mapping and not value:
                     auto_value = field.get_value_for_model(selected_model)
                     if auto_value:
                         value = auto_value
                 
-                # Validation
+                # VALIDATION
                 if field.is_required:
-                    if field.field_type == 'ok_nok':
+                    if field.field_type == 'ok_nok' and not field.has_status_field:
+                        if not value:
+                            errors.append(f"{field.label} is required")
+                    elif field.has_status_field:
                         if not status:
                             errors.append(f"{field.label} is required")
-                    elif not value:
-                        errors.append(f"{field.label} is required")
+                    else:
+                        if not value:
+                            errors.append(f"{field.label} is required")
                 
-                # Check if comment is required
                 if field.requires_comment_if_nok:
-                    if status == 'NOK' and not comment:
-                        errors.append(f"Comment is required for '{field.label}' when status is NOK")
+                    if field.has_status_field:
+                        if status in ['NOK', 'No'] and not comment:
+                            errors.append(f"Comment is required for '{field.label}' when {status}")
+                    elif field.field_type in ['ok_nok', 'yes_no']:
+                        if value in ['NOK', 'No'] and not comment:
+                            errors.append(f"Comment is required for '{field.label}' when {value}")
                 
-                # Validate numeric ranges
                 if field.field_type in ['number', 'decimal'] and value:
                     try:
                         numeric_value = float(value)
@@ -8421,58 +8494,50 @@ def edit_checksheet_response(request, response_id):
                         errors.append(f"{field.label} must be a valid number")
                 
                 # Update or create field response
-                if field.id in existing_responses:
-                    field_response = existing_responses[field.id]
-                    field_response.value = value
-                    field_response.status = status
-                    field_response.comment = comment
-                    field_response.filled_by = request.user
-                    field_response.save()
-                else:
-                    ChecksheetFieldResponse.objects.create(
-                        response=response,
-                        field=field,
-                        value=value,
-                        status=status,
-                        comment=comment,
-                        filled_by=request.user
-                    )
+                field_response, created = ChecksheetFieldResponse.objects.update_or_create(
+                    response=response,
+                    field=field,
+                    defaults={
+                        'value': value,
+                        'status': status,
+                        'comment': comment,
+                        'filled_by': request.user
+                    }
+                )
         
         if errors:
             for error in errors:
                 messages.error(request, error)
-            # Re-render form with data
-            context = {
-                'checksheet': checksheet,
-                'sections': checksheet.sections.filter(is_active=True).order_by('order'),
-                'response': response,
-                'page_title': f'Edit {checksheet.name}',
-                'is_edit': True,
-                'form_data': request.POST
-            }
-            return render(request, 'checksheets/checksheet_form.html', context)
-        
-        # Update response metadata
-        response.updated_at = timezone.now()
-        
-        # Check if user wants to submit or save as draft
-        action = request.POST.get('action')
-        if action == 'submit':
-            response.status = 'submitted'
-            response.submitted_at = timezone.now()
-            response.save()
-            messages.success(request, 'Checksheet submitted successfully! Waiting for supervisor approval.')
-            return redirect('checksheet_response_detail', response_id=response.id)
+            # Continue to re-render the form with errors
         else:
-            response.save()
-            messages.success(request, 'Checksheet updated successfully!')
-            return redirect('edit_checksheet_response', response_id=response.id)
+            # Check if user wants to submit or save as draft
+            action = request.POST.get('action')
+            if action == 'submit':
+                response.status = 'submitted'
+                response.submitted_at = timezone.now()
+                response.save()
+                messages.success(request, 'Checksheet submitted successfully! Waiting for supervisor approval.')
+                return redirect('checksheet_response_detail', response_id=response.id)
+            else:
+                response.updated_at = timezone.now()
+                response.save()
+                messages.success(request, 'Checksheet updated successfully!')
+                return redirect('edit_checksheet_response', response_id=response.id)
     
-    # GET request - show form with existing data
-    sections = checksheet.sections.filter(is_active=True).order_by('order')
+    # GET request or form has errors - show form with existing data
+    sections = checksheet.sections.filter(is_active=True).prefetch_related(
+        Prefetch('fields', queryset=ChecksheetField.objects.filter(is_active=True).order_by('order'))
+    ).order_by('order')
     
-    # Get existing responses
-    existing_responses = {fr.field_id: fr for fr in response.field_responses.all()}
+    # Build response data for template
+    existing_responses = {}
+    for field_response in response.field_responses.select_related('field'):
+        existing_responses[field_response.field.id] = {
+            'field_id': field_response.field.id,
+            'value': field_response.value,
+            'status': field_response.status,
+            'comment': field_response.comment,
+        }
     
     context = {
         'checksheet': checksheet,
@@ -8483,6 +8548,148 @@ def edit_checksheet_response(request, response_id):
         'is_edit': True
     }
     return render(request, 'checksheets/checksheet_form.html', context)
+# ============ EDIT CHECKSHEET RESPONSE ============
+
+# @login_required
+# def edit_checksheet_response(request, response_id):
+#     """Edit an existing checksheet response"""
+#     response = get_object_or_404(
+#         ChecksheetResponse.objects.select_related('checksheet', 'filled_by')
+#         .prefetch_related('field_responses__field__section'),
+#         pk=response_id
+#     )
+    
+#     # Check permissions
+#     if response.filled_by != request.user and not request.user.is_superuser:
+#         messages.error(request, 'You do not have permission to edit this response')
+#         return redirect('checksheet_responses_list')
+    
+#     # Check if response can be edited
+#     if not response.can_be_edited:
+#         messages.error(request, f'Cannot edit response with status: {response.get_status_display()}')
+#         return redirect('checksheet_response_detail', response_id=response.id)
+    
+#     checksheet = response.checksheet
+    
+#     if request.method == 'POST':
+#         # Get existing field responses
+#         existing_responses = {fr.field_id: fr for fr in response.field_responses.all()}
+        
+#         selected_model = None
+#         errors = []
+        
+#         # First pass: collect selected model
+#         for section in checksheet.sections.filter(is_active=True):
+#             for field in section.fields.filter(is_active=True):
+#                 if 'Program selection' in field.label or 'program' in field.label.lower():
+#                     field_key = f'field_{field.id}'
+#                     selected_model = request.POST.get(field_key, '')
+#                     break
+        
+#         # Second pass: process all fields
+#         for section in checksheet.sections.filter(is_active=True).order_by('order'):
+#             for field in section.fields.filter(is_active=True).order_by('order'):
+#                 field_key = f'field_{field.id}'
+#                 status_key = f'status_{field.id}'
+#                 comment_key = f'comment_{field.id}'
+                
+#                 value = request.POST.get(field_key, '').strip()
+#                 status = request.POST.get(status_key, '')
+#                 comment = request.POST.get(comment_key, '').strip()
+                
+#                 # Auto-fill based on model
+#                 if field.auto_fill_based_on_model and selected_model and field.model_value_mapping:
+#                     auto_value = field.get_value_for_model(selected_model)
+#                     if auto_value:
+#                         value = auto_value
+                
+#                 # Validation
+#                 if field.is_required:
+#                     if field.field_type == 'ok_nok':
+#                         if not status:
+#                             errors.append(f"{field.label} is required")
+#                     elif not value:
+#                         errors.append(f"{field.label} is required")
+                
+#                 # Check if comment is required
+#                 if field.requires_comment_if_nok:
+#                     if status == 'NOK' and not comment:
+#                         errors.append(f"Comment is required for '{field.label}' when status is NOK")
+                
+#                 # Validate numeric ranges
+#                 if field.field_type in ['number', 'decimal'] and value:
+#                     try:
+#                         numeric_value = float(value)
+#                         if field.min_value is not None and numeric_value < field.min_value:
+#                             errors.append(f"{field.label} must be at least {field.min_value} {field.unit}")
+#                         if field.max_value is not None and numeric_value > field.max_value:
+#                             errors.append(f"{field.label} must be at most {field.max_value} {field.unit}")
+#                     except ValueError:
+#                         errors.append(f"{field.label} must be a valid number")
+                
+#                 # Update or create field response
+#                 if field.id in existing_responses:
+#                     field_response = existing_responses[field.id]
+#                     field_response.value = value
+#                     field_response.status = status
+#                     field_response.comment = comment
+#                     field_response.filled_by = request.user
+#                     field_response.save()
+#                 else:
+#                     ChecksheetFieldResponse.objects.create(
+#                         response=response,
+#                         field=field,
+#                         value=value,
+#                         status=status,
+#                         comment=comment,
+#                         filled_by=request.user
+#                     )
+        
+#         if errors:
+#             for error in errors:
+#                 messages.error(request, error)
+#             # Re-render form with data
+#             context = {
+#                 'checksheet': checksheet,
+#                 'sections': checksheet.sections.filter(is_active=True).order_by('order'),
+#                 'response': response,
+#                 'page_title': f'Edit {checksheet.name}',
+#                 'is_edit': True,
+#                 'form_data': request.POST
+#             }
+#             return render(request, 'checksheets/checksheet_form.html', context)
+        
+#         # Update response metadata
+#         response.updated_at = timezone.now()
+        
+#         # Check if user wants to submit or save as draft
+#         action = request.POST.get('action')
+#         if action == 'submit':
+#             response.status = 'submitted'
+#             response.submitted_at = timezone.now()
+#             response.save()
+#             messages.success(request, 'Checksheet submitted successfully! Waiting for supervisor approval.')
+#             return redirect('checksheet_response_detail', response_id=response.id)
+#         else:
+#             response.save()
+#             messages.success(request, 'Checksheet updated successfully!')
+#             return redirect('edit_checksheet_response', response_id=response.id)
+    
+#     # GET request - show form with existing data
+#     sections = checksheet.sections.filter(is_active=True).order_by('order')
+    
+#     # Get existing responses
+#     existing_responses = {fr.field_id: fr for fr in response.field_responses.all()}
+    
+#     context = {
+#         'checksheet': checksheet,
+#         'sections': sections,
+#         'response': response,
+#         'existing_responses': existing_responses,
+#         'page_title': f'Edit {checksheet.name}',
+#         'is_edit': True
+#     }
+#     return render(request, 'checksheets/checksheet_form.html', context)
 
 
 # ============ VIEW CHECKSHEET RESPONSE ============

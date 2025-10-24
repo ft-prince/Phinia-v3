@@ -2239,7 +2239,7 @@ class Checksheet(models.Model):
     is_active = models.BooleanField(default=True, verbose_name="Active")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='created_checksheets')
+    created_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, related_name='created_checksheets')
     
     applicable_models = models.CharField(
         max_length=100,
@@ -2373,7 +2373,7 @@ class ChecksheetResponse(models.Model):
     """Store responses to checksheet instances"""
     checksheet = models.ForeignKey(Checksheet, on_delete=models.CASCADE, related_name='responses')
     verification_status = models.ForeignKey(
-        DailyVerificationStatus,
+        'DailyVerificationStatus',
         on_delete=models.CASCADE,
         related_name='checksheet_responses',
         null=True,
@@ -2389,13 +2389,13 @@ class ChecksheetResponse(models.Model):
     ]
     
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
-    filled_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='filled_checksheets')
+    filled_by = models.ForeignKey('User', on_delete=models.CASCADE, related_name='filled_checksheets')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
     
     supervisor_approved_by = models.ForeignKey(
-        User,
+        'User',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -2404,7 +2404,7 @@ class ChecksheetResponse(models.Model):
     supervisor_approved_at = models.DateTimeField(null=True, blank=True)
     
     quality_approved_by = models.ForeignKey(
-        User,
+        'User',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -2422,6 +2422,133 @@ class ChecksheetResponse(models.Model):
     
     def __str__(self):
         return f"{self.checksheet.name} - {self.status}"
+    
+    @property
+    def can_be_edited(self):
+        """Check if this response can be edited"""
+        # Allow editing for draft and rejected statuses
+        # Supervisors can edit submitted and supervisor_approved as well
+        return self.status in ['draft', 'rejected', 'submitted']
+
+    @property
+    def can_be_edited_by_supervisor(self):
+        """Check if this response can be edited by supervisor"""
+        # Supervisors can edit more statuses
+        return self.status in ['draft', 'rejected', 'submitted', 'supervisor_approved']
+
+    @property
+    def can_be_approved_by_supervisor(self):
+        """Check if this response can be approved by supervisor"""
+        return self.status == 'submitted'
+
+    @property
+    def can_be_approved_by_quality(self):
+        """Check if this response can be approved by quality"""
+        return self.status == 'supervisor_approved'
+
+    @property
+    def can_be_rejected(self):
+        """Check if this response can be rejected"""
+        return self.status in ['submitted', 'supervisor_approved']
+
+    @property
+    def is_final(self):
+        """Check if this response is in a final state"""
+        return self.status in ['quality_approved', 'rejected']
+
+    @property
+    def status_badge_class(self):
+        """Get Bootstrap badge class for status"""
+        status_classes = {
+            'draft': 'bg-secondary',
+            'submitted': 'bg-info',
+            'supervisor_approved': 'bg-primary',
+            'quality_approved': 'bg-success',
+            'rejected': 'bg-danger',
+        }
+        return status_classes.get(self.status, 'bg-secondary')
+
+    def can_user_edit(self, user):
+        """Check if a specific user can edit this response"""
+        # Owner can edit if status allows
+        is_owner = self.filled_by == user
+        
+        # Supervisors and admins have extended permissions
+        is_supervisor = user.user_type in ['shift_supervisor', 'quality_supervisor']
+        is_admin = user.is_superuser
+        
+        if is_admin:
+            # Admins can edit anything except quality_approved
+            return self.status != 'quality_approved'
+        elif is_supervisor:
+            # Supervisors can edit their submissions and pending approvals
+            return self.can_be_edited_by_supervisor
+        elif is_owner:
+            # Owners can only edit draft, rejected, or submitted
+            return self.can_be_edited
+        
+        return False
+
+    def approve_by_supervisor(self, user):
+        """Approve the checksheet response by supervisor"""
+        if not self.can_be_approved_by_supervisor:
+            raise ValueError("This response cannot be approved by supervisor at this stage")
+        
+        self.status = 'supervisor_approved'
+        self.supervisor_approved_by = user
+        self.supervisor_approved_at = timezone.now()
+        self.save()
+
+    def approve_by_quality(self, user):
+        """Approve the checksheet response by quality supervisor"""
+        if not self.can_be_approved_by_quality:
+            raise ValueError("This response cannot be approved by quality at this stage")
+        
+        self.status = 'quality_approved'
+        self.quality_approved_by = user
+        self.quality_approved_at = timezone.now()
+        self.save()
+
+    def reject(self, user, reason):
+        """Reject the checksheet response"""
+        if not self.can_be_rejected:
+            raise ValueError("This response cannot be rejected at this stage")
+        
+        self.status = 'rejected'
+        self.rejection_reason = reason
+        self.save()
+
+    def get_completion_percentage(self):
+        """Calculate the completion percentage of required fields"""
+        total_required = self.checksheet.sections.filter(
+            is_active=True
+        ).aggregate(
+            count=models.Count('fields', filter=models.Q(fields__is_required=True, fields__is_active=True))
+        )['count'] or 0
+        
+        if total_required == 0:
+            return 100
+        
+        filled_required = self.field_responses.filter(
+            field__is_required=True,
+            field__is_active=True
+        ).exclude(
+            value=''
+        ).count()
+        
+        return int((filled_required / total_required) * 100)
+
+    def has_nok_items(self):
+        """Check if there are any NOK or failed items"""
+        return self.field_responses.filter(
+            models.Q(status='NOK') | models.Q(value='NOK')
+        ).exists()
+
+    def get_nok_count(self):
+        """Get count of NOK items"""
+        return self.field_responses.filter(
+            models.Q(status='NOK') | models.Q(value='NOK')
+        ).count()
 
 
 class ChecksheetFieldResponse(models.Model):
@@ -2444,7 +2571,7 @@ class ChecksheetFieldResponse(models.Model):
     
     comment = models.TextField(blank=True, verbose_name="Comment")
     
-    filled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    filled_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True)
     filled_at = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -2454,3 +2581,22 @@ class ChecksheetFieldResponse(models.Model):
     
     def __str__(self):
         return f"{self.response.checksheet.name} - {self.field.label}: {self.value}"
+    
+    @property
+    def is_ok(self):
+        """Check if this field response is OK"""
+        return self.status == 'OK' or self.value == 'OK'
+    
+    @property
+    def is_nok(self):
+        """Check if this field response is NOK"""
+        return self.status == 'NOK' or self.value == 'NOK'
+    
+    @property
+    def display_value(self):
+        """Get formatted display value"""
+        if self.field.field_type in ['ok_nok', 'yes_no']:
+            return self.status if self.status else self.value
+        elif self.field.unit:
+            return f"{self.value} {self.field.unit}"
+        return self.value
