@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -339,6 +340,87 @@ class SubgroupFrequencyConfig(models.Model):
     class Meta:
         verbose_name = "Subgroup Frequency Configuration"
         verbose_name_plural = "Subgroup Frequency Configurations"
+
+ 
+ 
+class SubgroupCategoryFrequencyConfig(models.Model):
+    """Configuration for timing/frequency of each subgroup category"""
+    CATEGORY_CHOICES = [
+        ('uv_vacuum_test', 'UV Vacuum Test'),
+        ('uv_flow_value', 'UV Flow Value'),
+        ('umbrella_valve_assembly', 'Umbrella Valve Assembly'),
+        ('uv_clip_pressing', 'UV Clip Pressing'),
+        ('workstation_cleanliness', 'Workstation Cleanliness'),
+        ('bin_contamination_check', 'Bin Contamination Check'),
+    ]
+    
+    MODEL_CHOICES = (
+        ('P703', 'P703'),
+        ('U704', 'U704'),
+        ('FD', 'FD'),
+        ('SA', 'SA'),
+        ('Gnome', 'Gnome'),
+    )
+    
+    model_name = models.CharField(max_length=10, choices=MODEL_CHOICES)
+    category = models.CharField(max_length=30, choices=CATEGORY_CHOICES)
+    frequency_minutes = models.PositiveIntegerField(
+        default=60,
+        help_text="Frequency in minutes (e.g., 60 = every hour, 120 = every 2 hours)"
+    )
+    max_readings_per_shift = models.PositiveIntegerField(
+        default=5,
+        help_text="Maximum number of readings for this category per shift"
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['model_name', 'category']
+        verbose_name = 'Subgroup Category Frequency Config'
+        verbose_name_plural = 'Subgroup Category Frequency Configs'
+        ordering = ['model_name', 'category']
+    
+    def __str__(self):
+        return f"{self.model_name} - {self.get_category_display()} - Every {self.frequency_minutes}min"
+    
+    @property
+    def frequency_hours(self):
+        """Convert frequency from minutes to hours for display"""
+        return self.frequency_minutes / 60
+
+
+class SubgroupCategoryTiming(models.Model):
+    """Track timing for each category reading"""
+    checklist = models.ForeignKey(ChecklistBase, on_delete=models.CASCADE, related_name='category_timings')
+    category = models.CharField(max_length=30, choices=SubgroupCategoryFrequencyConfig.CATEGORY_CHOICES)
+    last_reading_time = models.DateTimeField()
+    next_reading_due = models.DateTimeField()
+    frequency_config = models.ForeignKey(SubgroupCategoryFrequencyConfig, on_delete=models.CASCADE)
+    readings_count = models.PositiveIntegerField(default=0)
+    is_overdue = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = ['checklist', 'category']
+        ordering = ['next_reading_due']
+        verbose_name = 'Subgroup Category Timing'
+        verbose_name_plural = 'Subgroup Category Timings'
+    
+    def __str__(self):
+        return f"{self.checklist} - {self.get_category_display()} - Due: {self.next_reading_due}"
+    
+    def update_next_due_time(self):
+        """Update the next due time based on frequency config"""
+        from datetime import timedelta
+        self.next_reading_due = self.last_reading_time + timedelta(minutes=self.frequency_config.frequency_minutes)
+        self.is_overdue = timezone.now() > self.next_reading_due
+        self.save()
+
+ 
+
+ 
+
 
  
 class SubgroupEntry(models.Model):
@@ -797,6 +879,193 @@ class SubgroupEntry(models.Model):
         """Helper method to get latest verification"""
         return self.verifications.order_by('-verified_at').first()   
     
+    
+    
+class SubgroupEntryNew(models.Model):
+    """NEW MODEL - Enhanced subgroup measurements with category-specific timing"""
+    VERIFICATION_STATUS_CHOICES = (
+        ('verified', 'Verified'),
+        ('rejected', 'Rejected'),
+    )
+
+    OK_NG_CHOICES = [('OK', 'OK'), ('NOK', 'NOK')]
+    YES_NO_CHOICES = [('Yes', 'Yes'), ('NOK', 'NOK')]
+
+    checklist = models.ForeignKey(ChecklistBase, on_delete=models.CASCADE, related_name='subgroups_new')
+    subgroup_number = models.PositiveIntegerField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # NEW FIELDS: Category tracking
+    category = models.CharField(
+        max_length=30,
+        choices=SubgroupCategoryFrequencyConfig.CATEGORY_CHOICES,
+        help_text="Which category this reading belongs to"
+    )
+    
+    frequency_config = models.ForeignKey(
+        SubgroupCategoryFrequencyConfig,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Frequency configuration used for this reading"
+    )
+    
+    # NEW FIELDS: Maintenance tracking
+    is_after_maintenance = models.BooleanField(
+        default=False,
+        verbose_name="Is this reading after maintenance?",
+        help_text="Check if this reading was taken after maintenance"
+    )
+    
+    maintenance_comment = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Maintenance Comments",
+        help_text="Comments about maintenance performed"
+    )
+    
+    effectiveness_comment = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Effectiveness Comments",
+        help_text="Comments about the effectiveness of the process"
+    )
+    
+    # UV Vacuum Test measurements (5 readings) with comments
+    uv_vacuum_test_1 = models.FloatField(null=True, blank=True, verbose_name="UV Vacuum Test 1 (mbar)")
+    uv_vacuum_test_1_comment = models.TextField(blank=True, null=True)
+    uv_vacuum_test_2 = models.FloatField(null=True, blank=True, verbose_name="UV Vacuum Test 2 (mbar)")
+    uv_vacuum_test_2_comment = models.TextField(blank=True, null=True)
+    uv_vacuum_test_3 = models.FloatField(null=True, blank=True, verbose_name="UV Vacuum Test 3 (mbar)")
+    uv_vacuum_test_3_comment = models.TextField(blank=True, null=True)
+    uv_vacuum_test_4 = models.FloatField(null=True, blank=True, verbose_name="UV Vacuum Test 4 (mbar)")
+    uv_vacuum_test_4_comment = models.TextField(blank=True, null=True)
+    uv_vacuum_test_5 = models.FloatField(null=True, blank=True, verbose_name="UV Vacuum Test 5 (mbar)")
+    uv_vacuum_test_5_comment = models.TextField(blank=True, null=True)
+    
+    # UV Flow Value measurements (5 readings) with comments
+    uv_flow_value_1 = models.FloatField(null=True, blank=True, verbose_name="UV Flow Value 1 (%)")
+    uv_flow_value_1_comment = models.TextField(blank=True, null=True)
+    uv_flow_value_2 = models.FloatField(null=True, blank=True, verbose_name="UV Flow Value 2 (%)")
+    uv_flow_value_2_comment = models.TextField(blank=True, null=True)
+    uv_flow_value_3 = models.FloatField(null=True, blank=True, verbose_name="UV Flow Value 3 (%)")
+    uv_flow_value_3_comment = models.TextField(blank=True, null=True)
+    uv_flow_value_4 = models.FloatField(null=True, blank=True, verbose_name="UV Flow Value 4 (%)")
+    uv_flow_value_4_comment = models.TextField(blank=True, null=True)
+    uv_flow_value_5 = models.FloatField(null=True, blank=True, verbose_name="UV Flow Value 5 (%)")
+    uv_flow_value_5_comment = models.TextField(blank=True, null=True)
+    
+    # Umbrella Valve Assembly measurements (5 readings) with comments
+    umbrella_valve_assembly_1 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    umbrella_valve_assembly_1_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_2 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    umbrella_valve_assembly_2_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_3 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    umbrella_valve_assembly_3_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_4 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    umbrella_valve_assembly_4_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_5 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    umbrella_valve_assembly_5_comment = models.TextField(blank=True, null=True)
+    
+    # UV Clip Pressing measurements (5 readings) with comments
+    uv_clip_pressing_1 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    uv_clip_pressing_1_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_2 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    uv_clip_pressing_2_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_3 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    uv_clip_pressing_3_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_4 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    uv_clip_pressing_4_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_5 = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    uv_clip_pressing_5_comment = models.TextField(blank=True, null=True)
+    
+    # Work Station Cleanliness (single measurement) with comment
+    workstation_clean = models.CharField(max_length=3, choices=OK_NG_CHOICES, null=True, blank=True)
+    workstation_clean_comment = models.TextField(blank=True, null=True)
+    
+    # Bin Contamination Check measurements (5 readings) with comments
+    bin_contamination_check_1 = models.CharField(max_length=3, choices=YES_NO_CHOICES, null=True, blank=True)
+    bin_contamination_check_1_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_2 = models.CharField(max_length=3, choices=YES_NO_CHOICES, null=True, blank=True)
+    bin_contamination_check_2_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_3 = models.CharField(max_length=3, choices=YES_NO_CHOICES, null=True, blank=True)
+    bin_contamination_check_3_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_4 = models.CharField(max_length=3, choices=YES_NO_CHOICES, null=True, blank=True)
+    bin_contamination_check_4_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_5 = models.CharField(max_length=3, choices=YES_NO_CHOICES, null=True, blank=True)
+    bin_contamination_check_5_comment = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        category_display = f" - {self.get_category_display()}" if self.category else ""
+        return f"Subgroup NEW {self.subgroup_number}{category_display} - {self.checklist.selected_model}"
+
+    class Meta:
+        ordering = ['checklist', 'timestamp', 'subgroup_number']
+        verbose_name = "Subgroup Entry (New with Category Timing)"
+        verbose_name_plural = "Subgroup Entries (New with Category Timing)"
+
+    # Helper methods for category-specific functionality
+    def get_category_fields(self):
+        """Get fields that belong to this entry's category"""
+        category_fields = {
+            'uv_vacuum_test': [
+                self.uv_vacuum_test_1, self.uv_vacuum_test_2, self.uv_vacuum_test_3,
+                self.uv_vacuum_test_4, self.uv_vacuum_test_5
+            ],
+            'uv_flow_value': [
+                self.uv_flow_value_1, self.uv_flow_value_2, self.uv_flow_value_3,
+                self.uv_flow_value_4, self.uv_flow_value_5
+            ],
+            'umbrella_valve_assembly': [
+                self.umbrella_valve_assembly_1, self.umbrella_valve_assembly_2,
+                self.umbrella_valve_assembly_3, self.umbrella_valve_assembly_4,
+                self.umbrella_valve_assembly_5
+            ],
+            'uv_clip_pressing': [
+                self.uv_clip_pressing_1, self.uv_clip_pressing_2,
+                self.uv_clip_pressing_3, self.uv_clip_pressing_4,
+                self.uv_clip_pressing_5
+            ],
+            'workstation_cleanliness': [self.workstation_clean],
+            'bin_contamination_check': [
+                self.bin_contamination_check_1, self.bin_contamination_check_2,
+                self.bin_contamination_check_3, self.bin_contamination_check_4,
+                self.bin_contamination_check_5
+            ]
+        }
+        
+        return category_fields.get(self.category, [])
+    
+    @property
+    def category_completion_percentage(self):
+        """Get completion percentage for this category"""
+        fields = self.get_category_fields()
+        if not fields:
+            return 0
+        
+        filled_fields = [f for f in fields if f is not None and f != '']
+        return (len(filled_fields) / len(fields)) * 100
+    
+    @property
+    def is_category_complete(self):
+        """Check if this category is completely filled"""
+        return self.category_completion_percentage == 100
+    
+    @property
+    def uv_vacuum_average(self):
+        readings = [self.uv_vacuum_test_1, self.uv_vacuum_test_2, self.uv_vacuum_test_3, 
+                   self.uv_vacuum_test_4, self.uv_vacuum_test_5]
+        valid_readings = [r for r in readings if r is not None]
+        return sum(valid_readings) / len(valid_readings) if valid_readings else 0
+    
+    @property
+    def uv_flow_average(self):
+        readings = [self.uv_flow_value_1, self.uv_flow_value_2, self.uv_flow_value_3, 
+                   self.uv_flow_value_4, self.uv_flow_value_5]
+        valid_readings = [r for r in readings if r is not None]
+        return sum(valid_readings) / len(valid_readings) if valid_readings else 0
+
+    
 class SubgroupVerification(models.Model):
     """Verification records for each subgroup entry"""
     VERIFIER_TYPES = (
@@ -877,6 +1146,39 @@ class Concern(models.Model):
 
 
 
+# NEW MODEL: Verification for the new subgroup entries
+class SubgroupVerificationNew(models.Model):
+    """Verification records for new subgroup entries"""
+    VERIFIER_TYPES = (
+        ('supervisor', 'Shift Supervisor'),
+        ('quality', 'Quality Supervisor'),
+    )
+    
+    subgroup = models.ForeignKey(SubgroupEntryNew, on_delete=models.CASCADE, related_name='verifications')
+    verified_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    verifier_type = models.CharField(max_length=20, choices=VERIFIER_TYPES)
+    verified_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=SubgroupEntryNew.VERIFICATION_STATUS_CHOICES)
+    comments = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['verified_at']
+        verbose_name = "Subgroup Verification (New)"
+        verbose_name_plural = "Subgroup Verifications (New)"
+
+
+class SubgroupEditHistory(models.Model):
+    subgroup = models.ForeignKey(SubgroupEntry, on_delete=models.CASCADE, related_name='edit_history')
+    edited_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    edited_at = models.DateTimeField(auto_now_add=True)
+    field_name = models.CharField(max_length=100)
+    old_value = models.CharField(max_length=200, null=True, blank=True)
+    new_value = models.CharField(max_length=200, null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-edited_at']
+
+
 
 
 class DefectCategory(models.Model):
@@ -891,6 +1193,81 @@ class DefectCategory(models.Model):
     class Meta:
         verbose_name_plural = "Defect Categories"
 
+
+
+# Helper functions for category timing management
+def get_next_due_category(checklist):
+    """Get the next category that needs readings"""
+    category_timings = SubgroupCategoryTiming.objects.filter(
+        checklist=checklist,
+        next_reading_due__lte=timezone.now()
+    ).order_by('next_reading_due').first()
+    
+    return category_timings.category if category_timings else None
+
+
+def create_category_timing_for_checklist(checklist):
+    """Create initial timing records for all categories when checklist is created"""
+    model_name = checklist.selected_model
+    
+    for category_code, category_name in SubgroupCategoryFrequencyConfig.CATEGORY_CHOICES:
+        try:
+            frequency_config = SubgroupCategoryFrequencyConfig.objects.get(
+                model_name=model_name,
+                category=category_code,
+                is_active=True
+            )
+        except SubgroupCategoryFrequencyConfig.DoesNotExist:
+            # Create default config if none exists
+            frequency_config = SubgroupCategoryFrequencyConfig.objects.create(
+                model_name=model_name,
+                category=category_code,
+                frequency_minutes=60,  # Default 1 hour
+                max_readings_per_shift=5,
+                is_active=True
+            )
+        
+        from datetime import timedelta
+        now = timezone.now()
+        
+        SubgroupCategoryTiming.objects.get_or_create(
+            checklist=checklist,
+            category=category_code,
+            defaults={
+                'last_reading_time': now,
+                'next_reading_due': now + timedelta(minutes=frequency_config.frequency_minutes),
+                'frequency_config': frequency_config,
+                'readings_count': 0,
+                'is_overdue': False
+            }
+        )
+
+
+# Signals for automatic timing management
+@receiver(post_save, sender=ChecklistBase)
+def create_checklist_category_timings(sender, instance, created, **kwargs):
+    """Automatically create category timing records when a new checklist is created"""
+    if created:
+        create_category_timing_for_checklist(instance)
+
+
+@receiver(post_save, sender=SubgroupEntryNew)
+def update_category_timing_on_reading(sender, instance, created, **kwargs):
+    """Update category timing when a new reading is taken"""
+    if created and instance.category:
+        try:
+            timing = SubgroupCategoryTiming.objects.get(
+                checklist=instance.checklist,
+                category=instance.category
+            )
+            
+            timing.last_reading_time = instance.timestamp
+            timing.readings_count += 1
+            timing.update_next_due_time()
+            
+        except SubgroupCategoryTiming.DoesNotExist:
+            # Create timing record if it doesn't exist
+            create_category_timing_for_checklist(instance.checklist)
 
 
 # Model for configurable checksheet content
@@ -967,7 +1344,7 @@ class ChecklistDynamicValue(models.Model):
     def __str__(self):
         return f"{self.checklist} - {self.parameter.parameter_name}: {self.value}"
 
- 
+   
 #  FTQ
 
 
@@ -2600,3 +2977,408 @@ class ChecksheetFieldResponse(models.Model):
         elif self.field.unit:
             return f"{self.value} {self.field.unit}"
         return self.value
+    
+    
+    
+    
+    
+    
+    
+    # new 
+    
+    
+    
+    
+    
+#  Time-Based Progressive Parameter Display
+
+ 
+class ParameterGroupConfig(models.Model):
+    """Configuration for when each parameter group becomes available"""
+    
+    PARAMETER_GROUPS = [
+        ('uv_vacuum', 'UV Vacuum Test (5 readings)'),
+        ('uv_flow', 'UV Flow Value (5 readings)'),
+        ('umbrella_valve', 'Umbrella Valve Assembly (5 checks)'),
+        ('uv_clip', 'UV Clip Pressing (5 checks)'),
+        ('workstation', 'Workstation Clean (1 check)'),
+        ('bin_contamination', 'Bin Contamination Check (5 checks)'),
+    ]
+    
+    model_name = models.CharField(
+        max_length=10, 
+        choices=[
+            ('P703', 'P703'),
+            ('U704', 'U704'),
+            ('FD', 'FD'),
+            ('SA', 'SA'),
+            ('Gnome', 'Gnome'),
+        ]
+    )
+    
+    parameter_group = models.CharField(
+        max_length=50,
+        choices=PARAMETER_GROUPS,
+        verbose_name="Parameter Group"
+    )
+    
+    # Minutes after shift/checklist start when this parameter becomes available
+    frequency_minutes = models.PositiveIntegerField(
+        default=0,
+        help_text="Minutes after checklist creation when fields appear"
+    )
+    
+    is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True,blank=True,null=True)
+    updated_at = models.DateTimeField(auto_now=True,blank=True,null=True)
+
+    
+    class Meta:
+        unique_together = ['model_name', 'parameter_group']
+        ordering = ['display_order', 'frequency_minutes']
+        verbose_name = "Parameter Group Configuration"
+        verbose_name_plural = "Parameter Group Configurations"
+    
+    def __str__(self):
+        return f"{self.model_name} - {self.get_parameter_group_display()} (after {self.frequency_minutes} min)"
+
+
+class ParameterGroupEntry(models.Model):
+    """Stores readings for each parameter group"""
+    
+    OK_NG_CHOICES = [('OK', 'OK'), ('NOK', 'NOK')]
+    YES_NO_CHOICES = [('Yes', 'Yes'), ('No', 'No')]
+    
+    # Link to checklist
+    checklist = models.ForeignKey(
+        'ChecklistBase',
+        on_delete=models.CASCADE,
+        related_name='parameter_entries'
+    )
+    
+    # Which parameter group this entry is for
+    parameter_group = models.CharField(
+        max_length=50,
+        choices=ParameterGroupConfig.PARAMETER_GROUPS
+    )
+    
+    # When this entry was filled
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    # Status
+    is_completed = models.BooleanField(default=False)
+    
+    # ============================================
+    # UV VACUUM TEST (5 readings)
+    # ============================================
+    uv_vacuum_test_1 = models.FloatField(
+        verbose_name="UV Vacuum Test 1 (kPa)",
+        help_text="Range: -43 to -35 kPa",
+        blank=True,
+        null=True
+    )
+    uv_vacuum_test_1_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_vacuum_test_2 = models.FloatField(verbose_name="UV Vacuum Test 2 (kPa)", blank=True, null=True)
+    uv_vacuum_test_2_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_vacuum_test_3 = models.FloatField(verbose_name="UV Vacuum Test 3 (kPa)", blank=True, null=True)
+    uv_vacuum_test_3_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_vacuum_test_4 = models.FloatField(verbose_name="UV Vacuum Test 4 (kPa)", blank=True, null=True)
+    uv_vacuum_test_4_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_vacuum_test_5 = models.FloatField(verbose_name="UV Vacuum Test 5 (kPa)", blank=True, null=True)
+    uv_vacuum_test_5_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    # ============================================
+    # UV FLOW VALUE (5 readings)
+    # ============================================
+    uv_flow_value_1 = models.FloatField(
+        verbose_name="UV Flow Value 1 (LPM)",
+        help_text="Range: 30-40 LPM",
+        blank=True,
+        null=True
+    )
+    uv_flow_value_1_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_flow_value_2 = models.FloatField(verbose_name="UV Flow Value 2 (LPM)", blank=True, null=True)
+    uv_flow_value_2_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_flow_value_3 = models.FloatField(verbose_name="UV Flow Value 3 (LPM)", blank=True, null=True)
+    uv_flow_value_3_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_flow_value_4 = models.FloatField(verbose_name="UV Flow Value 4 (LPM)", blank=True, null=True)
+    uv_flow_value_4_comment = models.TextField(blank=True, null=True)  # ← ADD THIS
+    
+    uv_flow_value_5 = models.FloatField(verbose_name="UV Flow Value 5 (LPM)", blank=True, null=True)
+    uv_flow_value_5_comment = models.TextField(blank=True, null=True)      
+    # ============================================
+    # UMBRELLA VALVE ASSEMBLY (5 checks)
+    # ============================================
+    umbrella_valve_assembly_1 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    umbrella_valve_assembly_1_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_2 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    umbrella_valve_assembly_2_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_3 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    umbrella_valve_assembly_3_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_4 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    umbrella_valve_assembly_4_comment = models.TextField(blank=True, null=True)
+    umbrella_valve_assembly_5 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    umbrella_valve_assembly_5_comment = models.TextField(blank=True, null=True)
+    
+    # ============================================
+    # UV CLIP PRESSING (5 checks)
+    # ============================================
+    uv_clip_pressing_1 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    uv_clip_pressing_1_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_2 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    uv_clip_pressing_2_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_3 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    uv_clip_pressing_3_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_4 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    uv_clip_pressing_4_comment = models.TextField(blank=True, null=True)
+    uv_clip_pressing_5 = models.CharField(max_length=3, choices=OK_NG_CHOICES, blank=True, null=True)
+    uv_clip_pressing_5_comment = models.TextField(blank=True, null=True)
+    
+    # ============================================
+    # WORKSTATION CLEAN (1 check)
+    # ============================================
+    workstation_clean = models.CharField(
+        max_length=3,
+        choices=YES_NO_CHOICES,
+        verbose_name="Workstation Clean",
+        blank=True,
+        null=True
+    )
+    workstation_clean_comment = models.TextField(blank=True, null=True)
+    
+    # ============================================
+    # BIN CONTAMINATION (5 checks)
+    # ============================================
+    bin_contamination_check_1 = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True, null=True)
+    bin_contamination_check_1_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_2 = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True, null=True)
+    bin_contamination_check_2_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_3 = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True, null=True)
+    bin_contamination_check_3_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_4 = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True, null=True)
+    bin_contamination_check_4_comment = models.TextField(blank=True, null=True)
+    bin_contamination_check_5 = models.CharField(max_length=3, choices=YES_NO_CHOICES, blank=True, null=True)
+    bin_contamination_check_5_comment = models.TextField(blank=True, null=True)
+    
+    # ============================================
+    # COMMON FIELDS
+    # ============================================
+    is_after_maintenance = models.BooleanField(default=False)
+    maintenance_comment = models.TextField(blank=True, null=True)
+    general_notes = models.TextField(blank=True, null=True)
+    
+    # Computed properties
+    @property
+    def uv_vacuum_average(self):
+        """Calculate average of UV vacuum test readings"""
+        values = [
+            self.uv_vacuum_test_1, self.uv_vacuum_test_2, 
+            self.uv_vacuum_test_3, self.uv_vacuum_test_4, 
+            self.uv_vacuum_test_5
+        ]
+        valid_values = [v for v in values if v is not None]
+        return sum(valid_values) / len(valid_values) if valid_values else 0
+    
+    @property
+    def uv_flow_average(self):
+        """Calculate average of UV flow value readings"""
+        values = [
+            self.uv_flow_value_1, self.uv_flow_value_2,
+            self.uv_flow_value_3, self.uv_flow_value_4,
+            self.uv_flow_value_5
+        ]
+        valid_values = [v for v in values if v is not None]
+        return sum(valid_values) / len(valid_values) if valid_values else 0
+    
+    @property
+    def umbrella_valve_ok_count(self):
+        """Count OK readings for umbrella valve"""
+        values = [
+            self.umbrella_valve_assembly_1, self.umbrella_valve_assembly_2,
+            self.umbrella_valve_assembly_3, self.umbrella_valve_assembly_4,
+            self.umbrella_valve_assembly_5
+        ]
+        return sum(1 for v in values if v == 'OK')
+    
+    @property
+    def uv_clip_ok_count(self):
+        """Count OK readings for UV clip"""
+        values = [
+            self.uv_clip_pressing_1, self.uv_clip_pressing_2,
+            self.uv_clip_pressing_3, self.uv_clip_pressing_4,
+            self.uv_clip_pressing_5
+        ]
+        return sum(1 for v in values if v == 'OK')
+    
+    @property
+    def bin_contamination_yes_count(self):
+        """Count Yes readings for bin contamination"""
+        values = [
+            self.bin_contamination_check_1, self.bin_contamination_check_2,
+            self.bin_contamination_check_3, self.bin_contamination_check_4,
+            self.bin_contamination_check_5
+        ]
+        return sum(1 for v in values if v == 'Yes')
+    
+    @property
+    def parameter_display_name(self):
+        """Get display name for parameter group"""
+        return dict(ParameterGroupConfig.PARAMETER_GROUPS).get(self.parameter_group, self.parameter_group)
+    
+    def get_applicable_fields(self):
+        """Return list of field names applicable to this parameter group"""
+        field_mapping = {
+            'uv_vacuum': [
+                'uv_vacuum_test_1', 'uv_vacuum_test_1_comment',  # ← UPDATE THIS
+                'uv_vacuum_test_2', 'uv_vacuum_test_2_comment',  # ← UPDATE THIS
+                'uv_vacuum_test_3', 'uv_vacuum_test_3_comment',  # ← UPDATE THIS
+                'uv_vacuum_test_4', 'uv_vacuum_test_4_comment',  # ← UPDATE THIS
+                'uv_vacuum_test_5', 'uv_vacuum_test_5_comment',  # ← UPDATE THIS
+            ],
+            'uv_flow': [
+                'uv_flow_value_1', 'uv_flow_value_1_comment',    # ← UPDATE THIS
+                'uv_flow_value_2', 'uv_flow_value_2_comment',    # ← UPDATE THIS
+                'uv_flow_value_3', 'uv_flow_value_3_comment',    # ← UPDATE THIS
+                'uv_flow_value_4', 'uv_flow_value_4_comment',    # ← UPDATE THIS
+                'uv_flow_value_5', 'uv_flow_value_5_comment',    # ← UPDATE THIS
+            ],
+
+            'umbrella_valve': [
+                'umbrella_valve_assembly_1', 'umbrella_valve_assembly_1_comment',
+                'umbrella_valve_assembly_2', 'umbrella_valve_assembly_2_comment',
+                'umbrella_valve_assembly_3', 'umbrella_valve_assembly_3_comment',
+                'umbrella_valve_assembly_4', 'umbrella_valve_assembly_4_comment',
+                'umbrella_valve_assembly_5', 'umbrella_valve_assembly_5_comment',
+            ],
+            'uv_clip': [
+                'uv_clip_pressing_1', 'uv_clip_pressing_1_comment',
+                'uv_clip_pressing_2', 'uv_clip_pressing_2_comment',
+                'uv_clip_pressing_3', 'uv_clip_pressing_3_comment',
+                'uv_clip_pressing_4', 'uv_clip_pressing_4_comment',
+                'uv_clip_pressing_5', 'uv_clip_pressing_5_comment',
+            ],
+            'workstation': [
+                'workstation_clean', 'workstation_clean_comment'
+            ],
+            'bin_contamination': [
+                'bin_contamination_check_1', 'bin_contamination_check_1_comment',
+                'bin_contamination_check_2', 'bin_contamination_check_2_comment',
+                'bin_contamination_check_3', 'bin_contamination_check_3_comment',
+                'bin_contamination_check_4', 'bin_contamination_check_4_comment',
+                'bin_contamination_check_5', 'bin_contamination_check_5_comment',
+            ],
+        }
+        
+        # Always include common fields
+        common_fields = ['is_after_maintenance', 'maintenance_comment', 'general_notes']
+        return field_mapping.get(self.parameter_group, []) + common_fields
+
+    @property
+    def supervisor_verification(self):
+        """Get supervisor verification for this entry"""
+        return self.verifications.filter(verification_type='supervisor').first()
+    
+    @property
+    def quality_verification(self):
+        """Get quality verification for this entry"""
+        return self.verifications.filter(verification_type='quality').first()
+    
+    @property
+    def is_supervisor_verified(self):
+        """Check if supervisor has verified"""
+        return self.verifications.filter(verification_type='supervisor').exists()
+    
+    @property
+    def is_quality_verified(self):
+        """Check if quality has verified"""
+        return self.verifications.filter(verification_type='quality').exists()
+    
+    @property
+    def is_fully_verified(self):
+        """Check if both supervisors have verified"""
+        return self.is_supervisor_verified and self.is_quality_verified
+    
+    @property
+    def verification_status_badge(self):
+        """Get HTML badge for verification status"""
+        if self.is_fully_verified:
+            return '<span class="badge bg-success">✓ Fully Verified</span>'
+        elif self.is_supervisor_verified:
+            return '<span class="badge bg-warning">⏳ Quality Pending</span>'
+        else:
+            return '<span class="badge bg-secondary">⏳ Supervisor Pending</span>'
+    
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = "Parameter Group Entry"
+        verbose_name_plural = "Parameter Group Entries"
+    
+    def __str__(self):
+        return f"{self.checklist} - {self.parameter_display_name} - {self.timestamp.strftime('%H:%M')}"    
+    
+    
+    
+    
+#
+
+class ParameterGroupVerification(models.Model):
+    """Track verification of individual parameter group entries"""
+    
+    VERIFICATION_TYPES = [
+        ('supervisor', 'Shift Supervisor'),
+        ('quality', 'Quality Supervisor'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+    
+    parameter_entry = models.ForeignKey(
+        'ParameterGroupEntry',
+        on_delete=models.CASCADE,
+        related_name='verifications'
+    )
+    
+    verification_type = models.CharField(
+        max_length=20,
+        choices=VERIFICATION_TYPES
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES
+    )
+    
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='parameter_group_verifications'
+    )
+    
+    verified_at = models.DateTimeField(auto_now_add=True)
+    
+    comment = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="Verification Comment"
+    )
+    
+    class Meta:
+        ordering = ['-verified_at']
+        unique_together = ['parameter_entry', 'verification_type']
+        verbose_name = "Parameter Group Verification"
+        verbose_name_plural = "Parameter Group Verifications"
+    
+    def __str__(self):
+        return f"{self.parameter_entry.parameter_display_name} - {self.get_verification_type_display()} - {self.status}"

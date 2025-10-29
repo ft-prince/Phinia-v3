@@ -1,0 +1,778 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Add Subgroup Entry{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="card" style="background-color: #000000; color: #FFFFFF; border: 2px solid #ffffff; border-radius: 8px; box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);">
+                <div class="card-header text-white" style="background-color: #CC0000; border-bottom: 2px solid #ffffff;">
+                    <h5 class="mb-0">
+                        Add Subgroup {{ current_subgroup }} - Checklist #{{ checklist.id }} 
+                        <span class="badge bg-dark">Model: {{ checklist.selected_model }}</span>
+                        <span class="badge bg-dark">Max: {{ max_subgroups }} subgroups</span>
+                    </h5>
+                </div>
+                <div class="card-body" style="background-color: #111;">
+                    <form method="post" id="subgroupForm">
+                        {% csrf_token %}
+                        
+                        <style>
+                            .readings-row {
+                                display: grid;
+                                grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+                                gap: 10px;
+                                margin-bottom: 15px;
+                            }
+                            .single-reading {
+                                display: flex;
+                                justify-content: center;
+                                margin-bottom: 15px;
+                            }
+                            .single-reading select {
+                                width: 200px;
+                            }
+                            .reading-input, select, input[type="number"], textarea {
+                                background-color: #222;
+                                color: white;
+                                border: 2px solid white;
+                                border-radius: 4px;
+                                padding: 8px 12px;
+                                width: 100%;
+                                text-align: center;
+                            }
+                            textarea {
+                                text-align: left;
+                                resize: vertical;
+                            }
+                            .reading-input:focus, select:focus, input:focus, textarea:focus {
+                                outline: none;
+                                border-color: #CC0000;
+                                box-shadow: 0 0 5px rgba(204, 0, 0, 0.5);
+                            }
+                            .reading-input.out-of-range, input.out-of-range {
+                                border-color: #ff0000 !important;
+                                background-color: #440000 !important;
+                                color: #ffffff !important;
+                                box-shadow: 0 0 10px rgba(255, 0, 0, 0.8) !important;
+                            }
+                            .reading-header {
+                                text-align: center;
+                                font-weight: bold;
+                                color: #CC0000;
+                                margin-bottom: 5px;
+                            }
+                            .parameter-section {
+                                border: 2px solid #ffffff;
+                                border-radius: 8px;
+                                padding: 15px;
+                                margin-bottom: 20px;
+                                background-color: rgba(255, 255, 255, 0.05);
+                                position: relative;
+                            }
+                            .parameter-title {
+                                margin: -25px 0 15px 15px;
+                                background-color: #000000;
+                                display: inline-block;
+                                padding: 5px 15px;
+                                border: 2px solid #CC0000;
+                                border-radius: 5px;
+                                font-weight: bold;
+                            }
+                            .parameter-description {
+                                margin-bottom: 15px;
+                                color: #e0e0e0;
+                                font-size: 14px;
+                            }
+                            .range-info {
+                                color: #ffd700;
+                                font-size: 12px;
+                                text-align: center;
+                                margin-bottom: 10px;
+                            }
+                            .warning-message {
+                                background-color: #ff0000;
+                                color: white;
+                                padding: 8px 12px;
+                                border-radius: 4px;
+                                margin-bottom: 10px;
+                                font-size: 12px;
+                                font-weight: bold;
+                                display: none;
+                                animation: pulse 1s infinite;
+                            }
+                            @keyframes pulse {
+                                0% { opacity: 1; }
+                                50% { opacity: 0.7; }
+                                100% { opacity: 1; }
+                            }
+                            .reading-container {
+                                position: relative;
+                            }
+                            .individual-warning {
+                                position: absolute;
+                                top: -25px;
+                                left: 0;
+                                right: 0;
+                                background-color: #ff0000;
+                                color: white;
+                                font-size: 10px;
+                                padding: 2px 4px;
+                                border-radius: 3px;
+                                text-align: center;
+                                display: none;
+                                z-index: 1000;
+                                pointer-events: none;
+                            }
+                            .nok-comment-container {
+                                margin-top: 5px;
+                                display: none;
+                            }
+                            .nok-comment-container.show {
+                                display: block;
+                            }
+                            .nok-comment-container textarea {
+                                font-size: 11px;
+                                background-color: #222 !important;
+                                color: white !important;
+                                border-color: #ff6666 !important;
+                            }
+                            .form-check-input {
+                                background-color: #222;
+                                border-color: white;
+                            }
+                            .form-check-input:checked {
+                                background-color: #CC0000;
+                                border-color: #CC0000;
+                            }
+                            @media (max-width: 768px) {
+                                .readings-row {
+                                    grid-template-columns: 1fr 1fr;
+                                    gap: 5px;
+                                }
+                            }
+                        </style>
+                        
+                        <!-- Maintenance/ME Activity Section -->
+                        <div class="parameter-section" style="border-color: #FFA500;">
+                            <h6 class="parameter-title" style="border-color: #FFA500; color: #FFA500;">
+                                Maintenance Activity (Optional)
+                                <span style="font-size: 85%; font-weight: normal; color: #ddd;">रखरखाव गतिविधि (वैकल्पिक)</span>
+                            </h6>
+                            <div class="parameter-description">
+                                Check this if you're adding this subgroup after maintenance or ME activity
+                                <br><span class="text-secondary">यदि आप रखरखाव या एमई गतिविधि के बाद यह सबग्रुप जोड़ रहे हैं तो इसे चेक करें</span>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                {{ form.is_after_maintenance }}
+                                <label class="form-check-label text-white" for="id_is_after_maintenance">
+                                    This subgroup is added after maintenance/ME activity
+                                    <span class="text-secondary">(यह सबग्रुप रखरखाव/एमई गतिविधि के बाद जोड़ा गया है)</span>
+                                </label>
+                            </div>
+                            
+                            <div id="maintenanceFields" style="display: none;">
+                                <div class="mb-3">
+                                    <label class="form-label text-white">
+                                        Maintenance Activity Description <span class="text-danger">*</span>
+                                        <span class="text-secondary">(रखरखाव गतिविधि का विवरण)</span>
+                                    </label>
+                                    {{ form.maintenance_comment }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label text-white">
+                                        Effectiveness Comment (Optional)
+                                        <span class="text-secondary">(प्रभावशीलता टिप्पणी - वैकल्पिक)</span>
+                                    </label>
+                                    {{ form.effectiveness_comment }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- UV Vacuum Test Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title text-danger">UV Vacuum Test (kPa)</h6>
+                            <div class="parameter-description">
+                                Record 5 consecutive readings of UV vacuum test
+                                <span class="text-secondary">(यूवी वैक्यूम टेस्ट की 5 लगातार रीडिंग रिकॉर्ड करें)</span>
+                            </div>
+                            <div class="range-info">Recommended Range: -43 to -35 kPa</div>
+                            <div class="warning-message" id="uvVacuumWarning">
+                                ⚠️ One or more UV Vacuum readings are outside the recommended range!
+                            </div>
+                            
+                            <div class="readings-row">
+                                <div class="reading-header">Reading 1</div>
+                                <div class="reading-header">Reading 2</div>
+                                <div class="reading-header">Reading 3</div>
+                                <div class="reading-header">Reading 4</div>
+                                <div class="reading-header">Reading 5</div>
+                            </div>
+                            <div class="readings-row">
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvVacuum1Warning">Out of range!</div>
+                                    {{ form.uv_vacuum_test_1 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment1">
+                                        {{ form.uv_vacuum_test_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvVacuum2Warning">Out of range!</div>
+                                    {{ form.uv_vacuum_test_2 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment2">
+                                        {{ form.uv_vacuum_test_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvVacuum3Warning">Out of range!</div>
+                                    {{ form.uv_vacuum_test_3 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment3">
+                                        {{ form.uv_vacuum_test_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvVacuum4Warning">Out of range!</div>
+                                    {{ form.uv_vacuum_test_4 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment4">
+                                        {{ form.uv_vacuum_test_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvVacuum5Warning">Out of range!</div>
+                                    {{ form.uv_vacuum_test_5 }}
+                                    <div class="nok-comment-container" id="uvVacuumComment5">
+                                        {{ form.uv_vacuum_test_5_comment }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- UV Flow Value Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title text-danger">UV Flow Value (LPM)</h6>
+                            <div class="parameter-description">
+                                Record 5 consecutive readings of UV flow value from HMI
+                                <span class="text-secondary">(HMI से यूवी फ्लो वैल्यू की 5 लगातार रीडिंग रिकॉर्ड करें)</span>
+                            </div>
+                            <div class="range-info">Recommended Range: 30-40 LPM</div>
+                            <div class="warning-message" id="uvFlowWarning">
+                                ⚠️ One or more UV Flow readings are outside the recommended range!
+                            </div>
+                            
+                            <div class="readings-row">
+                                <div class="reading-header">Reading 1</div>
+                                <div class="reading-header">Reading 2</div>
+                                <div class="reading-header">Reading 3</div>
+                                <div class="reading-header">Reading 4</div>
+                                <div class="reading-header">Reading 5</div>
+                            </div>
+                            <div class="readings-row">
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvFlow1Warning">Out of range!</div>
+                                    {{ form.uv_flow_value_1 }}
+                                    <div class="nok-comment-container" id="uvFlowComment1">
+                                        {{ form.uv_flow_value_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvFlow2Warning">Out of range!</div>
+                                    {{ form.uv_flow_value_2 }}
+                                    <div class="nok-comment-container" id="uvFlowComment2">
+                                        {{ form.uv_flow_value_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvFlow3Warning">Out of range!</div>
+                                    {{ form.uv_flow_value_3 }}
+                                    <div class="nok-comment-container" id="uvFlowComment3">
+                                        {{ form.uv_flow_value_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvFlow4Warning">Out of range!</div>
+                                    {{ form.uv_flow_value_4 }}
+                                    <div class="nok-comment-container" id="uvFlowComment4">
+                                        {{ form.uv_flow_value_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    <div class="individual-warning" id="uvFlow5Warning">Out of range!</div>
+                                    {{ form.uv_flow_value_5 }}
+                                    <div class="nok-comment-container" id="uvFlowComment5">
+                                        {{ form.uv_flow_value_5_comment }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Umbrella Valve Assembly Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title text-danger">Umbrella Valve Assembly in Retainer</h6>
+                            <div class="parameter-description">
+                                Check umbrella valve assembly in retainer in UV Assy Station - 5 checks
+                                <span class="text-secondary">(यूवी असेंबली स्टेशन में रिटेनर में अम्ब्रेला वाल्व असेंबली की जांच करें - 5 जांच)</span>
+                            </div>
+                            
+                            <div class="readings-row">
+                                <div class="reading-header">Check 1</div>
+                                <div class="reading-header">Check 2</div>
+                                <div class="reading-header">Check 3</div>
+                                <div class="reading-header">Check 4</div>
+                                <div class="reading-header">Check 5</div>
+                            </div>
+                            <div class="readings-row">
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_1 }}
+                                    <div class="nok-comment-container" id="umbrellaComment1">
+                                        {{ form.umbrella_valve_assembly_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_2 }}
+                                    <div class="nok-comment-container" id="umbrellaComment2">
+                                        {{ form.umbrella_valve_assembly_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_3 }}
+                                    <div class="nok-comment-container" id="umbrellaComment3">
+                                        {{ form.umbrella_valve_assembly_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_4 }}
+                                    <div class="nok-comment-container" id="umbrellaComment4">
+                                        {{ form.umbrella_valve_assembly_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.umbrella_valve_assembly_5 }}
+                                    <div class="nok-comment-container" id="umbrellaComment5">
+                                        {{ form.umbrella_valve_assembly_5_comment }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- UV Clip Pressing Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title text-danger">UV Clip Pressing</h6>
+                            <div class="parameter-description">
+                                Check UV clip pressing - proper locking of 2 nos snap - 5 checks
+                                <span class="text-secondary">(यूवी क्लिप प्रेसिंग की जांच करें - 2 स्नैप का उचित लॉकिंग - 5 जांच)</span>
+                            </div>
+                            
+                            <div class="readings-row">
+                                <div class="reading-header">Check 1</div>
+                                <div class="reading-header">Check 2</div>
+                                <div class="reading-header">Check 3</div>
+                                <div class="reading-header">Check 4</div>
+                                <div class="reading-header">Check 5</div>
+                            </div>
+                            <div class="readings-row">
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_1 }}
+                                    <div class="nok-comment-container" id="uvClipComment1">
+                                        {{ form.uv_clip_pressing_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_2 }}
+                                    <div class="nok-comment-container" id="uvClipComment2">
+                                        {{ form.uv_clip_pressing_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_3 }}
+                                    <div class="nok-comment-container" id="uvClipComment3">
+                                        {{ form.uv_clip_pressing_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_4 }}
+                                    <div class="nok-comment-container" id="uvClipComment4">
+                                        {{ form.uv_clip_pressing_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.uv_clip_pressing_5 }}
+                                    <div class="nok-comment-container" id="uvClipComment5">
+                                        {{ form.uv_clip_pressing_5_comment }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Workstation Clean Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title text-danger">Workstation Cleanliness</h6>
+                            <div class="parameter-description">
+                                All workstations are clean - Single Check
+                                <span class="text-secondary">(सभी वर्कस्टेशन साफ हैं - एकल जांच)</span>
+                            </div>
+                            
+                            <div class="single-reading">
+                                <div class="reading-container" style="width: 200px;">
+                                    {{ form.workstation_clean }}
+                                    <div class="nok-comment-container" id="workstationComment">
+                                        {{ form.workstation_clean_comment }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Bin Contamination Check Section -->
+                        <div class="parameter-section">
+                            <h6 class="parameter-title text-danger">Bin Contamination Check</h6>
+                            <div class="parameter-description">
+                                Station Operator will confirm that every bin feeded on line is free from contamination - 5 checks
+                                <br><small class="text-muted">PTGW_5.3_PC_GUR_03</small>
+                                <br><span class="text-secondary">(स्टेशन ऑपरेटर पुष्टि करेगा कि लाइन पर खिलाया गया प्रत्येक बिन संदूषण से मुक्त है - 5 जांच)</span>
+                            </div>
+                            
+                            <div class="readings-row">
+                                <div class="reading-header">Check 1</div>
+                                <div class="reading-header">Check 2</div>
+                                <div class="reading-header">Check 3</div>
+                                <div class="reading-header">Check 4</div>
+                                <div class="reading-header">Check 5</div>
+                            </div>
+                            <div class="readings-row">
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_1 }}
+                                    <div class="nok-comment-container" id="binComment1">
+                                        {{ form.bin_contamination_check_1_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_2 }}
+                                    <div class="nok-comment-container" id="binComment2">
+                                        {{ form.bin_contamination_check_2_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_3 }}
+                                    <div class="nok-comment-container" id="binComment3">
+                                        {{ form.bin_contamination_check_3_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_4 }}
+                                    <div class="nok-comment-container" id="binComment4">
+                                        {{ form.bin_contamination_check_4_comment }}
+                                    </div>
+                                </div>
+                                <div class="reading-container">
+                                    {{ form.bin_contamination_check_5 }}
+                                    <div class="nok-comment-container" id="binComment5">
+                                        {{ form.bin_contamination_check_5_comment }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-danger btn-lg" style="border: 2px solid white; font-weight: bold;">
+                                Save Subgroup Entry ({{ current_subgroup }}/{{ max_subgroups }})
+                            </button>
+                            <a href="{% url 'checklist_detail' checklist.id %}" class="btn btn-outline-light" style="border: 2px solid white;">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('subgroupForm');
+    
+    // Handle maintenance checkbox
+    const maintenanceCheckbox = document.getElementById('id_is_after_maintenance');
+    const maintenanceFields = document.getElementById('maintenanceFields');
+    
+    if (maintenanceCheckbox) {
+        maintenanceCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                maintenanceFields.style.display = 'block';
+                const maintenanceComment = document.querySelector('textarea[name="maintenance_comment"]');
+                if (maintenanceComment) {
+                    maintenanceComment.required = true;
+                }
+            } else {
+                maintenanceFields.style.display = 'none';
+                const maintenanceComment = document.querySelector('textarea[name="maintenance_comment"]');
+                if (maintenanceComment) {
+                    maintenanceComment.required = false;
+                }
+            }
+        });
+    }
+    
+ // Real-time validation function
+function validateField(fieldName, value, min, max, unit, index) {
+    const field = form[fieldName];
+    let commentDivId;
+    
+    // Properly map field names to comment div IDs
+    if (fieldName.startsWith('uv_vacuum_test_')) {
+        commentDivId = `uvVacuumComment${index}`;
+    } else if (fieldName.startsWith('uv_flow_value_')) {
+        commentDivId = `uvFlowComment${index}`;
+    }
+    
+    const warningElement = document.getElementById(`${fieldName.replace('_test_', '').replace('_value_', '').replace(/\d+$/, '')}${index}Warning`);
+    const commentDiv = document.getElementById(commentDivId);
+    
+    if (value !== '' && (parseFloat(value) < min || parseFloat(value) > max)) {
+        field.classList.add('out-of-range');
+        if (warningElement) {
+            warningElement.style.display = 'block';
+            warningElement.textContent = `${parseFloat(value)} ${unit} is out of range!`;
+        }
+        if (commentDiv) {
+            commentDiv.classList.add('show');
+        }
+        return false;
+    } else {
+        field.classList.remove('out-of-range');
+        if (warningElement) {
+            warningElement.style.display = 'none';
+        }
+        if (commentDiv) {
+            commentDiv.classList.remove('show');
+        }
+        return true;
+    }
+}
+
+    // Check for overall section warnings
+    function checkSectionWarnings() {
+        let uvVacuumHasError = false;
+        let uvFlowHasError = false;
+
+        for (let i = 1; i <= 5; i++) {
+            const uvVacValue = form[`uv_vacuum_test_${i}`].value;
+            if (uvVacValue !== '' && (parseFloat(uvVacValue) < -43 || parseFloat(uvVacValue) > -35)) {
+                uvVacuumHasError = true;
+            }
+            
+            const uvFlowValue = form[`uv_flow_value_${i}`].value;
+            if (uvFlowValue !== '' && (parseFloat(uvFlowValue) < 30 || parseFloat(uvFlowValue) > 40)) {
+                uvFlowHasError = true;
+            }
+        }
+
+        const uvVacuumWarning = document.getElementById('uvVacuumWarning');
+        const uvFlowWarning = document.getElementById('uvFlowWarning');
+
+        if (uvVacuumWarning) {
+            uvVacuumWarning.style.display = uvVacuumHasError ? 'block' : 'none';
+        }
+        if (uvFlowWarning) {
+            uvFlowWarning.style.display = uvFlowHasError ? 'block' : 'none';
+        }
+    }
+
+    // Update validation
+    function updateValidation() {
+        for (let i = 1; i <= 5; i++) {
+            const uvVacVal = form[`uv_vacuum_test_${i}`].value;
+            validateField(`uv_vacuum_test_${i}`, uvVacVal, -43, -35, 'kPa', i);
+            
+            const uvFlowVal = form[`uv_flow_value_${i}`].value;
+            validateField(`uv_flow_value_${i}`, uvFlowVal, 30, 40, 'LPM', i);
+        }
+        checkSectionWarnings();
+    }
+
+    // Add event listeners for real-time validation
+    for (let i = 1; i <= 5; i++) {
+        const uvVacuumField = form[`uv_vacuum_test_${i}`];
+        const uvFlowField = form[`uv_flow_value_${i}`];
+        
+        if (uvVacuumField) {
+            uvVacuumField.addEventListener('input', updateValidation);
+            uvVacuumField.addEventListener('blur', updateValidation);
+        }
+        if (uvFlowField) {
+            uvFlowField.addEventListener('input', updateValidation);
+            uvFlowField.addEventListener('blur', updateValidation);
+        }
+    }
+    
+    // Handle NOK/No selections for select fields
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('change', function() {
+            const name = this.name;
+            let commentDiv = null;
+            
+            // Find the corresponding comment div
+            if (name.includes('umbrella_valve_assembly_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`umbrellaComment${index}`);
+            } else if (name.includes('uv_clip_pressing_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`uvClipComment${index}`);
+            } else if (name === 'workstation_clean') {
+                commentDiv = document.getElementById('workstationComment');
+            } else if (name.includes('bin_contamination_check_')) {
+                const index = name.match(/\d+/)[0];
+                commentDiv = document.getElementById(`binComment${index}`);
+            }
+            
+            if (commentDiv) {
+                const commentTextarea = commentDiv.querySelector('textarea');
+                if (this.value === 'NOK' || this.value === 'No') {
+                    commentDiv.classList.add('show');
+                    if (commentTextarea) {
+                        commentTextarea.required = false; // Optional comments
+                    }
+                } else {
+                    commentDiv.classList.remove('show');
+                    if (commentTextarea) {
+                        commentTextarea.required = false;
+                    }
+                }
+            }
+        });
+    });
+
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        let warningMessages = [];
+        let infoMessages = [];
+
+        // Check UV vacuum test readings
+        for (let i = 1; i <= 5; i++) {
+            const fieldName = `uv_vacuum_test_${i}`;
+            const field = form[fieldName];
+            
+            if (field && field.value) {
+                const uvVacuum = parseFloat(field.value);
+                
+                if (!isNaN(uvVacuum) && (uvVacuum < -43 || uvVacuum > -35)) {
+                    warningMessages.push(`UV Vacuum Test Reading ${i}: ${uvVacuum} kPa is outside range (-43 to -35 kPa)`);
+                }
+            }
+        }
+
+        // Check UV flow value readings
+        for (let i = 1; i <= 5; i++) {
+            const fieldName = `uv_flow_value_${i}`;
+            const field = form[fieldName];
+            
+            if (field && field.value) {
+                const uvFlow = parseFloat(field.value);
+                
+                if (!isNaN(uvFlow) && (uvFlow < 30 || uvFlow > 40)) {
+                    warningMessages.push(`UV Flow Value Reading ${i}: ${uvFlow} LPM is outside range (30-40 LPM)`);
+                }
+            }
+        }
+
+        // Check for NOK/No values
+        for (let i = 1; i <= 5; i++) {
+            const umbrellaField = form[`umbrella_valve_assembly_${i}`];
+            if (umbrellaField && umbrellaField.value === 'NOK') {
+                warningMessages.push(`Umbrella Valve Assembly ${i} marked as NOK`);
+            }
+            
+            const uvClipField = form[`uv_clip_pressing_${i}`];
+            if (uvClipField && uvClipField.value === 'NOK') {
+                warningMessages.push(`UV Clip Pressing ${i} marked as NOK`);
+            }
+            
+            const binField = form[`bin_contamination_check_${i}`];
+            if (binField && binField.value === 'No') {
+                warningMessages.push(`Bin Contamination Check ${i} marked as No`);
+            }
+        }
+        
+        // Check workstation
+        const workstationField = form['workstation_clean'];
+        if (workstationField && workstationField.value === 'No') {
+            warningMessages.push('Workstation marked as not clean');
+        }
+        
+        // Check maintenance fields
+        if (maintenanceCheckbox && maintenanceCheckbox.checked) {
+            const maintenanceCommentField = document.querySelector('textarea[name="maintenance_comment"]');
+            if (!maintenanceCommentField || !maintenanceCommentField.value.trim()) {
+                alert('Maintenance activity description is required when maintenance checkbox is selected.');
+                e.preventDefault();
+                if (maintenanceCommentField) {
+                    maintenanceCommentField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    maintenanceCommentField.focus();
+                }
+                return false;
+            }
+        }
+
+        // Calculate averages for info
+        let uvVacuumSum = 0, uvFlowSum = 0, uvVacCount = 0, uvFlowCount = 0;
+        
+        for (let i = 1; i <= 5; i++) {
+            const uvVacField = form[`uv_vacuum_test_${i}`];
+            if (uvVacField && uvVacField.value) {
+                const val = parseFloat(uvVacField.value);
+                if (!isNaN(val)) {
+                    uvVacuumSum += val;
+                    uvVacCount++;
+                }
+            }
+            
+            const uvFlowField = form[`uv_flow_value_${i}`];
+            if (uvFlowField && uvFlowField.value) {
+                const val = parseFloat(uvFlowField.value);
+                if (!isNaN(val)) {
+                    uvFlowSum += val;
+                    uvFlowCount++;
+                }
+            }
+        }
+        
+        if (uvVacCount > 0) {
+            const uvVacuumAvg = (uvVacuumSum / uvVacCount).toFixed(2);
+            infoMessages.push(`UV Vacuum Test Average: ${uvVacuumAvg} kPa`);
+        }
+        
+        if (uvFlowCount > 0) {
+            const uvFlowAvg = (uvFlowSum / uvFlowCount).toFixed(2);
+            infoMessages.push(`UV Flow Value Average: ${uvFlowAvg} LPM`);
+        }
+
+        // Combine messages
+        let allMessages = [];
+        if (warningMessages.length > 0) {
+            allMessages.push('WARNINGS:');
+            allMessages = allMessages.concat(warningMessages);
+        }
+        if (infoMessages.length > 0) {
+            allMessages.push('\nINFO:');
+            allMessages = allMessages.concat(infoMessages);
+        }
+
+        // Show warnings/info and allow submission
+        if (allMessages.length > 0) {
+            const proceed = confirm(allMessages.join('\n') + '\n\nDo you want to proceed with saving this subgroup?');
+            if (!proceed) {
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        return true;
+    });
+
+    // Run initial validation
+    updateValidation();
+});
+</script>
+{% endblock %}

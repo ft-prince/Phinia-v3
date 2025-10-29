@@ -1,0 +1,331 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Fill Parameters - Checklist #{{ checklist.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body {
+        background-color: black !important;
+        color: white !important;
+    }
+    
+    .card {
+        background-color: #111 !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+        margin-bottom: 15px;
+    }
+    
+    .card-header {
+        background-color: #CC0000 !important;
+        border-bottom: 2px solid #ffffff !important;
+        color: white !important;
+        padding: 10px 15px;
+    }
+    
+    .card-body {
+        padding: 15px;
+    }
+    
+    .parameter-section {
+        border: 2px solid #ffffff;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 25px;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .parameter-title {
+        margin: -32px 0 20px 15px;
+        background-color: #000000;
+        display: inline-block;
+        padding: 8px 20px;
+        border: 2px solid #CC0000;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    
+    .reading-input, select, input[type="number"], textarea {
+        background-color: #222;
+        color: white;
+        border: 2px solid white;
+        border-radius: 4px;
+        padding: 10px;
+        width: 100%;
+    }
+    
+    .reading-input:focus, select:focus, input:focus, textarea:focus {
+        outline: none;
+        border-color: #CC0000;
+        box-shadow: 0 0 5px rgba(204, 0, 0, 0.5);
+    }
+    
+    .readings-row {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .reading-header {
+        text-align: center;
+        font-weight: bold;
+        color: #CC0000;
+        margin-bottom: 8px;
+    }
+    
+    .range-info {
+        color: #ffd700;
+        font-size: 13px;
+        text-align: center;
+        margin-bottom: 15px;
+    }
+    
+    .btn-submit {
+        background-color: #CC0000 !important;
+        border: 2px solid #ffffff !important;
+        color: white !important;
+        padding: 12px 40px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 5px;
+    }
+    
+    .btn-submit:hover {
+        background-color: #990000 !important;
+        transform: translateY(-2px);
+    }
+    
+    .progress {
+        height: 25px;
+        background-color: #222;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .progress-bar {
+        background-color: #CC0000;
+        font-weight: bold;
+    }
+    
+    @media (max-width: 768px) {
+        .readings-row {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header Card -->
+    <div class="card">
+        <div class="card-header">
+            <h4 class="mb-0">
+                <i class="fas fa-edit"></i> Fill Parameter Groups
+                <span style="font-size: 85%; font-weight: normal; margin-left: 10px;">पैरामीटर समूह भरें</span>
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Model:</strong> {{ checklist.selected_model }}</p>
+                    <p class="mb-1"><strong>Shift:</strong> {{ checklist.verification_status.shift.get_shift_type_display }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Started At:</strong> {{ checklist.created_at|date:"H:i:s" }}</p>
+                    <p class="mb-1"><strong>Operator:</strong> {{ checklist.verification_status.shift.operator }}</p>
+                </div>
+            </div>
+            
+            <!-- Progress -->
+            {% with total=availability.completed|length|add:availability.available|length|add:availability.pending|length %}
+            {% widthratio availability.completed|length total 100 as percentage %}
+            <div class="progress mt-3">
+                <div class="progress-bar" style="width: {{ percentage }}%;">
+                    {{ availability.completed|length }}/{{ total}} Completed ({{ percentage }}%)
+                </div>
+            </div>
+            {% endwith %}
+            
+            {% comment %} {% if availability.completed %}
+            <div class="mt-2">
+                <strong>✓ Completed:</strong>
+                {% for param in availability.completed %}
+                    <span class="badge bg-success">{{ param|upper|replace:"_":" " }}</span>
+                {% endfor %}
+            </div>
+            {% endif %} {% endcomment %}
+            
+            {% if availability.pending %}
+            <div class="mt-2">
+                <strong>⏰ Pending:</strong>
+                {% for pending in availability.pending %}
+                    <span class="badge bg-warning text-dark">
+                        {{ pending.display_name }} ({{ pending.frequency_minutes }}min)
+                    </span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Form for ALL Available Parameters -->
+    <form method="post" id="parameterForm">
+        {% csrf_token %}
+        
+        {% for form_data in forms_data %}
+        <!-- Parameter Section -->
+        <div class="parameter-section">
+            <h5 class="parameter-title">
+                {{ form_data.display_name }}
+                <span style="font-size: 75%; color: #aaa; font-weight: normal;">
+                    (After {{ form_data.frequency_minutes }} min)
+                </span>
+            </h5>
+            
+            {% if form_data.parameter_group == 'uv_vacuum' %}
+                <!-- UV Vacuum Test -->
+                <div class="range-info">Recommended Range: -43 to -35 kPa</div>
+                <div class="readings-row">
+                    <div class="reading-header">Reading 1</div>
+                    <div class="reading-header">Reading 2</div>
+                    <div class="reading-header">Reading 3</div>
+                    <div class="reading-header">Reading 4</div>
+                    <div class="reading-header">Reading 5</div>
+                </div>
+                <div class="readings-row">
+                    {{ form_data.form.uv_vacuum_test_1 }}
+                    {{ form_data.form.uv_vacuum_test_2 }}
+                    {{ form_data.form.uv_vacuum_test_3 }}
+                    {{ form_data.form.uv_vacuum_test_4 }}
+                    {{ form_data.form.uv_vacuum_test_5 }}
+                </div>
+            
+            {% elif form_data.parameter_group == 'uv_flow' %}
+                <!-- UV Flow Value -->
+                <div class="range-info">Recommended Range: 30-40 LPM</div>
+                <div class="readings-row">
+                    <div class="reading-header">Reading 1</div>
+                    <div class="reading-header">Reading 2</div>
+                    <div class="reading-header">Reading 3</div>
+                    <div class="reading-header">Reading 4</div>
+                    <div class="reading-header">Reading 5</div>
+                </div>
+                <div class="readings-row">
+                    {{ form_data.form.uv_flow_value_1 }}
+                    {{ form_data.form.uv_flow_value_2 }}
+                    {{ form_data.form.uv_flow_value_3 }}
+                    {{ form_data.form.uv_flow_value_4 }}
+                    {{ form_data.form.uv_flow_value_5 }}
+                </div>
+            
+            {% elif form_data.parameter_group == 'umbrella_valve' %}
+                <!-- Umbrella Valve Assembly -->
+                <div class="readings-row">
+                    <div class="reading-header">Check 1</div>
+                    <div class="reading-header">Check 2</div>
+                    <div class="reading-header">Check 3</div>
+                    <div class="reading-header">Check 4</div>
+                    <div class="reading-header">Check 5</div>
+                </div>
+                <div class="readings-row">
+                    {{ form_data.form.umbrella_valve_assembly_1 }}
+                    {{ form_data.form.umbrella_valve_assembly_2 }}
+                    {{ form_data.form.umbrella_valve_assembly_3 }}
+                    {{ form_data.form.umbrella_valve_assembly_4 }}
+                    {{ form_data.form.umbrella_valve_assembly_5 }}
+                </div>
+            
+            {% elif form_data.parameter_group == 'uv_clip' %}
+                <!-- UV Clip Pressing -->
+                <div class="readings-row">
+                    <div class="reading-header">Check 1</div>
+                    <div class="reading-header">Check 2</div>
+                    <div class="reading-header">Check 3</div>
+                    <div class="reading-header">Check 4</div>
+                    <div class="reading-header">Check 5</div>
+                </div>
+                <div class="readings-row">
+                    {{ form_data.form.uv_clip_pressing_1 }}
+                    {{ form_data.form.uv_clip_pressing_2 }}
+                    {{ form_data.form.uv_clip_pressing_3 }}
+                    {{ form_data.form.uv_clip_pressing_4 }}
+                    {{ form_data.form.uv_clip_pressing_5 }}
+                </div>
+            
+            {% elif form_data.parameter_group == 'workstation' %}
+                <!-- Workstation Clean -->
+                <div class="mb-3">
+                    <label class="form-label">Workstation Clean?</label>
+                    {{ form_data.form.workstation_clean }}
+                </div>
+            
+            {% elif form_data.parameter_group == 'bin_contamination' %}
+                <!-- Bin Contamination Check -->
+                <div class="readings-row">
+                    <div class="reading-header">Bin 1</div>
+                    <div class="reading-header">Bin 2</div>
+                    <div class="reading-header">Bin 3</div>
+                    <div class="reading-header">Bin 4</div>
+                    <div class="reading-header">Bin 5</div>
+                </div>
+                <div class="readings-row">
+                    {{ form_data.form.bin_contamination_check_1 }}
+                    {{ form_data.form.bin_contamination_check_2 }}
+                    {{ form_data.form.bin_contamination_check_3 }}
+                    {{ form_data.form.bin_contamination_check_4 }}
+                    {{ form_data.form.bin_contamination_check_5 }}
+                </div>
+            {% endif %}
+            
+            <!-- Common fields for all parameter groups -->
+            <div class="mt-3">
+                <div class="form-check">
+                    {{ form_data.form.is_after_maintenance }}
+                    <label class="form-check-label text-white">
+                        After Maintenance/ME Activity
+                    </label>
+                </div>
+                
+                <div class="mt-2" id="maintenance-{{ form_data.parameter_group }}" style="display: none;">
+                    <label class="form-label">Maintenance Comment:</label>
+                    {{ form_data.form.maintenance_comment }}
+                </div>
+                
+                <div class="mt-2">
+                    <label class="form-label">General Notes (Optional):</label>
+                    {{ form_data.form.general_notes }}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Submit Button -->
+        <div class="text-center mb-4">
+            <a href="{% url 'checklist_detail' checklist.id %}" class="btn btn-secondary btn-lg me-2">
+                <i class="fas fa-arrow-left"></i> Back to Checklist
+            </a>
+            <button type="submit" class="btn btn-submit btn-lg">
+                <i class="fas fa-save"></i> Save All Parameters
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Show/hide maintenance comment fields
+document.querySelectorAll('[id^="id_"][id$="-is_after_maintenance"]').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const paramGroup = this.id.split('-')[0].replace('id_', '');
+        const commentDiv = document.getElementById('maintenance-' + paramGroup);
+        if (commentDiv) {
+            commentDiv.style.display = this.checked ? 'block' : 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

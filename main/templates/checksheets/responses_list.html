@@ -1,160 +1,359 @@
 {% extends 'main/base.html' %}
 
-{% block page_icon %}fas fa-file-alt{% endblock %}
+{% block page_icon %}fas fa-clipboard-list{% endblock %}
+{% block page_title %}Checksheet Responses{% endblock %}
 
 {% block content %}
-<!-- Filters -->
-<div class="card mb-4">
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-4">
-                <label class="form-label">Status</label>
-                <select name="status" class="form-select">
-                    <option value="">All Statuses</option>
-                    <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>Draft</option>
-                    <option value="submitted" {% if selected_status == 'submitted' %}selected{% endif %}>Submitted</option>
-                    <option value="supervisor_approved" {% if selected_status == 'supervisor_approved' %}selected{% endif %}>Supervisor Approved</option>
-                    <option value="quality_approved" {% if selected_status == 'quality_approved' %}selected{% endif %}>Quality Approved</option>
-                    <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>Rejected</option>
-                </select>
+<div class="container-fluid">
+    <!-- Header Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-dark text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 opacity-75">Total Responses</h6>
+                            <h2 class="mb-0">{{ total_count }}</h2>
+                        </div>
+                        <i class="fas fa-clipboard-list fa-3x opacity-50"></i>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-4">
-                <label class="form-label">Checksheet</label>
-                <select name="checksheet" class="form-select">
-                    <option value="">All Checksheets</option>
-                    {% for cs in checksheets %}
-                    <option value="{{ cs.id }}" {% if selected_checksheet == cs.id|stringformat:"s" %}selected{% endif %}>
-                        {{ cs.name }}
-                    </option>
-                    {% endfor %}
-                </select>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 opacity-75">Pending</h6>
+                            <h2 class="mb-0">{{ pending_count }}</h2>
+                        </div>
+                        <i class="fas fa-clock fa-3x opacity-50"></i>
+                    </div>
+                </div>
             </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="fas fa-filter"></i> Filter
-                </button>
-                <a href="{% url 'checksheet_responses_list' %}" class="btn btn-secondary">
-                    <i class="fas fa-times"></i> Clear
-                </a>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 opacity-75">In Progress</h6>
+                            <h2 class="mb-0">{{ in_progress_count }}</h2>
+                        </div>
+                        <i class="fas fa-tasks fa-3x opacity-50"></i>
+                    </div>
+                </div>
             </div>
-        </form>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1 opacity-75">Completed</h6>
+                            <h2 class="mb-0">{{ completed_count }}</h2>
+                        </div>
+                        <i class="fas fa-check-circle fa-3x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- Responses Table -->
-<div class="card">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Checksheet</th>
-                        <th>Status</th>
-                        <th>Filled By</th>
-                        <th>Created</th>
-                        <th>Submitted</th>
-                        <th>Completion</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for response in responses %}
-                    <tr>
-                        <td><strong>#{{ response.id }}</strong></td>
-                        <td>
-                            {{ response.checksheet.name }}
-                            {% if response.checksheet.name_hindi %}
-                            <br><small class="hindi-text">{{ response.checksheet.name_hindi }}</small>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <span class="badge status-badge status-{{ response.status }}">
-                                {{ response.get_status_display }}
-                            </span>
-                        </td>
-                        <td>{{ response.filled_by.username }}</td>
-                        <td>{{ response.created_at|date:"Y-m-d H:i" }}</td>
-                        <td>
-                            {% if response.submitted_at %}
-                            {{ response.submitted_at|date:"Y-m-d H:i" }}
-                            {% else %}
-                            <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <div class="progress" style="height: 25px;">
-                                <div class="progress-bar bg-success" role="progressbar" 
-                                     style="width: {{ response.completion_percentage }}%;" 
-                                     aria-valuenow="{{ response.completion_percentage }}" 
-                                     aria-valuemin="0" aria-valuemax="100">
-                                    {{ response.completion_percentage }}%
+    <!-- Filters Card -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-filter"></i> Filters
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        <i class="fas fa-info-circle"></i> Status
+                    </label>
+                    <select name="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="draft" {% if selected_status == 'draft' %}selected{% endif %}>
+                            📝 Draft
+                        </option>
+                        <option value="submitted" {% if selected_status == 'submitted' %}selected{% endif %}>
+                            📤 Submitted
+                        </option>
+                        <option value="supervisor_approved" {% if selected_status == 'supervisor_approved' %}selected{% endif %}>
+                            👨‍💼 Supervisor Approved
+                        </option>
+                        <option value="quality_approved" {% if selected_status == 'quality_approved' %}selected{% endif %}>
+                            ✅ Quality Approved
+                        </option>
+                        <option value="rejected" {% if selected_status == 'rejected' %}selected{% endif %}>
+                            ❌ Rejected
+                        </option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">
+                        <i class="fas fa-clipboard"></i> Checksheet
+                    </label>
+                    <select name="checksheet" class="form-select">
+                        <option value="">All Checksheets</option>
+                        {% for cs in checksheets %}
+                        <option value="{{ cs.id }}" {% if selected_checksheet == cs.id|stringformat:"s" %}selected{% endif %}>
+                            {{ cs.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-search"></i> Apply Filters
+                    </button>
+                    <a href="{% url 'checksheet_responses_list' %}" class="btn btn-dark">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                    <a href="{% url 'checksheet_list' %}" class="btn btn-success">
+                        <i class="fas fa-plus-circle"></i> New
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Responses Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-list"></i> Checksheet Responses
+                <span class="badge bg-dark ms-2">{{ page_obj.paginator.count }} total</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="bg-dark text-white">
+                        <tr>
+                            <th style="width: 5%;" class="text-center">#</th>
+                            <th style="width: 25%;">Checksheet</th>
+                            <th style="width: 12%;" class="text-center">Status</th>
+                            <th style="width: 10%;">Filled By</th>
+                            <th style="width: 10%;">Created</th>
+                            <th style="width: 10%;">Submitted</th>
+                            <th style="width: 13%;" class="text-center">Progress</th>
+                            <th style="width: 10%;" class="text-center">Approvals</th>
+                            <th style="width: 5%;" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for response in responses %}
+                        <tr {% if response.status == 'rejected' %}class="table-danger"{% elif response.status == 'quality_approved' %}class="table-success"{% endif %}>
+                            <td class="text-center">
+                                <strong class="text-danger">#{{ response.id }}</strong>
+                            </td>
+                            <td>
+                                <div class="fw-bold">{{ response.checksheet.name }}</div>
+                                {% if response.checksheet.name_hindi %}
+                                <small class="text-muted d-block" style="font-style: italic;">
+                                    {{ response.checksheet.name_hindi }}
+                                </small>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if response.status == 'draft' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-edit"></i> Draft
+                                    </span>
+                                {% elif response.status == 'submitted' %}
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-paper-plane"></i> Submitted
+                                    </span>
+                                {% elif response.status == 'supervisor_approved' %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-user-check"></i> Supervisor
+                                    </span>
+                                {% elif response.status == 'quality_approved' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-certificate"></i> Approved
+                                    </span>
+                                {% elif response.status == 'rejected' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times-circle"></i> Rejected
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>{{ response.filled_by.username }}</div>
+                                <small class="text-muted">{{ response.filled_by.get_user_type }}</small>
+                            </td>
+                            <td>
+                                <small>{{ response.created_at|date:"Y-m-d" }}</small><br>
+                                <small class="text-muted">{{ response.created_at|date:"H:i" }}</small>
+                            </td>
+                            <td>
+                                {% if response.submitted_at %}
+                                    <small>{{ response.submitted_at|date:"Y-m-d" }}</small><br>
+                                    <small class="text-muted">{{ response.submitted_at|date:"H:i" }}</small>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar {% if response.completion_percentage == 100 %}bg-success{% elif response.completion_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                         role="progressbar" 
+                                         style="width: {{ response.completion_percentage }}%;" 
+                                         aria-valuenow="{{ response.completion_percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                        <strong>{{ response.completion_percentage }}%</strong>
+                                    </div>
                                 </div>
-                            </div>
-                        </td>
-                        <td>
-                            <a href="{% url 'checksheet_response_detail' response.id %}" 
-                               class="btn btn-sm btn-info" title="View">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            {% if response.can_be_edited and response.filled_by == user %}
-                            <a href="{% url 'edit_checksheet_response' response.id %}" 
-                               class="btn btn-sm btn-primary" title="Edit">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="8" class="text-center py-4">
-                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                            <p class="text-muted">No responses found.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                            <td class="text-center">
+                                <div class="d-flex justify-content-center gap-1">
+                                    {% if response.supervisor_approved_by %}
+                                        <span class="badge bg-success" title="Supervisor: {{ response.supervisor_approved_by.username }}" data-bs-toggle="tooltip">
+                                            👨‍💼
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary" title="Supervisor pending" data-bs-toggle="tooltip">
+                                            👨‍💼
+                                        </span>
+                                    {% endif %}
+                                    
+                                    {% if response.quality_approved_by %}
+                                        <span class="badge bg-success" title="Quality: {{ response.quality_approved_by.username }}" data-bs-toggle="tooltip">
+                                            🔍
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary" title="Quality pending" data-bs-toggle="tooltip">
+                                            🔍
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'checksheet_response_detail' response.id %}" 
+                                       class="btn btn-sm btn-dark" 
+                                       title="View Details"
+                                       data-bs-toggle="tooltip">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if response.can_be_edited and response.filled_by == user %}
+                                    <a href="{% url 'edit_checksheet_response' response.id %}" 
+                                       class="btn btn-sm btn-danger" 
+                                       title="Edit Response"
+                                       data-bs-toggle="tooltip">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3 d-block"></i>
+                                <h5 class="text-muted">No responses found</h5>
+                                <p class="text-muted">Try adjusting your filters or create a new response.</p>
+                                <a href="{% url 'checksheet_list' %}" class="btn btn-danger">
+                                    <i class="fas fa-plus-circle"></i> Create New Response
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
         
         <!-- Pagination -->
         {% if page_obj.has_other_pages %}
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
-                        <i class="fas fa-angle-double-left"></i>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
-                        <i class="fas fa-angle-left"></i>
-                    </a>
-                </li>
-                {% endif %}
-                
-                <li class="page-item active">
-                    <span class="page-link">
-                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                    </span>
-                </li>
-                
-                {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
-                        <i class="fas fa-angle-right"></i>
-                    </a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
-                        <i class="fas fa-angle-double-right"></i>
-                    </a>
-                </li>
-                {% endif %}
-            </ul>
-        </nav>
+        <div class="card-footer bg-light">
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link text-danger" href="?page=1{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                            <i class="fas fa-angle-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link text-danger" href="?page={{ page_obj.previous_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link bg-danger border-danger">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link text-danger" href="?page={{ page_obj.next_page_number }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link text-danger" href="?page={{ page_obj.paginator.num_pages }}{% if selected_status %}&status={{ selected_status }}{% endif %}{% if selected_checksheet %}&checksheet={{ selected_checksheet }}{% endif %}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
         {% endif %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(0,0,0,.02);
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+
+    .btn-group .btn {
+        margin: 0 !important;
+    }
+
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.35em 0.65em;
+    }
+
+    .progress {
+        font-size: 0.75rem;
+    }
+
+    .page-link {
+        border-color: #dc3545;
+    }
+
+    .page-link:hover {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+</script>
 {% endblock %}

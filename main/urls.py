@@ -26,7 +26,7 @@ urlpatterns = [
     path('checklist/<int:checklist_id>/subgroup/<int:subgroup_id>/edit/', views.edit_subgroup, name='edit_subgroup'),  # New
     path('checklist/<int:checklist_id>/concern/add/', views.add_concern, name='add_concern'),  # New
 
-   path('verification/<int:verification_id>/edit/', views.edit_verification, name='edit_verification'), 
+    path('verification/<int:verification_id>/edit/', views.edit_verification, name='edit_verification'), 
     # Verification URLs
     path('checklist/<int:checklist_id>/verify/supervisor/', views.supervisor_verify, name='supervisor_verify'),
     path('checklist/<int:checklist_id>/verify/quality/', views.quality_verify, name='quality_verify'),
@@ -178,6 +178,15 @@ path('verify-subgroup-ajax/', views.verify_subgroup_ajax, name='verify_subgroup_
     
     # AJAX URLs
     path('ajax/autofill/', views.get_autofill_value, name='get_autofill_value'),
+
+
+
+    # NEW/UPDATED URLs
+    path('checklist/<int:checklist_id>/fill-parameters/', 
+         views.fill_parameter_group, 
+         name='fill_parameter_group'),
+    
+     path('parameter-entry/<int:entry_id>/verify/', views.verify_parameter_entry, name='verify_parameter_entry'),
 
 
 ]

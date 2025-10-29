@@ -1,10 +1,12 @@
+from django.views.decorators.http import require_POST
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, authenticate
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime, time, timedelta
-from .models import ChecklistBase, ChecklistDynamicValue, ChecksheetContentConfig, DTPMVerificationHistory, DailyVerificationStatus, ErrorPreventionCheck, ErrorPreventionCheckHistory, ErrorPreventionMechanism, ErrorPreventionMechanismHistory, ErrorPreventionMechanismStatus, SubgroupEntry, SubgroupFrequencyConfig, Verification, Shift, User
+from .models import ChecklistBase, ChecklistDynamicValue, ChecksheetContentConfig, DTPMVerificationHistory, DailyVerificationStatus, ErrorPreventionCheck, ErrorPreventionCheckHistory, ErrorPreventionMechanism, ErrorPreventionMechanismHistory, ErrorPreventionMechanismStatus, ParameterGroupVerification, SubgroupEntry, SubgroupFrequencyConfig, Verification, Shift, User
 from .forms import ChecklistBaseForm, DailyVerificationWorkflowForm, ErrorPreventionCheckForm, ErrorPreventionFilterForm, ErrorPreventionStatusFormSet, ErrorPreventionWorkflowForm, FTQRecordEditForm, SubgroupEntryForm, SubgroupVerificationForm, VerificationForm, ConcernForm, UserRegistrationForm
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -323,6 +325,18 @@ from .models import (
     ChecklistBase, FTQRecord, ErrorPreventionCheck, 
     DTPMChecklistFMA03New, SubgroupFrequencyConfig
 )
+from .models import (
+    ChecklistBase, 
+    ParameterGroupEntry, 
+    ParameterGroupConfig,
+    DailyVerificationStatus,
+    Shift,
+    SubgroupFrequencyConfig,
+    ChecksheetContentConfig,
+    ChecklistDynamicValue,
+    User
+)
+from .forms import ChecklistBaseForm, ParameterGroupEntryForm
 
 
 @login_required
@@ -343,6 +357,7 @@ def operator_dashboard(request):
         active_checklist = ChecklistBase.objects.filter(
             verification_status=active_verification
         ).select_related('frequency_config').prefetch_related('subgroup_entries').first()
+
 
     # Get frequency configuration
     frequency_hours = 2  # Default
@@ -602,6 +617,94 @@ def operator_dashboard(request):
     elif not active_checklist:
         can_create_new = True
     
+    # ============ PARAMETER GROUP INTEGRATION ============
+
+    # Get parameter groups that need filling (only if active checklist exists)
+    parameter_groups_need_filling = []
+    parameter_group_stats = {
+        'total_parameters': 0,
+        'filled_count': 0,
+        'ready_count': 0,
+    }
+
+    if active_checklist:
+        # Define shift start times
+        SHIFT_START_TIMES = {
+            'A': time(6, 30),
+            'B': time(14, 30),
+            'C': time(22, 30),
+            'S1': time(6, 30),
+            'S2': time(18, 30),
+            'S3': time(22, 30),
+        }
+        
+        shift_type = active_verification.shift.shift_type if active_verification and active_verification.shift else None
+        
+        if shift_type and shift_type in SHIFT_START_TIMES:
+            shift_start_time = SHIFT_START_TIMES[shift_type]
+            shift_start = timezone.make_aware(
+                datetime.combine(current_date, shift_start_time)
+            )
+            
+            # For night shifts - if current time is before shift start, shift started yesterday
+            if shift_start > current_datetime:
+                shift_start = shift_start - timedelta(days=1)
+        else:
+            shift_start = active_checklist.created_at
+        
+        # Get parameter configurations for this model
+        parameter_configs = ParameterGroupConfig.objects.filter(
+            model_name=active_checklist.selected_model,
+            is_active=True
+        ).order_by('display_order')
+        
+        parameter_group_stats['total_parameters'] = parameter_configs.count()
+        
+        for config in parameter_configs:
+            # Get completed entries for this parameter
+            entries = ParameterGroupEntry.objects.filter(
+                checklist=active_checklist,
+                parameter_group=config.parameter_group,
+                is_completed=True
+            )
+            
+            entry_count = entries.count()
+            
+            # Calculate expected fills based on shift start time
+            minutes_since_shift_start = (current_datetime - shift_start).total_seconds() / 60
+            
+            if config.frequency_minutes > 0:
+                expected_fills = int(minutes_since_shift_start / config.frequency_minutes) + 1
+            else:
+                expected_fills = 1
+            
+            # Can fill now if we haven't filled all expected times yet
+            can_fill_now = entry_count < expected_fills
+            
+            # Calculate next available time
+            if config.frequency_minutes > 0:
+                next_cycle_number = entry_count + 1
+                next_available = shift_start + timedelta(minutes=config.frequency_minutes * (next_cycle_number - 1))
+                minutes_until_next = max(0, int((next_available - current_datetime).total_seconds() / 60))
+            else:
+                next_available = shift_start
+                minutes_until_next = 0
+            
+            if entry_count > 0:
+                parameter_group_stats['filled_count'] += 1
+            
+            if can_fill_now:
+                parameter_group_stats['ready_count'] += 1
+                parameter_groups_need_filling.append({
+                    'config': config,
+                    'entry_count': entry_count,
+                    'expected_fills': expected_fills,
+                    'can_fill_now': can_fill_now,
+                    'minutes_until_next': minutes_until_next,
+                })
+
+    # ============ END PARAMETER GROUP INTEGRATION ============
+    
     context = {
         'current_date': current_date,
         'current_time': current_time,
@@ -638,6 +741,12 @@ def operator_dashboard(request):
         'checksheets_need_filling': checksheets_need_filling,
         'checksheet_stats': checksheet_stats,
         'recent_checksheet_responses': recent_checksheet_responses,
+        
+        
+            # Parameter group context
+        'parameter_groups_need_filling': parameter_groups_need_filling,
+        'parameter_group_stats': parameter_group_stats,
+
     }
     
     return render(request, 'main/operator_dashboard.html', context)
@@ -646,23 +755,68 @@ def operator_dashboard(request):
 
 
 
-@login_required
-@user_passes_test(lambda u: u.user_type == 'operator')
+#   TIMING LOGIC - First Immediate, Then Timed, Batch Overdue
 
+def get_available_parameter_groups(checklist):
+    """
+    Get available, pending, and completed parameter groups for a checklist
+    Returns a dictionary with 'completed', 'pending', and 'available' lists
+    """
+    # Get all parameter configurations for this model
+    param_configs = ParameterGroupConfig.objects.filter(
+        model_name=checklist.selected_model,
+        is_active=True
+    ).order_by('display_order', 'frequency_minutes')
+    
+    # Get completed parameter entries for this checklist
+    completed_entries = checklist.parameter_entries.filter(
+        is_completed=True
+    ).values_list('parameter_group', flat=True)
+    
+    # Get pending (started but not completed) entries
+    pending_entries = checklist.parameter_entries.filter(
+        is_completed=False
+    ).values_list('parameter_group', flat=True)
+    
+    # Calculate time since checklist creation
+    time_since_creation = timezone.now() - checklist.created_at
+    minutes_passed = int(time_since_creation.total_seconds() / 60)
+    
+    result = {
+        'completed': [],
+        'pending': [],
+        'available': []
+    }
+    
+    for config in param_configs:
+        param_info = {
+            'parameter_group': config.parameter_group,
+            'display_name': config.get_parameter_group_display(),
+            'frequency_minutes': config.frequency_minutes,
+            'is_available': minutes_passed >= config.frequency_minutes
+        }
+        
+        if config.parameter_group in completed_entries:
+            result['completed'].append(param_info)
+        elif config.parameter_group in pending_entries:
+            result['pending'].append(param_info)
+        elif minutes_passed >= config.frequency_minutes:
+            result['available'].append(param_info)
+        # If not enough time has passed, don't include in any category
+    
+    return result
+
+
+# ============================================
+# CREATE CHECKLIST (INTEGRATED)
+# ============================================
 
 @login_required
 @user_passes_test(lambda u: u.user_type == 'operator')
 def create_checklist(request):
     """
-    Handles the creation of an initial checklist without custom parameters.
-
-    This view manages the following:
-    - Renders the form for a new checklist.
-    - Prevents creation if a pending checklist already exists for the user on the current day.
-    - Fetches and passes dynamic configuration data (measurement frequencies, model-specific parameters)
-      to the frontend.
-    - On successful submission, creates a Shift, a DailyVerificationStatus, the ChecklistBase instance,
-      and saves all standard and dynamic parameter values within a single database transaction.
+    Handles the creation of an initial checklist.
+    After successful creation, redirects to fill the FIRST available parameter group.
     """
     current_datetime = timezone.now()
     current_date = current_datetime.date()
@@ -761,13 +915,15 @@ def create_checklist(request):
                                 except ChecksheetContentConfig.DoesNotExist:
                                     continue
                     
-                    # 6. Provide feedback and redirect
+                    # 6. Provide feedback
                     messages.success(request, f'Checklist created successfully for {selected_shift_type} shift!')
                     if hasattr(form, 'warnings'):
                         for warning in form.warnings:
                             messages.warning(request, warning)
                     
-                    return redirect('add_subgroup', checklist_id=checklist.id)
+                    # 7. REDIRECT TO FILL PARAMETERS (NEW!)
+                    # Instead of add_subgroup, redirect to parameter filling
+                    return redirect('fill_parameter_group', checklist_id=checklist.id)
 
             except Exception as e:
                 messages.error(request, f'An unexpected error occurred: {e}')
@@ -780,6 +936,226 @@ def create_checklist(request):
         'dynamic_parameters_json': json.dumps(dynamic_parameters)
     }
     return render(request, 'main/create_checklist.html', context)
+
+
+# ============================================
+# FILL PARAMETER GROUP (SHOW ALL AVAILABLE FIELDS AT ONCE)
+# ============================================
+
+# CORRECTED FILL_PARAMETER_GROUP VIEW
+
+# UPDATED VIEW - All Parameters Always Available, Multiple Entries
+
+@login_required
+@user_passes_test(lambda u: u.user_type == 'operator')
+def fill_parameter_group(request, checklist_id):
+    """
+    NEW VERSION: Show ALL 6 parameter groups ALWAYS
+    Each parameter can be filled MULTIPLE times during the shift
+    Timer starts from ACTUAL SHIFT START TIME (e.g., 6:30 PM for S2)
+    
+    UI shows:
+    - All 6 parameters at once
+    - Which ones can be filled NOW (based on shift start + frequency)
+    - Which ones need to wait (countdown timer)
+    - How many times each has been filled
+    """
+    
+    # Get the checklist
+    try:
+        checklist = ChecklistBase.objects.select_related(
+            'verification_status__created_by',
+            'verification_status__shift'
+        ).get(id=checklist_id)
+    except ChecklistBase.DoesNotExist:
+        messages.error(request, 'Checklist not found')
+        return redirect('operator_dashboard')
+    
+    # Verify ownership
+    if not checklist.verification_status:
+        messages.error(request, 'Invalid checklist - no verification status')
+        return redirect('operator_dashboard')
+    
+    if checklist.verification_status.created_by != request.user:
+        messages.error(request, 'You do not have permission to modify this checklist')
+        return redirect('operator_dashboard')
+    
+    # Check status
+    if checklist.status != 'pending':
+        messages.error(request, 'Cannot add entries to a verified checklist')
+        return redirect('checklist_detail', checklist_id=checklist.id)
+    
+    # ============================================================================
+    # CRITICAL FIX: Get ACTUAL shift start time based on shift type
+    # ============================================================================
+    shift = checklist.verification_status.shift
+    shift_type = shift.shift_type if shift else None
+    
+    # Define shift start times (adjust these according to your actual shift timings)
+    SHIFT_START_TIMES = {
+        'A': time(6, 30),    # 6:30 AM
+        'B': time(14, 30),   # 2:30 PM  
+        'C': time(22, 30),   # 10:30 PM
+        'S1': time(6, 30),   # 6:30 AM to 6:30 PM
+        'S2': time(18, 30),  # 6:30 PM to 6:30 AM (next day)
+        'S3': time(22, 30),  # 10:30 PM to 10:30 AM (next day)
+    }
+    
+    # Get current time
+    now = timezone.now()
+    today = now.date()
+    
+    # Determine shift start time
+    if shift_type and shift_type in SHIFT_START_TIMES:
+        shift_start_time = SHIFT_START_TIMES[shift_type]
+        
+        # Create datetime for today with shift start time
+        shift_start = timezone.make_aware(
+            datetime.combine(today, shift_start_time)
+        )
+        
+        # For night shifts (S2, C, etc.) - if current time is before shift start,
+        # the shift actually started yesterday
+        if shift_start > now:
+            shift_start = shift_start - timedelta(days=1)
+    else:
+        # Fallback: use checklist creation time if shift type unknown
+        shift_start = checklist.created_at
+        messages.warning(request, f'Unknown shift type: {shift_type}. Using checklist creation time.')
+    
+    # ============================================================================
+    
+    # Get ALL parameter configurations for this model
+    configs = ParameterGroupConfig.objects.filter(
+        model_name=checklist.selected_model,
+        is_active=True
+    ).order_by('display_order')
+    
+    if not configs.exists():
+        messages.warning(request, 'No parameters configured for this model')
+        return redirect('checklist_detail', checklist_id=checklist.id)
+    
+    # Calculate availability for each parameter based on SHIFT START TIME
+    forms_data = []
+    total_entries = 0
+    ready_count = 0
+    
+    for config in configs:
+        # Get all completed entries for this parameter
+        entries = ParameterGroupEntry.objects.filter(
+            checklist=checklist,
+            parameter_group=config.parameter_group,
+            is_completed=True
+        ).order_by('-timestamp')
+        
+        entry_count = entries.count()
+        total_entries += entry_count
+        
+        # Get last entry
+        last_entry = entries.first()
+        
+        # Calculate how many times this parameter SHOULD have been filled by now
+        # based on shift start time and frequency
+        minutes_since_shift_start = (now - shift_start).total_seconds() / 60
+        
+        # How many complete cycles have passed?
+        if config.frequency_minutes > 0:
+            expected_fills = int(minutes_since_shift_start / config.frequency_minutes) + 1
+        else:
+            expected_fills = 1  # Can fill immediately if frequency is 0
+        
+        # Can we fill now? Yes if we haven't filled all expected times yet
+        can_fill_now = entry_count < expected_fills
+        
+        # Calculate next available time (next cycle start)
+        if config.frequency_minutes > 0:
+            next_cycle_number = entry_count + 1
+            next_available = shift_start + timedelta(minutes=config.frequency_minutes * (next_cycle_number - 1))
+            minutes_until_next = max(0, int((next_available - now).total_seconds() / 60))
+        else:
+            next_available = shift_start
+            minutes_until_next = 0
+        
+        if can_fill_now:
+            ready_count += 1
+        
+        # Handle form submission
+        if request.method == 'POST' and can_fill_now:
+            # Check if THIS parameter was submitted
+            if f'{config.parameter_group}-submit' in request.POST:
+                form = ParameterGroupEntryForm(
+                    request.POST,
+                    parameter_group=config.parameter_group,
+                    prefix=config.parameter_group
+                )
+                
+                if form.is_valid():
+                    try:
+                        with transaction.atomic():
+                            # Create NEW entry (not update existing)
+                            entry = form.save(commit=False)
+                            entry.checklist = checklist
+                            entry.parameter_group = config.parameter_group
+                            entry.is_completed = True
+                            entry.timestamp = timezone.now()
+                            entry.save()
+                            
+                            messages.success(
+                                request,
+                                f'✓ {config.get_parameter_group_display()} entry #{entry_count + 1} saved!'
+                            )
+                            return redirect('fill_parameter_group', checklist_id=checklist.id)
+                    
+                    except Exception as e:
+                        messages.error(request, f'Error saving entry: {str(e)}')
+                        form = ParameterGroupEntryForm(
+                            parameter_group=config.parameter_group,
+                            prefix=config.parameter_group
+                        )
+            else:
+                # Not this parameter's submit button
+                form = ParameterGroupEntryForm(
+                    parameter_group=config.parameter_group,
+                    prefix=config.parameter_group
+                )
+        else:
+            # GET request or can't fill yet - show empty form
+            form = ParameterGroupEntryForm(
+                parameter_group=config.parameter_group,
+                prefix=config.parameter_group
+            )
+        
+        forms_data.append({
+            'form': form,
+            'parameter_group': config.parameter_group,
+            'display_name': config.get_parameter_group_display(),
+            'frequency_minutes': config.frequency_minutes,
+            'entry_count': entry_count,
+            'expected_fills': expected_fills,
+            'last_filled': last_entry.timestamp if last_entry else None,
+            'can_fill_now': can_fill_now,
+            'minutes_until_next': minutes_until_next,
+            'next_available': next_available,
+            'display_order': config.display_order
+        })
+    
+    # Statistics
+    statistics = {
+        'total_entries': total_entries,
+        'parameters_ready': ready_count,
+        'parameters_total': configs.count(),
+        'shift_start': shift_start,
+        'shift_type': shift_type,
+    }
+    
+    # Render template
+    context = {
+        'checklist': checklist,
+        'forms_data': forms_data,
+        'statistics': statistics,
+    }
+    
+    return render(request, 'subgroup/fill_parameter_multiple.html', context)
  
  
  
@@ -1361,37 +1737,106 @@ def supervisor_dashboard(request):
     ]
     current_shift_display = dict(SHIFT_CHOICES).get(current_shift_type, current_shift_type)
     
-    # Get all pending subgroups that need verification
-    pending_verifications = SubgroupEntry.objects.filter(
-        verifications__isnull=True,  # No verification yet
-        checklist__status='pending'  # Only check active checklists
+    # ============================================================================
+    # PARAMETER GROUP VERIFICATIONS - Pending
+    # ============================================================================
+    
+    # Get all completed parameter entries
+    all_completed_entries = ParameterGroupEntry.objects.filter(
+        is_completed=True
     ).select_related(
         'checklist',
         'checklist__verification_status',
         'checklist__verification_status__shift'
-    ).order_by('-timestamp')[:10]  # Most recent first
+    ).prefetch_related('verifications').order_by('-timestamp')
     
-    # Get recent verifications by supervisors with better error handling
+    # Filter to get only those without supervisor verification
+    pending_parameter_entries = []
+    for entry in all_completed_entries[:50]:  # Check last 50 entries
+        # Check if entry has supervisor verification
+        has_supervisor_verification = entry.verifications.filter(
+            verification_type='supervisor'
+        ).exists()
+        
+        if not has_supervisor_verification:
+            pending_parameter_entries.append(entry)
+            
+        if len(pending_parameter_entries) >= 20:  # Limit to 20
+            break
+    
+    # Count pending by parameter group
+    pending_by_group = defaultdict(int)
+    for entry in pending_parameter_entries:
+        pending_by_group[entry.parameter_group] += 1
+    
+    # ============================================================================
+    # PARAMETER GROUP VERIFICATIONS - Recent
+    # ============================================================================
+    
     try:
-        all_verified_entries = SubgroupVerification.objects.filter(
-            verifier_type__in=['supervisor', 'quality']  # Get both types
+        all_parameter_verifications = ParameterGroupVerification.objects.filter(
+            verification_type='supervisor'
         ).select_related(
-            'subgroup',
-            'verified_by',
-            'subgroup__checklist',
-            'subgroup__checklist__verification_status'
+            'parameter_entry',
+            'parameter_entry__checklist',
+            'verified_by'
         ).order_by('-verified_at')
         
-        # Count verifications for today before taking a slice
-        verified_today_count = all_verified_entries.filter(verified_at__date=current_date).count()
+        # Count verifications for today
+        parameter_verified_today = all_parameter_verifications.filter(
+            verified_at__date=current_date
+        ).count()
         
-        # Now take the slice for display
-        verified_entries = all_verified_entries[:10]
+        # Get recent verifications for display
+        recent_parameter_verifications = all_parameter_verifications[:10]
         
     except Exception as e:
-        # Handle case where no verifications exist
-        verified_entries = []
-        verified_today_count = 0
+        recent_parameter_verifications = []
+        parameter_verified_today = 0
+    
+    # ============================================================================
+    # CHECKSHEET RESPONSES - Pending
+    # ============================================================================
+    
+    # Get checksheet responses that need supervisor verification
+    pending_checksheet_responses = ChecksheetResponse.objects.filter(
+        status='submitted',  # Submitted but not yet verified
+        supervisor_approved_at__isnull=True  # Not yet approved by supervisor
+    ).select_related(
+        'checksheet',
+        'filled_by',
+        'verification_status'
+    ).order_by('-submitted_at')[:20]
+    
+    # ============================================================================
+    # CHECKSHEET RESPONSES - Recent Verifications
+    # ============================================================================
+    
+    recent_checksheet_verifications = ChecksheetResponse.objects.filter(
+        supervisor_approved_at__isnull=False,  # Has been verified by supervisor
+        supervisor_approved_at__date=current_date
+    ).select_related(
+        'checksheet',
+        'filled_by',
+        'supervisor_approved_by'
+    ).order_by('-supervisor_approved_at')[:10]
+    
+    checksheet_verified_today = recent_checksheet_verifications.count()
+    
+    # ============================================================================
+    # COMBINED STATISTICS
+    # ============================================================================
+    
+    total_pending_verifications = (
+        len(pending_parameter_entries) + 
+        pending_checksheet_responses.count()
+    )
+    
+    total_verified_today = parameter_verified_today + checksheet_verified_today
+    
+    # ============================================================================
+    # EXISTING CODE - FTQ, DTPM, EP CHECKS
+    # ============================================================================
     
     # Get recent FTQ records with model and shift info
     recent_ftq_records = FTQRecord.objects.select_related(
@@ -1420,7 +1865,7 @@ def supervisor_dashboard(request):
         date=current_date
     ).select_related('verification_status').first()
     
-    # DTPM Checklist status summary (count checkpoint statuses by OK/NG)
+    # DTPM Checklist status summary
     dtpm_checklist_stats = {
         'ok_count': 0,
         'ng_count': 0,
@@ -1430,7 +1875,6 @@ def supervisor_dashboard(request):
     }
     
     if today_dtpm_checklist:
-        # Get checkpoint results for this DTPM checklist
         checkpoint_results = today_dtpm_checklist.check_results.all()
         dtpm_checklist_stats['total_checkpoints'] = checkpoint_results.count()
         dtpm_checklist_stats['ok_count'] = checkpoint_results.filter(status='OK').count()
@@ -1460,7 +1904,6 @@ def supervisor_dashboard(request):
     }
     
     if today_ep_check:
-        # Get mechanism statuses for this EP check
         mechanism_statuses = today_ep_check.mechanism_statuses.all()
         ep_check_stats['total_mechanisms'] = mechanism_statuses.count()
         ep_check_stats['ok_count'] = mechanism_statuses.filter(status='OK').count()
@@ -1496,7 +1939,6 @@ def supervisor_dashboard(request):
         else:
             workflow_summary['pending_workflows'] += 1
         
-        # Get model from checklist if available
         if workflow.current_model_from_checklist:
             workflow_summary['models_in_use'].add(workflow.current_model_from_checklist)
         
@@ -1511,12 +1953,27 @@ def supervisor_dashboard(request):
         'current_time': current_time,
         'current_shift': current_shift_display,
         'current_shift_type': current_shift_type,
-        'pending_verifications': pending_verifications,
-        'verified_entries': verified_entries,
+        
+        # Parameter Group Verifications
+        'pending_parameter_entries': pending_parameter_entries,
+        'pending_by_group': dict(pending_by_group),
+        'recent_parameter_verifications': recent_parameter_verifications,
+        'parameter_verified_today': parameter_verified_today,
+        
+        # Checksheet Verifications
+        'pending_checksheet_responses': pending_checksheet_responses,
+        'recent_checksheet_verifications': recent_checksheet_verifications,
+        'checksheet_verified_today': checksheet_verified_today,
+        
+        # Combined Statistics
         'verification_summary': {
-            'pending_count': pending_verifications.count(),
-            'verified_today': verified_today_count
+            'pending_count': total_pending_verifications,
+            'verified_today': total_verified_today,
+            'parameter_pending': len(pending_parameter_entries),
+            'checksheet_pending': pending_checksheet_responses.count(),
         },
+        
+        # Existing Data
         'recent_ftq_records': recent_ftq_records,
         'today_ftq': today_ftq,
         'ftq_percentage': ftq_percentage or 0,
@@ -1531,6 +1988,9 @@ def supervisor_dashboard(request):
     }
     
     return render(request, 'main/supervisor_dashboard.html', context)
+  
+  
+     
 
 def calculate_average_verification_time(entries):
     """Calculate average time taken for verification"""
@@ -1810,48 +2270,177 @@ def get_critical_issues(in_progress, pending):
 @login_required
 @user_passes_test(lambda u: u.user_type == 'quality_supervisor')
 def quality_dashboard(request):
-    current_datetime = timezone.now()
+    current_datetime = timezone.localtime(timezone.now())
     current_date = current_datetime.date()
     current_time = current_datetime.time()
-    is_day_shift = (8 <= current_time.hour < 20)
-    current_shift = 'day' if is_day_shift else 'night'
-    current_shift_display = 'Day Shift (8 AM - 8 PM)' if is_day_shift else 'Night Shift (8 PM - 8 AM)'
+    
+    # Updated shift determination
+    def get_current_shift_type():
+        current_hour = current_datetime.hour
+        current_minute = current_datetime.minute
+        current_time_minutes = current_hour * 60 + current_minute
+        
+        if (6 * 60 + 30) <= current_time_minutes < (15 * 60):
+            return 'A'
+        elif (8 * 60 + 30) <= current_time_minutes < (17 * 60):
+            return 'G'
+        elif (15 * 60) <= current_time_minutes < (23 * 60 + 30):
+            return 'B'
+        elif current_time_minutes >= (23 * 60 + 30) or current_time_minutes < (6 * 60 + 30):
+            return 'C'
+        else:
+            if 6 <= current_hour < 18:
+                return 'S1'
+            else:
+                return 'S2'
+    
+    current_shift_type = get_current_shift_type()
+    
+    SHIFT_CHOICES = [
+        ('S1', 'S1 - 6:30 AM to 6:30 PM'),
+        ('A', 'A - 6:30 AM to 3:00 PM'),
+        ('G', 'G - 8:30 AM to 5:00 PM'),
+        ('B', 'B - 3:00 PM to 11:30 PM'),
+        ('C', 'C - 11:30 PM to 6:30 AM'),
+        ('S2', 'S2 - 6:30 PM to 6:30 AM'),
+    ]
+    current_shift_display = dict(SHIFT_CHOICES).get(current_shift_type, current_shift_type)
 
-    # Get all subgroups that need quality verification (where supervisor has verified)
-    pending_subgroups = SubgroupEntry.objects.filter(
-        verification_status='supervisor_verified',
-        # Include entries from the last 7 days
-        checklist__created_at__date__gte=current_date - timedelta(days=7),
-        checklist__created_at__date__lte=current_date
+    # ============================================================================
+    # PARAMETER GROUP VERIFICATIONS - Pending Quality Approval
+    # ============================================================================
+    
+    # Get all completed parameter entries from last 7 days
+    all_completed_entries = ParameterGroupEntry.objects.filter(
+        is_completed=True,
+        timestamp__date__gte=current_date - timedelta(days=7),
+        timestamp__date__lte=current_date
     ).select_related(
-        'checklist'
-    ).prefetch_related(
-        'verifications'
-    ).order_by('-timestamp')
-
-    # Get recent quality verifications for today and yesterday
-    recent_verifications = SubgroupVerification.objects.filter(
-        verifier_type='quality',
-        verified_at__date__gte=current_date - timedelta(days=1)
-    ).select_related(
-        'verified_by',
-        'subgroup__checklist'
-    ).order_by('-verified_at')
-
-    # Calculate stats
-    verification_stats = {
-        'pending_count': pending_subgroups.count(),
-        'approved_today': recent_verifications.filter(
-            status='quality_verified',
-            verified_at__date=current_date
-        ).count(),
-        'rejected_today': recent_verifications.filter(
-            status='rejected',
-            verified_at__date=current_date
+        'checklist',
+        'checklist__verification_status',
+        'checklist__verification_status__shift'
+    ).prefetch_related('verifications').order_by('-timestamp')
+    
+    # Filter to get entries that have supervisor approval but not quality approval
+    pending_parameter_entries = []
+    for entry in all_completed_entries[:100]:  # Check last 100 entries
+        # Check if entry has supervisor verification
+        has_supervisor_verification = entry.verifications.filter(
+            verification_type='supervisor',
+            status='approved'
+        ).exists()
+        
+        # Check if entry has quality verification
+        has_quality_verification = entry.verifications.filter(
+            verification_type='quality'
+        ).exists()
+        
+        # Include if supervisor approved but quality not yet done
+        if has_supervisor_verification and not has_quality_verification:
+            pending_parameter_entries.append(entry)
+            
+        if len(pending_parameter_entries) >= 20:  # Limit to 20
+            break
+    
+    # Count pending by parameter group
+    pending_by_group = defaultdict(int)
+    for entry in pending_parameter_entries:
+        pending_by_group[entry.parameter_group] += 1
+    
+    # ============================================================================
+    # PARAMETER GROUP VERIFICATIONS - Recent Quality Verifications
+    # ============================================================================
+    
+    try:
+        all_parameter_verifications = ParameterGroupVerification.objects.filter(
+            verification_type='quality',
+            verified_at__date__gte=current_date - timedelta(days=1)
+        ).select_related(
+            'parameter_entry',
+            'parameter_entry__checklist',
+            'verified_by'
+        ).order_by('-verified_at')
+        
+        # Count verifications for today BEFORE slicing
+        parameter_approved_today = all_parameter_verifications.filter(
+            verified_at__date=current_date,
+            status='approved'
         ).count()
-    }
+        
+        parameter_rejected_today = all_parameter_verifications.filter(
+            verified_at__date=current_date,
+            status='rejected'
+        ).count()
+        
+        # Get recent verifications for display - slice AFTER counting
+        recent_parameter_verifications = all_parameter_verifications[:10]
+        
+    except Exception as e:
+        recent_parameter_verifications = []
+        parameter_approved_today = 0
+        parameter_rejected_today = 0
+    
+    # ============================================================================
+    # CHECKSHEET RESPONSES - Pending Quality Approval
+    # ============================================================================
+    
+    # Get checksheet responses that have supervisor approval but need quality approval
+    pending_checksheet_responses = ChecksheetResponse.objects.filter(
+        supervisor_approved_at__isnull=False,  # Supervisor has approved
+        quality_approved_at__isnull=True,  # Quality has not approved yet
+        submitted_at__date__gte=current_date - timedelta(days=7)
+    ).select_related(
+        'checksheet',
+        'filled_by',
+        'verification_status',
+        'supervisor_approved_by'
+    ).order_by('-submitted_at')[:20]
+    
+    # ============================================================================
+    # CHECKSHEET RESPONSES - Recent Quality Verifications
+    # ============================================================================
+    
+    # Get base queryset for all checksheet verifications
+    all_checksheet_verifications = ChecksheetResponse.objects.filter(
+        quality_approved_at__isnull=False,
+        quality_approved_at__date__gte=current_date - timedelta(days=1)
+    ).select_related(
+        'checksheet',
+        'filled_by',
+        'quality_approved_by'
+    ).order_by('-quality_approved_at')
+    
+    # Count approved/rejected today BEFORE slicing
+    checksheet_approved_today = all_checksheet_verifications.filter(
+        quality_approved_at__date=current_date,
+        status='approved'
+    ).count()
+    
+    checksheet_rejected_today = all_checksheet_verifications.filter(
+        quality_approved_at__date=current_date,
+        status='rejected'
+    ).count()
+    
+    # Get recent verifications for display - slice AFTER counting
+    recent_checksheet_verifications = all_checksheet_verifications[:10]
+    
+    # ============================================================================
+    # COMBINED STATISTICS
+    # ============================================================================
+    
+    total_pending_verifications = (
+        len(pending_parameter_entries) + 
+        pending_checksheet_responses.count()
+    )
+    
+    total_approved_today = parameter_approved_today + checksheet_approved_today
+    total_rejected_today = parameter_rejected_today + checksheet_rejected_today
 
-    # Get FTQ data (similar to supervisor dashboard)
+    # ============================================================================
+    # FTQ, EP, DTPM DATA
+    # ============================================================================
+    
+    # Get FTQ data
     today_ftq = None
     ftq_percentage = 0
     recent_ftq_records = []
@@ -1859,7 +2448,7 @@ def quality_dashboard(request):
     try:
         today_ftq = FTQRecord.objects.filter(
             date=current_date
-        ).first()
+        ).select_related('verification_status').first()
         
         if today_ftq and today_ftq.total_inspected > 0:
             ftq_percentage = ((today_ftq.total_inspected - today_ftq.total_defects) / today_ftq.total_inspected) * 100
@@ -1868,10 +2457,9 @@ def quality_dashboard(request):
             date__gte=current_date - timedelta(days=7)
         ).order_by('-date', '-id')[:5]
     except:
-        # Handle case where FTQ model doesn't exist or has different structure
         pass
 
-    # Get EP Check data - FIXED VERSION
+    # Get EP Check data
     today_ep_check = None
     ep_check_stats = {'ok_count': 0, 'ng_count': 0, 'na_count': 0}
     recent_ep_checks = []
@@ -1882,12 +2470,10 @@ def quality_dashboard(request):
         ).select_related('verification_status').first()
         
         if today_ep_check:
-            # Get mechanism statuses for this EP check - CORRECT FIELD NAMES
             mechanism_statuses = ErrorPreventionMechanismStatus.objects.filter(
                 ep_check=today_ep_check
             )
             
-            # Calculate EP stats based on the actual model structure
             ep_check_stats = {
                 'ok_count': mechanism_statuses.filter(status='OK').count(),
                 'ng_count': mechanism_statuses.filter(status='NG').count(),
@@ -1901,7 +2487,7 @@ def quality_dashboard(request):
         print(f"EP Check error: {e}")
         pass
 
-    # Get DTPM data - FIXED VERSION
+    # Get DTPM data
     today_dtpm_checklist = None
     dtpm_checklist_stats = {'ok_count': 0, 'ng_count': 0, 'total_checkpoints': 0}
     recent_dtpm_checklists = []
@@ -1912,12 +2498,10 @@ def quality_dashboard(request):
         ).select_related('verification_status').first()
         
         if today_dtpm_checklist:
-            # Get checkpoint results for this DTPM checklist - CORRECT FIELD NAMES
             checkpoint_results = DTPMCheckResultNew.objects.filter(
                 checklist=today_dtpm_checklist
             )
             
-            # Calculate DTPM stats based on the actual model structure
             dtpm_checklist_stats = {
                 'ok_count': checkpoint_results.filter(status='OK').count(),
                 'ng_count': checkpoint_results.filter(status='NG').count(),
@@ -1935,10 +2519,34 @@ def quality_dashboard(request):
         'current_date': current_date,
         'current_time': current_time,
         'current_shift': current_shift_display,
-        'pending_verifications': pending_subgroups,
-        'verified_entries': recent_verifications,
-        'verification_stats': verification_stats,
-        'verification_summary': verification_stats,  # For compatibility with template
+        'current_shift_type': current_shift_type,
+        
+        # Parameter Group Verifications
+        'pending_parameter_entries': pending_parameter_entries,
+        'pending_by_group': dict(pending_by_group),
+        'recent_parameter_verifications': recent_parameter_verifications,
+        'parameter_approved_today': parameter_approved_today,
+        'parameter_rejected_today': parameter_rejected_today,
+        
+        # Checksheet Verifications
+        'pending_checksheet_responses': pending_checksheet_responses,
+        'recent_checksheet_verifications': recent_checksheet_verifications,
+        'checksheet_approved_today': checksheet_approved_today,
+        'checksheet_rejected_today': checksheet_rejected_today,
+        
+        # Combined Statistics
+        'verification_stats': {
+            'pending_count': total_pending_verifications,
+            'approved_today': total_approved_today,
+            'rejected_today': total_rejected_today,
+            'parameter_pending': len(pending_parameter_entries),
+            'checksheet_pending': pending_checksheet_responses.count(),
+        },
+        'verification_summary': {  # For template compatibility
+            'pending_count': total_pending_verifications,
+            'approved_today': total_approved_today,
+            'rejected_today': total_rejected_today,
+        },
         
         # FTQ data
         'today_ftq': today_ftq,
@@ -2310,7 +2918,93 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib import messages
 from .models import ChecklistBase, SubgroupEntry, SubgroupVerification
+"""
+FIXED VERSION - checklist_detail view
+Removed dependency on non-existent has_recommended_range field
+"""
 
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from collections import defaultdict
+
+from collections import defaultdict
+from django.db import transaction
+from django.views.decorators.http import require_POST
+
+
+
+@login_required
+@require_POST
+def verify_parameter_entry(request, entry_id):
+    """
+    Verify a single parameter group entry
+    """
+    entry = get_object_or_404(ParameterGroupEntry, id=entry_id)
+    
+    # Check if entry is completed
+    if not entry.is_completed:
+        messages.error(request, 'Cannot verify incomplete parameter entry')
+        return redirect('checklist_detail', checklist_id=entry.checklist.id)
+    
+    # Determine verification type based on user
+    if request.user.user_type == 'shift_supervisor':
+        verification_type = 'supervisor'
+        if entry.supervisor_verification:
+            messages.error(request, 'This entry already verified by shift supervisor')
+            return redirect('checklist_detail', checklist_id=entry.checklist.id)
+    elif request.user.user_type == 'quality_supervisor':
+        verification_type = 'quality'
+        if not entry.supervisor_verification:
+            messages.error(request, 'Shift supervisor must verify this entry first')
+            return redirect('checklist_detail', checklist_id=entry.checklist.id)
+        if entry.quality_verification:
+            messages.error(request, 'This entry already verified by quality supervisor')
+            return redirect('checklist_detail', checklist_id=entry.checklist.id)
+    else:
+        messages.error(request, 'You do not have permission to verify parameters')
+        return redirect('checklist_detail', checklist_id=entry.checklist.id)
+    
+    # Get form data
+    status = request.POST.get('status')
+    comment = request.POST.get('comment', '').strip()
+    
+    if not status or status not in ['approved', 'rejected']:
+        messages.error(request, 'Invalid verification status')
+        return redirect('checklist_detail', checklist_id=entry.checklist.id)
+    
+    try:
+        with transaction.atomic():
+            # Create verification record
+            verification = ParameterGroupVerification.objects.create(
+                parameter_entry=entry,
+                verification_type=verification_type,
+                status=status,
+                verified_by=request.user,
+                comment=comment if comment else None
+            )
+            
+            # Success message
+            param_name = entry.parameter_display_name
+            if verification_type == 'supervisor':
+                messages.success(
+                    request, 
+                    f'✓ {param_name} - Entry #{entry.id} {status} by Shift Supervisor'
+                )
+            else:
+                messages.success(
+                    request, 
+                    f'✓ {param_name} - Entry #{entry.id} {status} by Quality Supervisor'
+                )
+            
+    except Exception as e:
+        messages.error(request, f'Error during verification: {str(e)}')
+    
+    return redirect('checklist_detail', checklist_id=entry.checklist.id)
+
+
+
+@login_required
 def checklist_detail(request, checklist_id):   
     checklist = get_object_or_404(
         ChecklistBase.objects.select_related(
@@ -2320,101 +3014,211 @@ def checklist_detail(request, checklist_id):
             'verification_status__created_by',
             'frequency_config'
         ).prefetch_related(
-            'subgroup_entries__verifications',
-            'subgroup_entries__edit_history__edited_by',
             'verifications',
             'concern_set',
-            'dynamic_values__parameter'  # NEW: Fetch dynamic values
+            'dynamic_values__parameter',
+            'parameter_entries',
+            'parameter_entries__verifications__verified_by',
         ), 
         id=checklist_id
     )
     
-    # Get subgroups with validation status
-    subgroups = process_subgroups(checklist.subgroup_entries.all().order_by('subgroup_number'))
+    # ============================================================================
+    # Get and group parameter entries by parameter_group
+    # ============================================================================
     
-    # Get frequency config
-    frequency_hours = 2
-    max_subgroups = 6
+    all_entries = checklist.parameter_entries.filter(
+        is_completed=True
+    ).order_by('parameter_group', 'timestamp')
     
-    if checklist.frequency_config and checklist.frequency_config.is_active:
-        frequency_hours = checklist.frequency_config.frequency_hours
-        max_subgroups = checklist.frequency_config.max_subgroups
-    else:
-        try:
-            from .models import SubgroupFrequencyConfig
-            config = SubgroupFrequencyConfig.objects.get(
-                model_name=checklist.selected_model,
-                is_active=True
-            )
-            frequency_hours = config.frequency_hours
-            max_subgroups = config.max_subgroups
-        except SubgroupFrequencyConfig.DoesNotExist:
-            pass
+    # Group entries by parameter_group
+    grouped_entries = defaultdict(list)
+    for entry in all_entries:
+        grouped_entries[entry.parameter_group].append(entry)
     
-    shift_max_subgroups = max_subgroups
+    # ============================================================================
+    # Get parameter configurations from database
+    # ============================================================================
     
-    # Get maintenance and NOK subgroups
-    maintenance_subgroups = [sg for sg in subgroups if getattr(sg, 'is_after_maintenance', False)]
-    nok_approval_subgroups = [sg for sg in subgroups if not sg.all_checks_passed]
+    param_configs_from_db = ParameterGroupConfig.objects.filter(
+        model_name=checklist.selected_model,
+        is_active=True
+    ).order_by('display_order')
     
-    # Get timing information
-    timing_info = {}
-    can_add_subgroup = False
-    if checklist.verification_status and checklist.verification_status.shift:
-        can_add_subgroup, next_allowed_time, available_slots = check_time_gap_shift_based(checklist)
+    # Create a mapping for easy lookup
+    param_config_map = {}
+    for config in param_configs_from_db:
+        # Determine if this parameter has a range
+        has_range = False
+        range_text = ''
         
-        current_date = timezone.localtime(timezone.now()).date()
-        expected_times = get_expected_subgroup_times(
-            checklist.verification_status.shift.shift_type, 
-            current_date,
-            checklist
-        )
+        if config.parameter_group == 'uv_vacuum':
+            has_range = True
+            range_text = '-43 to -35 kPa'
+        elif config.parameter_group == 'uv_flow':
+            has_range = True
+            range_text = '30-40 LPM'
         
-        schedule_info = []
-        current_time = timezone.localtime(timezone.now())
-        
-        for i, expected_time in enumerate(expected_times, 1):
-            schedule_info.append({
-                'subgroup_number': i,
-                'expected_time': expected_time,
-                'is_available': current_time >= expected_time,
-                'is_completed': any(sg.subgroup_number == i for sg in subgroups),
-                'time_display': timezone.localtime(expected_time).strftime('%H:%M')
-            })
-        
-        timing_info = {
-            'schedule': schedule_info,
-            'shift_type': checklist.verification_status.shift.shift_type,
-            'shift_display': checklist.verification_status.shift.get_shift_type_display(),
-            'max_subgroups': shift_max_subgroups,
-            'current_available_slots': available_slots,
-            'frequency_hours': frequency_hours
+        param_config_map[config.parameter_group] = {
+            'display_name': config.get_parameter_group_display(),
+            'frequency': config.frequency_minutes,
+            'has_range': has_range,
+            'range_text': range_text,
+            'display_order': config.display_order,
         }
     
-    # Calculate subgroup metrics
-    subgroup_metrics = {
-        'total_count': len(subgroups),
-        'passed_count': sum(1 for s in subgroups if getattr(s, 'all_checks_passed', False)),
-        'completion_percentage': (len(subgroups) / shift_max_subgroups) * 100 if subgroups and shift_max_subgroups else 0,
-        'progress_width': (len(subgroups) / shift_max_subgroups) * 100 if shift_max_subgroups else 0,
-        'total_readings_completed': len(subgroups) * 21,
-        'total_readings_target': shift_max_subgroups * 21,
-        'progress_text': f"{len(subgroups)}/{shift_max_subgroups} Complete ({len(subgroups) * 21}/{shift_max_subgroups * 21} readings)"
+    # ============================================================================
+    # Build grouped data for template
+    # ============================================================================
+    
+    parameter_entries_grouped = []
+    
+    for param_group, entries in grouped_entries.items():
+        # Get config from database, fallback to defaults if not found
+        config = param_config_map.get(param_group, {
+            'display_name': param_group.replace('_', ' ').title(),
+            'frequency': 60,
+            'has_range': False,
+            'range_text': '',
+            'display_order': 999,
+        })
+        
+        # Calculate verification stats for this group
+        total_entries = len(entries)
+        supervisor_verified = sum(1 for e in entries if e.is_supervisor_verified)
+        quality_verified = sum(1 for e in entries if e.is_quality_verified)
+        fully_verified = sum(1 for e in entries if e.is_fully_verified)
+
+        parameter_entries_grouped.append({
+            'parameter_group': param_group,
+            'display_name': config['display_name'],
+            'frequency_minutes': config['frequency'],
+            'entries': entries,
+            'entry_count': total_entries,
+            'has_range': config['has_range'],
+            'range_text': config['range_text'],
+            'display_order': config['display_order'],
+            'verification_stats': {
+                'total': total_entries,
+                'supervisor_verified': supervisor_verified,
+                'quality_verified': quality_verified,
+                'fully_verified': fully_verified,
+                'supervisor_pending': total_entries - supervisor_verified,
+                'quality_pending': supervisor_verified - quality_verified,
+            }
+        })
+    
+    # Sort by display order from database
+    parameter_entries_grouped.sort(key=lambda x: x['display_order'])
+    
+    # User verification permissions
+    can_verify_supervisor = request.user.user_type == 'shift_supervisor'
+    can_verify_quality = request.user.user_type == 'quality_supervisor'
+    
+    # ============================================================================
+    # Maintenance Entries: Entries marked as "after maintenance"
+    # ============================================================================
+    
+    maintenance_entries = all_entries.filter(is_after_maintenance=True)
+    
+    # ============================================================================
+    # NOK Approval Entries: Entries with out-of-range or NOK values
+    # ============================================================================
+    
+    nok_approval_entries = []
+    
+    for entry in all_entries:
+        needs_approval = False
+        
+        # UV Vacuum: Check out of range (-43 to -35 kPa)
+        if entry.parameter_group == 'uv_vacuum':
+            for i in range(1, 6):
+                value = getattr(entry, f'uv_vacuum_test_{i}', None)
+                if value is not None and (value < -43 or value > -35):
+                    needs_approval = True
+                    entry.has_out_of_range_values = True
+                    break
+        
+        # UV Flow: Check out of range (30-40 LPM)
+        elif entry.parameter_group == 'uv_flow':
+            for i in range(1, 6):
+                value = getattr(entry, f'uv_flow_value_{i}', None)
+                if value is not None and (value < 30 or value > 40):
+                    needs_approval = True
+                    entry.has_out_of_range_values = True
+                    break
+        
+        # Umbrella Valve: Check for NOK
+        elif entry.parameter_group == 'umbrella_valve':
+            for i in range(1, 6):
+                if getattr(entry, f'umbrella_valve_assembly_{i}', None) == 'NOK':
+                    needs_approval = True
+                    entry.has_nok_values = True
+                    break
+        
+        # UV Clip: Check for NOK
+        elif entry.parameter_group == 'uv_clip':
+            for i in range(1, 6):
+                if getattr(entry, f'uv_clip_pressing_{i}', None) == 'NOK':
+                    needs_approval = True
+                    entry.has_nok_values = True
+                    break
+        
+        # Workstation: Check if not clean
+        elif entry.parameter_group == 'workstation':
+            if entry.workstation_clean == 'No':
+                needs_approval = True
+        
+        # Bin Contamination: Check for No (contaminated)
+        elif entry.parameter_group == 'bin_contamination':
+            for i in range(1, 6):
+                if getattr(entry, f'bin_contamination_check_{i}', None) == 'No':
+                    needs_approval = True
+                    entry.has_no_values = True
+                    break
+        
+        if needs_approval:
+            nok_approval_entries.append(entry)
+    
+    # ============================================================================
+    # Get availability info
+    # ============================================================================
+    
+    availability = get_available_parameter_groups(checklist)
+    
+    # Calculate total parameters from database
+    total_parameters = param_configs_from_db.count()
+    
+    completed_count = len(availability['completed'])
+    pending_count = len(availability['pending'])
+    available_count = len(availability['available'])
+    
+    completion_percentage = int((completed_count / total_parameters) * 100) if total_parameters > 0 else 0
+    
+    # Parameter metrics
+    parameter_metrics = {
+        'total_count': total_parameters,
+        'completed_count': completed_count,
+        'pending_count': pending_count,
+        'available_count': available_count,
+        'completion_percentage': completion_percentage,
+        'progress_width': completion_percentage,
+        'progress_text': f"{completed_count}/{total_parameters} Parameters Complete"
     }
     
     # Verification status
-    verification_status = {
+    verification_status_info = {
         'can_verify_supervisor': (
             request.user.user_type == 'shift_supervisor' and 
             checklist.status == 'pending' and 
-            len(subgroups) == shift_max_subgroups
+            completed_count == total_parameters
         ),
         'can_verify_quality': (
             request.user.user_type == 'quality_supervisor' and 
             checklist.status == 'supervisor_approved'
         ),
-        'last_verification': checklist.verifications.last(),
-        'verification_count': checklist.verifications.count()
+        'last_verification': checklist.verifications.last() if hasattr(checklist, 'verifications') else None,
+        'verification_count': checklist.verifications.count() if hasattr(checklist, 'verifications') else 0
     }
     
     # User permissions
@@ -2425,36 +3229,78 @@ def checklist_detail(request, checklist_id):
         'can_view_all': request.user.user_type in ['shift_supervisor', 'quality_supervisor']
     }
     
-    # Measurement validation
-    measurement_validation = validate_measurements(checklist, subgroups)
-    
     # Concerns
-    concerns = process_concerns(checklist.concern_set.all().order_by('-created_at'))
+    concerns = checklist.concern_set.all().order_by('-created_at')
     
-    # NEW: Get dynamic values ordered by display_order
+    # Dynamic values
     dynamic_values = checklist.dynamic_values.select_related('parameter').order_by('parameter__order', 'parameter__id')
+    
+    # Can add more parameters?
+    can_add_parameters = (
+        request.user == checklist.verification_status.created_by and 
+        checklist.status == 'pending' and
+        (available_count > 0 or pending_count > 0)
+    )
     
     context = {
         'checklist': checklist,
         'verification_status': checklist.verification_status,
-        'subgroups': subgroups,
-        'can_add_subgroup': can_add_subgroup,
-        'total_subgroups': len(subgroups),
-        'remaining_subgroups': shift_max_subgroups - len(subgroups),
-        'subgroup_metrics': subgroup_metrics,
-        'verification_status': verification_status,
+        'parameter_entries': all_entries,
+        'parameter_entries_grouped': parameter_entries_grouped,
+        'can_verify_supervisor': can_verify_supervisor,
+        'can_verify_quality': can_verify_quality,
+        'maintenance_entries': maintenance_entries if maintenance_entries.exists() else None,
+        'nok_approval_entries': nok_approval_entries if nok_approval_entries else None,
+        'availability': availability,
+        'can_add_parameters': can_add_parameters,
+        'parameter_metrics': parameter_metrics,
+        'verification_status_info': verification_status_info,
         'user_permissions': user_permissions,
-        'measurement_validation': measurement_validation,
         'concerns': concerns,
-        'timing_info': timing_info,
-        'shift_max_subgroups': shift_max_subgroups,
-        'frequency_hours': frequency_hours,
-        'maintenance_subgroups': maintenance_subgroups,
-        'nok_approval_subgroups': nok_approval_subgroups,
-        'dynamic_values': dynamic_values,  # NEW: Add to context
+        'dynamic_values': dynamic_values,
     }
     
     return render(request, 'main/checklist_detail.html', context)
+
+
+# ============================================================================
+# QUICK DEBUG: Check if entries are actually duplicated in database
+# ============================================================================
+
+def debug_check_duplicates(checklist_id):
+    """
+    Run this in Django shell to check for actual duplicates in database
+    
+    Usage:
+        from your_app.views import debug_check_duplicates
+        debug_check_duplicates(your_checklist_id)
+    """
+    from collections import Counter
+    
+    checklist = ChecklistBase.objects.get(id=checklist_id)
+    entries = checklist.parameter_entries.filter(is_completed=True)
+    
+    # Count entries by parameter_group
+    param_counts = Counter([e.parameter_group for e in entries])
+    
+    print(f"Checklist ID: {checklist_id}")
+    print(f"Total entries: {entries.count()}")
+    print("\nEntries by parameter group:")
+    for param, count in param_counts.items():
+        print(f"  {param}: {count} entries")
+    
+    # Check for duplicate timestamps (might indicate actual duplicates)
+    timestamps = [e.timestamp for e in entries]
+    duplicate_timestamps = [t for t in timestamps if timestamps.count(t) > 1]
+    
+    if duplicate_timestamps:
+        print(f"\n⚠️ WARNING: Found {len(set(duplicate_timestamps))} duplicate timestamps!")
+        print("This might indicate actual duplicate entries in database.")
+    else:
+        print("\n✅ No duplicate timestamps found.")
+        print("Entries are unique - issue is likely in template display logic.")
+    
+    return param_counts
 
 
 
@@ -8196,6 +9042,12 @@ def checksheet_responses_list(request):
     if request.user.user_type == 'operator':
         responses = responses.filter(filled_by=request.user)
     
+    # Calculate stats
+    total_count = responses.count()
+    pending_count = responses.filter(status__in=['draft', 'submitted']).count()
+    in_progress_count = responses.filter(status='supervisor_approved').count()
+    completed_count = responses.filter(status='quality_approved').count()
+    
     # Pagination
     paginator = Paginator(responses, 20)
     page_number = request.GET.get('page')
@@ -8210,11 +9062,13 @@ def checksheet_responses_list(request):
         'checksheets': checksheets,
         'selected_status': status_filter,
         'selected_checksheet': checksheet_filter,
-        'page_title': 'Checksheet Responses'
+        'page_title': 'Checksheet Responses',
+        'total_count': total_count,
+        'pending_count': pending_count,
+        'in_progress_count': in_progress_count,
+        'completed_count': completed_count,
     }
     return render(request, 'checksheets/responses_list.html', context)
-
-
 # ============ CREATE CHECKSHEET RESPONSE ============
 
 @login_required

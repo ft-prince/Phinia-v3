@@ -1,0 +1,956 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Fill Subgroup{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body {
+        background-color: black !important;
+        color: white !important;
+    }
+    
+    .parameter-card {
+        background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+        border: 2px solid #ffffff;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        position: relative;
+    }
+    
+    .parameter-card.can-fill {
+        border-color: #28a745;
+        box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
+    }
+    
+    .parameter-card.waiting {
+        border-color: #ffc107;
+        opacity: 0.7;
+    }
+    
+    .parameter-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #444;
+    }
+    
+    .parameter-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #ffffff;
+    }
+    
+    .parameter-instructions {
+        background: rgba(255, 193, 7, 0.1);
+        border-left: 4px solid #ffc107;
+        padding: 12px;
+        margin: 15px 0;
+        font-size: 0.95rem;
+    }
+    
+    .hindi-text {
+        color: #b8b8b8;
+        font-style: italic;
+        margin-top: 5px;
+    }
+    
+    .recommended-range {
+        background: rgba(40, 167, 69, 0.1);
+        border: 1px solid #28a745;
+        padding: 8px 12px;
+        border-radius: 5px;
+        margin: 10px 0;
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .entry-count {
+        background: #CC0000;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+    
+    .status-badge {
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    
+    .status-ready {
+        background: #28a745;
+        color: white;
+    }
+    
+    .status-waiting {
+        background: #ffc107;
+        color: #000;
+    }
+    
+    .countdown-timer {
+        font-size: 1.5rem;
+        color: #ffc107;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    
+    /* Enhanced Table Styling */
+    .parameter-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        border: 2px solid #CC0000;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+    
+    .parameter-table th {
+        background: #CC0000;
+        color: white;
+        padding: 14px 10px;
+        text-align: center;
+        font-weight: bold;
+        font-size: 0.95rem;
+        border-right: 1px solid #fff;
+    }
+    
+    .parameter-table th:last-child {
+        border-right: none;
+    }
+    
+    .parameter-table td {
+        padding: 12px 10px;
+        border-bottom: 1px solid #333;
+        border-right: 1px solid #333;
+        background: #1a1a1a;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .parameter-table td:last-child {
+        border-right: none;
+    }
+    
+    .parameter-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    
+    .parameter-table tbody tr:hover td {
+        background: #252525;
+    }
+    
+    .parameter-table td.sno-col {
+        font-weight: bold;
+        color: #ffc107;
+        font-size: 1.1rem;
+        width: 60px;
+    }
+    
+    .parameter-table td.label-col {
+        text-align: left;
+        font-weight: 500;
+        width: 180px;
+    }
+    
+    .parameter-table input[type="number"],
+    .parameter-table input[type="text"],
+    .parameter-table textarea {
+        width: 100%;
+        background-color: #222 !important;
+        border: 2px solid #444 !important;
+        color: white !important;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 0.95rem;
+    }
+    
+    .parameter-table select {
+        width: 100%;
+        background-color: #222 !important;
+        border: 2px solid #444 !important;
+        color: white !important;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 0.95rem;
+        cursor: pointer;
+    }
+    
+    .parameter-table input[type="number"]:focus,
+    .parameter-table input[type="text"]:focus,
+    .parameter-table textarea:focus,
+    .parameter-table select:focus {
+        background-color: #333 !important;
+        border-color: #CC0000 !important;
+        outline: none;
+        box-shadow: 0 0 5px rgba(204, 0, 0, 0.5);
+    }
+    
+    .parameter-table input.out-of-range {
+        border-color: #ff6b6b !important;
+        background-color: rgba(255, 107, 107, 0.1) !important;
+    }
+    
+    .parameter-table textarea {
+        min-height: 60px;
+        resize: vertical;
+    }
+    
+    .range-warning {
+        color: #ff6b6b;
+        font-size: 0.85rem;
+        margin-top: 4px;
+        display: none;
+        font-weight: bold;
+    }
+    
+    .range-warning.show {
+        display: block;
+    }
+    
+    .form-control, .form-select {
+        background-color: #222 !important;
+        border: 2px solid #444 !important;
+        color: white !important;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background-color: #333 !important;
+        border-color: #CC0000 !important;
+        color: white !important;
+    }
+    
+    .btn-submit-param {
+        background-color: #28a745 !important;
+        border: 2px solid #ffffff !important;
+        color: white !important;
+        padding: 12px 30px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        width: 100%;
+        margin-top: 20px;
+    }
+    
+    .btn-submit-param:hover {
+        background-color: #218838 !important;
+        transform: translateY(-2px);
+    }
+    
+    .btn-submit-param:disabled {
+        background-color: #6c757d !important;
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .statistics-bar {
+        background: linear-gradient(145deg, #CC0000, #990000);
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+    }
+    
+    .stat-item {
+        text-align: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #fff;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #ddd;
+    }
+    
+    /* Comment Fields Section - Grid Layout */
+    .comment-section-header {
+        background: rgba(255, 193, 7, 0.15);
+        border-left: 4px solid #ffc107;
+        padding: 10px 15px;
+        margin: 20px 0 15px 0;
+        border-radius: 5px;
+        display: none;
+    }
+    
+    .comment-section-header.show {
+        display: block;
+    }
+    
+    .comment-section-header h6 {
+        color: #ffc107;
+        margin: 0;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+    
+    .comment-fields-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+    }
+    
+    /* Hide comment fields by default */
+    .comment-field-container {
+        display: none;
+        padding: 12px;
+        background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+        border: 2px solid #ffc107;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(255, 193, 7, 0.2);
+    }
+    
+    .comment-field-container.show {
+        display: block !important;
+        animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .comment-field-container label {
+        color: #ffc107;
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: block;
+        font-size: 0.9rem;
+    }
+    
+    .comment-field-container label i {
+        margin-right: 5px;
+    }
+    
+    .comment-field-container textarea,
+    .comment-field-container input[type="text"] {
+        min-height: 50px !important;
+        max-height: 100px;
+        resize: vertical;
+        font-size: 0.9rem;
+    }
+    
+    /* Hide general notes completely */
+    .general-notes-container {
+        display: none !important;
+    }
+    
+    /* Additional Info Section - Compact */
+    .additional-info-section {
+        background: rgba(255, 193, 7, 0.05);
+        border: 1px solid #444;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 20px;
+    }
+    
+    .additional-info-section h6 {
+        color: #ffc107;
+        margin-bottom: 15px;
+        font-size: 1rem;
+        border-bottom: 1px solid #444;
+        padding-bottom: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="card mb-3" style="background: #111; border: 2px solid #fff;">
+        <div class="card-header" style="background: #CC0000; border-bottom: 2px solid #fff;">
+            <h4 class="mb-0" style="color: white;">
+                <i class="fas fa-clipboard-list"></i> Fill Subgroup Entries
+                <span style="font-size: 85%; font-weight: normal; margin-left: 10px;">पैरामीटर समूह भरें - एकाधिक प्रविष्टियाँ</span>
+            </h4>
+        </div>
+        <div class="card-body" style="color: white;">
+            <div class="row">
+                <div class="col-md-4">
+                    <p class="mb-1"><strong>Model:</strong> {{ checklist.selected_model }}</p>
+                    <p class="mb-1"><strong>Checklist ID:</strong> #{{ checklist.id }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p class="mb-1"><strong>Shift:</strong> {{ checklist.verification_status.shift.get_shift_type_display }}</p>
+                    <p class="mb-1"><strong>Operator:</strong> {{ checklist.verification_status.shift.operator.get_full_name }}</p>
+                </div>
+                <div class="col-md-4">
+                    <p class="mb-1"><strong>Shift Start:</strong> {{ statistics.shift_start|date:"d M Y, H:i" }}</p>
+                    <p class="mb-1"><strong>Timer Mode:</strong> <span style="color: #28a745;">From Shift Start</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="statistics-bar">
+        <div class="stat-item">
+            <div class="stat-value">{{ statistics.total_entries }}</div>
+            <div class="stat-label">Total Entries</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ forms_data|length }}</div>
+            <div class="stat-label">Parameters</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value">{{ statistics.parameters_ready }}</div>
+            <div class="stat-label">Ready Now</div>
+        </div>
+    </div>
+
+    <!-- All Parameter Forms -->
+    {% for form_data in forms_data %}
+    <div class="parameter-card {% if form_data.can_fill_now %}can-fill{% else %}waiting{% endif %}" id="card-{{ form_data.parameter_group }}">
+        <div class="parameter-header">
+            <div>
+                <div class="parameter-title">
+                    {{ forloop.counter }}. {{ form_data.display_name }}
+                </div>
+                <small style="color: #aaa;">
+                    Frequency: Every {{ form_data.frequency_minutes }} minutes
+                    | Completed: {{ form_data.entry_count }}/{{ form_data.expected_fills }} expected fills
+                    {% if form_data.last_filled %}
+                    | Last filled: {{ form_data.last_filled|date:"H:i:s" }}
+                    {% else %}
+                    | Never filled yet
+                    {% endif %}
+                </small>
+            </div>
+            <div class="text-end">
+                <div class="entry-count">
+                    Entry #{{ form_data.entry_count|add:1 }}
+                </div>
+                {% if form_data.can_fill_now %}
+                <div class="status-badge status-ready mt-2">
+                    <i class="fas fa-check-circle"></i> Ready to Fill
+                </div>
+                {% else %}
+                <div class="status-badge status-waiting mt-2">
+                    <i class="fas fa-clock"></i> Wait {{ form_data.minutes_until_next }}m
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if form_data.can_fill_now %}
+        <!-- Parameter-specific instructions and form -->
+        <form method="post" class="parameter-form" data-param="{{ form_data.parameter_group }}">
+            {% csrf_token %}
+            
+            {% if form_data.parameter_group == 'uv_vacuum' %}
+            <div class="parameter-instructions">
+                <strong>UV Vacuum Test (kPa)</strong><br>
+                Record 5 consecutive readings of UV vacuum test<br>
+                <div class="hindi-text">यूवी वैक्यूम टेस्ट की 5 लगातार रीडिंग रिकॉर्ड करें</div>
+            </div>
+            <div class="recommended-range">
+                ✓ Recommended Range: -43 to -35 kPa
+            </div>
+            <table class="parameter-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">S.No.</th>
+                        <th style="width: 20%;">Reading</th>
+                        <th style="width: 72%;">Value (kPa)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in form_data.form %}
+                        {% if 'uv_vacuum_test_' in field.name and 'comment' not in field.name %}
+                        <tr>
+                            <td class="sno-col">{{ forloop.counter }}</td>
+                            <td class="label-col">{{ field.label }}</td>
+                            <td>
+                                {{ field }}
+                                <div class="range-warning">⚠️ Out of range (-43 to -35 kPa) - Comment required</div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% elif form_data.parameter_group == 'uv_flow' %}
+            <div class="parameter-instructions">
+                <strong>UV Flow Value (LPM)</strong><br>
+                Record 5 consecutive readings of UV flow value from HMI<br>
+                <div class="hindi-text">HMI से यूवी फ्लो वैल्यू की 5 लगातार रीडिंग रिकॉर्ड करें</div>
+            </div>
+            <div class="recommended-range">
+                ✓ Recommended Range: 30-40 LPM
+            </div>
+            <table class="parameter-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">S.No.</th>
+                        <th style="width: 20%;">Reading</th>
+                        <th style="width: 72%;">Value (LPM)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in form_data.form %}
+                        {% if 'uv_flow_value_' in field.name and 'comment' not in field.name %}
+                        <tr>
+                            <td class="sno-col">{{ forloop.counter }}</td>
+                            <td class="label-col">{{ field.label }}</td>
+                            <td>
+                                {{ field }}
+                                <div class="range-warning">⚠️ Out of range (30-40 LPM) - Comment required</div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% elif form_data.parameter_group == 'umbrella_valve' %}
+            <div class="parameter-instructions">
+                <strong>Umbrella Valve Assembly in Retainer</strong><br>
+                Check umbrella valve assembly in retainer in UV Assy Station - 5 checks<br>
+                <div class="hindi-text">यूवी असेंबली स्टेशन में रिटेनर में अम्ब्रेला वाल्व असेंबली की जांच करें - 5 जांच</div>
+            </div>
+            <table class="parameter-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">S.No.</th>
+                        <th style="width: 30%;">Check</th>
+                        <th style="width: 62%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in form_data.form %}
+                        {% if 'umbrella_valve_assembly_' in field.name and 'comment' not in field.name %}
+                        <tr>
+                            <td class="sno-col">{{ forloop.counter }}</td>
+                            <td class="label-col">{{ field.label }}</td>
+                            <td>{{ field }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% elif form_data.parameter_group == 'uv_clip' %}
+            <div class="parameter-instructions">
+                <strong>UV Clip Pressing</strong><br>
+                Check UV clip pressing - proper locking of 2 nos snap - 5 checks<br>
+                <div class="hindi-text">यूवी क्लिप प्रेसिंग की जांच करें - 2 स्नैप का उचित लॉकिंग - 5 जांच</div>
+            </div>
+            <table class="parameter-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">S.No.</th>
+                        <th style="width: 30%;">Check</th>
+                        <th style="width: 62%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in form_data.form %}
+                        {% if 'uv_clip_pressing_' in field.name and 'comment' not in field.name %}
+                        <tr>
+                            <td class="sno-col">{{ forloop.counter }}</td>
+                            <td class="label-col">{{ field.label }}</td>
+                            <td>{{ field }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% elif form_data.parameter_group == 'workstation' %}
+            <div class="parameter-instructions">
+                <strong>Workstation Cleanliness</strong><br>
+                All workstations are clean - Single Check<br>
+                <div class="hindi-text">सभी वर्कस्टेशन साफ हैं - एकल जांच</div>
+            </div>
+            <table class="parameter-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">S.No.</th>
+                        <th style="width: 40%;">Check</th>
+                        <th style="width: 52%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in form_data.form %}
+                        {% if 'workstation_clean' == field.name %}
+                        <tr>
+                            <td class="sno-col">1</td>
+                            <td class="label-col">{{ field.label }}</td>
+                            <td>{{ field }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            {% elif form_data.parameter_group == 'bin_contamination' %}
+            <div class="parameter-instructions">
+                <strong>Bin Contamination Check</strong><br>
+                Station Operator will confirm that every bin feeded on line is free from contamination - 5 checks<br>
+                Reference: PTGW_5.3_PC_GUR_03<br>
+                <div class="hindi-text">स्टेशन ऑपरेटर पुष्टि करेगा कि लाइन पर खिलाया गया प्रत्येक बिन संदूषण से मुक्त है - 5 जांच</div>
+            </div>
+            <table class="parameter-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">S.No.</th>
+                        <th style="width: 30%;">Check</th>
+                        <th style="width: 62%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for field in form_data.form %}
+                        {% if 'bin_contamination_check_' in field.name and 'comment' not in field.name %}
+                        <tr>
+                            <td class="sno-col">{{ forloop.counter }}</td>
+                            <td class="label-col">{{ field.label }}</td>
+                            <td>{{ field }}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+
+            <!-- Comments Section Header (Only shows when there are comments) -->
+            <div class="comment-section-header" id="comment-header-{{ form_data.parameter_group }}">
+                <h6><i class="fas fa-comment-dots"></i> Comments Required (Fill only for out-of-range or NOK/No values)</h6>
+            </div>
+
+            <!-- Comment Fields Section (Grid Layout) -->
+            <div class="comment-fields-grid" id="comment-section-{{ form_data.parameter_group }}">
+                {% for field in form_data.form %}
+                    {% if 'comment' in field.name and field.name != 'maintenance_comment' and field.name != 'general_notes' %}
+                    <div class="comment-field-container" data-comment-for="{{ field.html_name }}">
+                        <label><i class="fas fa-edit"></i> {{ field.label }}</label>
+                        {{ field }}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- Additional Info Section (Compact) -->
+            <div class="additional-info-section">
+                <h6><i class="fas fa-wrench"></i> Additional Information / अतिरिक्त जानकारी</h6>
+                <div class="row">
+                    {% for field in form_data.form %}
+                        {% if field.name == 'is_after_maintenance' %}
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                        </div>
+                        {% elif field.name == 'maintenance_comment' %}
+                        <div class="col-md-12 mb-3" id="maintenance-comment-container-{{ form_data.parameter_group }}" style="display: none;">
+                            <label class="form-label" style="color: #ffc107;">{{ field.label }} *</label>
+                            {{ field }}
+                        </div>
+                        {% elif field.name == 'general_notes' %}
+                        <!-- Hidden general notes -->
+                        <div class="general-notes-container">
+                            {{ field }}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <button type="submit" name="{{ form_data.parameter_group }}-submit" class="btn btn-submit-param">
+                <i class="fas fa-save"></i> Save Entry #{{ form_data.entry_count|add:1 }}
+            </button>
+        </form>
+        {% else %}
+        <!-- Waiting Message -->
+        <div class="text-center py-4">
+            <div class="countdown-timer">
+                <i class="fas fa-hourglass-half"></i> 
+                Next entry available in {{ form_data.minutes_until_next }} minutes
+            </div>
+            <p style="color: #aaa;">
+                This parameter can be filled again at {{ form_data.next_available|date:"H:i:s" }}
+            </p>
+            <p style="color: #888; font-size: 0.9rem;">
+                <i class="fas fa-info-circle"></i> Timer is based on shift start time, not last submission
+            </p>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <!-- Actions -->
+    <div class="text-center mt-4 mb-4">
+        <a href="{% url 'checklist_detail' checklist.id %}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-arrow-left"></i> Back to Checklist
+        </a>
+        <button onclick="location.reload()" class="btn btn-warning btn-lg ms-2">
+            <i class="fas fa-sync"></i> Refresh Status
+        </button>
+    </div>
+</div>
+
+<script>
+// Range definitions
+const RANGES = {
+    'uv_vacuum': { min: -43, max: -35 },
+    'uv_flow': { min: 30, max: 40 }
+};
+
+// ULTIMATE FIX: Build a mapping of all input fields to their comment fields at page load
+const fieldToCommentMap = new Map();
+
+function buildFieldCommentMap() {
+    console.log('=== BUILDING FIELD-COMMENT MAP ===');
+    
+    // Find all comment containers
+    const commentContainers = document.querySelectorAll('.comment-field-container');
+    
+    commentContainers.forEach(container => {
+        const commentFieldName = container.dataset.commentFor;
+        
+        // Extract base field name from comment field
+        // "uv_flow-uv_flow_value_1_comment" -> "uv_flow-uv_flow_value_1"
+        let baseFieldName = commentFieldName.replace('_comment', '');
+        
+        console.log(`Mapping: ${baseFieldName} -> ${commentFieldName}`);
+        fieldToCommentMap.set(baseFieldName, container);
+    });
+    
+    console.log(`Total mappings created: ${fieldToCommentMap.size}`);
+}
+
+function checkRange(value, rangeConfig) {
+    if (!value || value === '') return false;
+    const numValue = parseFloat(value);
+    return numValue < rangeConfig.min || numValue > rangeConfig.max;
+}
+
+// SIMPLE: Just use the full field name to find its comment
+function toggleCommentField(fullFieldName, shouldShow) {
+    console.log(`toggleCommentField: ${fullFieldName}, shouldShow: ${shouldShow}`);
+    
+    const commentContainer = fieldToCommentMap.get(fullFieldName);
+    
+    if (commentContainer) {
+        console.log('✅ Found comment container!');
+        if (shouldShow) {
+            commentContainer.classList.add('show');
+            const textarea = commentContainer.querySelector('textarea, input');
+            if (textarea) textarea.setAttribute('required', 'required');
+        } else {
+            commentContainer.classList.remove('show');
+            const textarea = commentContainer.querySelector('textarea, input');
+            if (textarea) {
+                textarea.removeAttribute('required');
+                textarea.value = '';
+            }
+        }
+    } else {
+        console.warn(`❌ No comment container found for: ${fullFieldName}`);
+        console.log('Available mappings:', Array.from(fieldToCommentMap.keys()));
+    }
+}
+
+// Update comment section header visibility
+function updateCommentHeader(paramGroup) {
+    const commentSection = document.getElementById('comment-section-' + paramGroup);
+    const commentHeader = document.getElementById('comment-header-' + paramGroup);
+    
+    if (commentSection && commentHeader) {
+        const visibleComments = commentSection.querySelectorAll('.comment-field-container.show');
+        if (visibleComments.length > 0) {
+            commentHeader.classList.add('show');
+        } else {
+            commentHeader.classList.remove('show');
+        }
+    }
+}
+
+// Handle numeric inputs
+function handleNumericInput(input, paramType) {
+    console.log(`=== handleNumericInput: ${input.name} = ${input.value} ===`);
+    
+    const value = input.value;
+    const fieldName = input.name; // Use FULL name with prefix
+    
+    const row = input.closest('tr');
+    const warningDiv = row ? row.querySelector('.range-warning') : null;
+    const form = input.closest('form');
+    const paramGroup = form ? form.dataset.param : null;
+    
+    const rangeConfig = RANGES[paramType];
+    if (!rangeConfig) return;
+    
+    const outOfRange = checkRange(value, rangeConfig);
+    console.log(`Out of range? ${outOfRange}`);
+    
+    // Toggle warning
+    if (warningDiv) {
+        if (outOfRange) {
+            warningDiv.classList.add('show');
+            input.classList.add('out-of-range');
+        } else {
+            warningDiv.classList.remove('show');
+            input.classList.remove('out-of-range');
+        }
+    }
+    
+    // Toggle comment field
+    toggleCommentField(fieldName, outOfRange);
+    
+    // Update header
+    if (paramGroup) updateCommentHeader(paramGroup);
+}
+
+// Handle select inputs
+function handleSelectInput(select) {
+    console.log(`=== handleSelectInput: ${select.name} = ${select.value} ===`);
+    
+    const value = select.value;
+    const fieldName = select.name; // Use FULL name with prefix
+    const needsComment = (value === 'NOK' || value === 'No');
+    
+    const form = select.closest('form');
+    const paramGroup = form ? form.dataset.param : null;
+    
+    toggleCommentField(fieldName, needsComment);
+    
+    // Update header
+    if (paramGroup) updateCommentHeader(paramGroup);
+}
+
+// Handle maintenance checkbox
+function handleMaintenanceCheckbox(checkbox, paramGroup) {
+    const commentContainer = document.getElementById('maintenance-comment-container-' + paramGroup);
+    if (!commentContainer) return;
+    
+    const commentField = commentContainer.querySelector('textarea, input[type="text"]');
+    
+    if (checkbox.checked) {
+        commentContainer.style.display = 'block';
+        if (commentField) commentField.setAttribute('required', 'required');
+    } else {
+        commentContainer.style.display = 'none';
+        if (commentField) {
+            commentField.removeAttribute('required');
+            commentField.value = '';
+        }
+    }
+}
+
+// Form validation
+function validateForm(form) {
+    const requiredFields = form.querySelectorAll('textarea[required], input[required]');
+    let isValid = true;
+    let errorMessages = [];
+    
+    requiredFields.forEach(field => {
+        if (!field.value.trim() && field.type !== 'checkbox') {
+            isValid = false;
+            const label = field.previousElementSibling;
+            const fieldName = label ? label.textContent.trim() : field.name;
+            errorMessages.push(fieldName);
+            field.style.borderColor = '#ff0000';
+        } else {
+            field.style.borderColor = '#444';
+        }
+    });
+    
+    if (!isValid) {
+        alert('⚠️ Please fill in all required fields:\n\n' + errorMessages.join('\n'));
+    }
+    
+    return isValid;
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== PAGE LOADED ===');
+    
+    // Build the field-comment map first!
+    buildFieldCommentMap();
+    
+    const allForms = document.querySelectorAll('.parameter-form');
+    console.log(`Forms found: ${allForms.length}`);
+    
+    allForms.forEach(form => {
+        const paramGroup = form.dataset.param;
+        console.log(`Initializing form: ${paramGroup}`);
+        
+        // Form validation
+        form.addEventListener('submit', function(e) {
+            if (!validateForm(form)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        
+        // UV Vacuum
+        if (paramGroup === 'uv_vacuum') {
+            const inputs = form.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                if (input.name.includes('uv_vacuum_test_')) {
+                    input.addEventListener('input', () => handleNumericInput(input, 'uv_vacuum'));
+                    input.addEventListener('change', () => handleNumericInput(input, 'uv_vacuum'));
+                    if (input.value) handleNumericInput(input, 'uv_vacuum');
+                }
+            });
+        }
+        
+        // UV Flow
+        if (paramGroup === 'uv_flow') {
+            const inputs = form.querySelectorAll('input[type="number"]');
+            inputs.forEach(input => {
+                if (input.name.includes('uv_flow_value_')) {
+                    console.log(`Attaching handler to: ${input.name}`);
+                    input.addEventListener('input', () => handleNumericInput(input, 'uv_flow'));
+                    input.addEventListener('change', () => handleNumericInput(input, 'uv_flow'));
+                    if (input.value) handleNumericInput(input, 'uv_flow');
+                }
+            });
+        }
+        
+        // Select fields
+        const selects = form.querySelectorAll('select');
+        selects.forEach(select => {
+            const selectName = select.name || select.id;
+            if (!selectName.includes('maintenance') && !selectName.includes('general')) {
+                select.addEventListener('change', () => handleSelectInput(select));
+                if (select.value) handleSelectInput(select);
+            }
+        });
+        
+        // Maintenance checkbox
+        const maintenanceCheckbox = form.querySelector('input[type="checkbox"][name*="maintenance"]');
+        if (maintenanceCheckbox) {
+            maintenanceCheckbox.addEventListener('change', () => {
+                handleMaintenanceCheckbox(maintenanceCheckbox, paramGroup);
+            });
+            handleMaintenanceCheckbox(maintenanceCheckbox, paramGroup);
+        }
+        
+        // Initial header update
+        updateCommentHeader(paramGroup);
+    });
+});
+
+// Auto-refresh
+setTimeout(() => location.reload(), 60000);
+</script>
+{% endblock %}

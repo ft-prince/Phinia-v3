@@ -109,535 +109,177 @@
         </div>
     </div>
 
-    <!-- Active Checklist and Next Subgroup Time -->
+    <!-- Active Checklist Status -->
     <div class="row mb-3">
         <div class="col-md-12">
             <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
                 <div class="card-header text-white" style="background-color: #990000;">
-                    <h5 class="mb-0">Daily Verification/Inspection Sheet Status</h5>
+                    <h5 class="mb-0">Daily Verification/Inspection Sheet (DVIS) Check Sheet</h5>
                 </div>
-                <!-- Around line 85-95 in your operator_dashboard.html -->
-<div class="card-body">
-    {% if active_checklist %}
-        <div class="single-row-content">
-            <!-- LEFT: Current Status with Frequency Info -->
-            <div>
-                <h6 class="text-danger mb-1">Current Status</h6>
-                <p class="mb-0">
-                    <strong>Subgroups:</strong> {{ current_subgroup_count }}/{{ max_subgroups }}
-                </p>
-                <p class="mb-0 text-muted" style="font-size: 0.85rem;">
-                    <i class="fas fa-clock me-1"></i>
-                    Every {{ frequency_hours }} hour{{ frequency_hours|pluralize }} 
-                    (max {{ max_subgroups }} subgroup{{ max_subgroups|pluralize }})
-                </p>
-            </div>
-            
-            <!-- MIDDLE: Time Remaining -->
-            <div>
-                {% if time_remaining %}
-                    <div class="alert alert-danger text-white mb-0" style="background-color: #770000; padding: 0.5rem;">
-                        <strong>Next Subgroup In:</strong> 
-                        <span id="timeRemaining" data-seconds="{{ time_remaining.seconds }}">
-                           {{ time_remaining_formatted }}
-                        </span>
-                    </div>
-                {% elif can_add_subgroup %}
-                    <div class="alert alert-success text-white mb-0" style="background-color: #28a745; padding: 0.5rem;">
-                        <strong>Ready to add new subgroup!</strong>
-                    </div>
-                {% endif %}
-            </div>
-            
-            <!-- RIGHT: Action Buttons -->
-            <div>
-                {% if can_add_subgroup %}
-                    <a href="{% url 'add_subgroup' checklist_id=active_checklist.id %}" 
-                       class="btn btn-danger btn-sm me-2">
-                        <i class="fas fa-plus-circle me-1"></i> Add Subgroup
-                    </a>
-                {% endif %}
-                <a href="{% url 'checklist_detail' checklist_id=active_checklist.id %}" 
-                   class="btn btn-outline-light btn-sm">
-                    <i class="fas fa-eye me-1"></i> View Details
-                </a>
-            </div>
-        </div>
-    {% else %}
-        <div class="text-center">
-            <p class="mb-3 text-danger">No active checklist for the current shift</p>
-            {% if can_create_new %}
-                <a href="{% url 'create_checklist' %}" class="btn btn-danger">
-                    <i class="fas fa-plus me-1"></i> Start New Checklist
-                </a>
-            {% else %}
-                <p class="text-danger mb-0">A verification workflow already exists for today.</p>
-            {% endif %}
-        </div>
-    {% endif %}
-</div>
-        </div>
-    </div>
-
-    <!-- Alert Notifications -->
-    {% if active_verification and not today_ep_check %}
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <div class="alert alert-danger" role="alert" style="background-color: #990000; border-color: #ff0000; color: white; padding: 0.75rem;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong><i class="fas fa-exclamation-triangle me-2"></i>EPVS Checksheet Required</strong>
-                        <span class="ms-2">Complete before end of shift</span>
-                    </div>
-                    <a href="{% url 'ep_check_create' %}" class="btn btn-light btn-sm pulse-button">
-                        <i class="fas fa-shield-alt me-1"></i> Create Now
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if active_verification and not today_dtpm_checklist %}
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <div class="alert alert-danger" role="alert" style="background-color: #990000; border-color: #ff0000; color: white; padding: 0.75rem;">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <strong><i class="fas fa-exclamation-triangle me-2"></i>DTPM Checklist Required</strong>
-                        <span class="ms-2">Complete before end of shift</span>
-                    </div>
-                    <a href="{% url 'dtpm_checklist_create' %}" class="btn btn-light btn-sm pulse-button">
-                        <i class="fas fa-clipboard-check me-1"></i> Create Now
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-
-
-    <!-- Add this to your operator_dashboard.html -->
-
-<!-- Checksheet Section -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">
-                        <i class="fas fa-clipboard-check"></i> Checksheets
-                    </h5>
-                    <a href="{% url 'checksheet_list' %}" class="btn btn-light btn-sm">
-                        <i class="fas fa-list"></i> View All
-                    </a>
-                </div>
-            </div>
-            <div class="card-body">
-                <!-- Checksheet Statistics -->
-                <div class="row mb-4">
-                    <div class="col-md-3 col-6 mb-3">
-                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
-                                <i class="fas fa-clipboard-list"></i>
-                            </div>
-                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
-                                {{ checksheet_stats.total_active }}
-                            </div>
-                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
-                                Active Checksheets
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 col-6 mb-3">
-                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 10px;">
-                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
-                                {{ checksheet_stats.filled_today }}
-                            </div>
-                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
-                                Filled Today
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 col-6 mb-3">
-                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); border-radius: 10px;">
-                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
-                                <i class="fas fa-clock"></i>
-                            </div>
-                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
-                                {{ checksheet_stats.need_filling }}
-                            </div>
-                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
-                                Need Filling
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-3 col-6 mb-3">
-                        <div class="stat-card text-center p-3" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); border-radius: 10px;">
-                            <div class="stat-icon mb-2" style="font-size: 2rem; color: white;">
-                                <i class="fas fa-chart-line"></i>
-                            </div>
-                            <div class="stat-value" style="font-size: 1.75rem; font-weight: bold; color: white;">
-                                {{ checksheet_stats.completion_rate }}%
-                            </div>
-                            <div class="stat-label" style="font-size: 0.875rem; color: rgba(255,255,255,0.9);">
-                                Completion Rate
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Checksheets Need Filling Alert -->
-                {% if checksheets_need_filling %}
-                <div class="alert alert-warning mb-4">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-exclamation-triangle fa-2x"></i>
-                        </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h6 class="alert-heading mb-1">Checksheets Pending</h6>
-                            <p class="mb-2">You have {{ checksheets_need_filling|length }} checksheet(s) that need to be filled today:</p>
-                            <div class="d-flex flex-wrap gap-2">
-                                {% for checksheet in checksheets_need_filling %}
-                                <a href="{% url 'create_checksheet_response' checksheet.id %}" 
-                                   class="btn btn-warning btn-sm">
-                                    <i class="fas fa-plus-circle"></i> {{ checksheet.name }}
-                                </a>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Today's Checksheet Responses -->
-                {% if today_checksheet_responses %}
-                <div class="mb-4">
-                    <h6 class="text-muted mb-3">
-                        <i class="fas fa-calendar-day"></i> Today's Checksheets
-                    </h6>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Checksheet</th>
-                                    <th>Status</th>
-                                    <th>Submitted</th>
-                                    <th>Completion</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for response in today_checksheet_responses %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ response.checksheet.name }}</strong>
-                                        {% if response.checksheet.name_hindi %}
-                                        <br><small class="text-muted">{{ response.checksheet.name_hindi }}</small>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if response.status == 'draft' %}
-                                        <span class="badge bg-secondary">
-                                            <i class="fas fa-file"></i> Draft
-                                        </span>
-                                        {% elif response.status == 'submitted' %}
-                                        <span class="badge bg-info">
-                                            <i class="fas fa-paper-plane"></i> Submitted
-                                        </span>
-                                        {% elif response.status == 'supervisor_approved' %}
-                                        <span class="badge bg-warning">
-                                            <i class="fas fa-user-check"></i> Supervisor Approved
-                                        </span>
-                                        {% elif response.status == 'quality_approved' %}
-                                        <span class="badge bg-success">
-                                            <i class="fas fa-certificate"></i> Quality Approved
-                                        </span>
-                                        {% elif response.status == 'rejected' %}
-                                        <span class="badge bg-danger">
-                                            <i class="fas fa-times-circle"></i> Rejected
-                                        </span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if response.submitted_at %}
-                                        <small>{{ response.submitted_at|date:"H:i" }}</small>
-                                        {% else %}
-                                        <span class="text-muted">—</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="progress" style="height: 20px; min-width: 100px;">
-                                            <div class="progress-bar bg-success" role="progressbar" 
-                                                 style="width: {{ response.completion_percentage }}%;" 
-                                                 aria-valuenow="{{ response.completion_percentage }}" 
-                                                 aria-valuemin="0" aria-valuemax="100">
-                                                {{ response.completion_percentage }}%
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{% url 'checksheet_response_detail' response.id %}" 
-                                               class="btn btn-outline-info" title="View">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            {% if response.can_be_edited %}
-                                            <a href="{% url 'edit_checksheet_response' response.id %}" 
-                                               class="btn btn-outline-primary" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                {% endif %}
-
-              <!-- Replace this section in the Available Checksheets area -->
-
-<!-- Available Checksheets -->
-{% if active_checksheets %}
-<div>
-    <h6 class="text-muted mb-3">
-        <i class="fas fa-clipboard-list"></i> Available Checksheets
-    </h6>
-    <div class="row">
-        {% for checksheet in active_checksheets %}
-        <div class="col-md-6 col-lg-4 mb-3">
-            <div class="card h-100 border-0 shadow-sm">
                 <div class="card-body">
-                    <h6 class="card-title">
-                        <i class="fas fa-clipboard-check text-primary"></i>
-                        {{ checksheet.name }}
-                    </h6>
-                    {% if checksheet.name_hindi %}
-                    <p class="card-text text-muted small mb-2">{{ checksheet.name_hindi }}</p>
-                    {% endif %}
-                    
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <small class="text-muted">
-                            <i class="fas fa-layer-group"></i> {{ checksheet.total_sections }} sections
-                        </small>
-                        <small class="text-muted">
-                            <i class="fas fa-tasks"></i> {{ checksheet.total_fields }} fields
-                        </small>
-                    </div>
-                    
-                    <!-- Check if filled today -->
-                    {% with filled_today=False %}
-                        {% for response in today_checksheet_responses %}
-                            {% if response.checksheet.id == checksheet.id %}
-                                <div class="alert alert-success py-2 mb-2">
-                                    <small>
-                                        <i class="fas fa-check-circle"></i> Filled today
-                                        {% if response.status == 'quality_approved' %}
-                                        <span class="badge bg-success">Approved</span>
-                                        {% elif response.status == 'supervisor_approved' %}
-                                        <span class="badge bg-warning">Supervisor OK</span>
-                                        {% elif response.status == 'submitted' %}
-                                        <span class="badge bg-info">Submitted</span>
-                                        {% endif %}
-                                    </small>
-                                </div>
-                                <a href="{% url 'checksheet_response_detail' response.id %}" 
-                                   class="btn btn-outline-primary btn-sm w-100">
-                                    <i class="fas fa-eye"></i> View Response
-                                </a>
-                                {% with filled_today=True %}{% endwith %}
-                            {% endif %}
-                        {% endfor %}
-                        
-                        {% if not filled_today %}
-                            {% for response in today_checksheet_responses %}
-                                {% if response.checksheet.id == checksheet.id %}
-                                {% else %}
-                                    {% if forloop.last %}
-                                    <a href="{% url 'create_checksheet_response' checksheet.id %}" 
-                                       class="btn btn-primary btn-sm w-100">
-                                        <i class="fas fa-plus-circle"></i> Create New Response
-                                    </a>
-                                    {% endif %}
-                                {% endif %}
-                            {% empty %}
-                            <a href="{% url 'create_checksheet_response' checksheet.id %}" 
-                               class="btn btn-primary btn-sm w-100">
-                                <i class="fas fa-plus-circle"></i> Create New Response
+                    {% if active_checklist %}
+                        <div class="text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-clipboard-check text-success" style="font-size: 2rem;"></i>
+                            </div>
+                            <p class="text-success mb-2">✓ Active Verification Sheet</p>
+                            <p class="text-muted small">Created at {{ active_checklist.created_at|date:"H:i" }}</p>
+                            <a href="{% url 'checklist_detail' checklist_id=active_checklist.id %}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-eye me-1"></i> View Details
                             </a>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+                        </div>
+                    {% else %}
+                        <div class="text-center">
+                            <div class="mb-2">
+                                <i class="fas fa-clipboard-check text-danger" style="font-size: 2rem;"></i>
+                            </div>
+                            <p class="mb-3 text-danger">No active checklist for the current shift</p>
+                            {% if can_create_new %}
+                                <a href="{% url 'create_checklist' %}" class="btn btn-danger">
+                                    <i class="fas fa-plus me-1"></i> Start New Checklist
+                                </a>
+                            {% else %}
+                                <p class="text-warning">Cannot create new checklist - another operator may have one active</p>
+                                <button type="button" class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#workflowModal">
+                                    <i class="fas fa-info-circle me-1"></i> Show Workflow
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
-        {% endfor %}
     </div>
-</div>
-{% else %}
-<div class="alert alert-info">
-    <i class="fas fa-info-circle"></i> No active checksheets available at this time.
-</div>
-{% endif %}
 
-                <!-- Recent Checksheet Activity -->
-                {% if recent_checksheet_responses %}
-                <div class="mt-4">
-                    <h6 class="text-muted mb-3">
-                        <i class="fas fa-history"></i> Recent Activity (Last 7 Days)
-                    </h6>
-                    <div class="list-group">
-                        {% for response in recent_checksheet_responses|slice:":5" %}
-                        <a href="{% url 'checksheet_response_detail' response.id %}" 
-                           class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between align-items-center">
+    <!-- Parameter Group Status Cards -->
+    {% if active_checklist and parameter_group_stats.total_parameters > 0 %}
+        {% for param_data in parameter_groups_need_filling %}
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card shadow-sm" style="background-color: #1a1a1a; color: #fff; border: 1px solid #333;">
+                        <div class="card-header text-white" style="background-color: #990000;">
+                            <h6 class="mb-0">{{ param_data.config.get_parameter_group_display }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="single-row-content">
+                                <!-- LEFT: Parameter Info -->
                                 <div>
-                                    <h6 class="mb-1">{{ response.checksheet.name }}</h6>
-                                    <small class="text-muted">
-                                        {{ response.created_at|date:"M d, Y H:i" }}
-                                    </small>
+                                    <p class="mb-1">
+                                        <i class="fas fa-clipboard-check me-1"></i>
+                                        <strong>Frequency:</strong> Every {{ param_data.config.frequency_minutes }} minutes
+                                    </p>
+                                    <p class="mb-0 text-muted" style="font-size: 0.85rem;">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        Filled {{ param_data.entry_count }} time{{ param_data.entry_count|pluralize }} 
+                                        (Expected: {{ param_data.expected_fills }})
+                                    </p>
                                 </div>
+                                
+                                <!-- MIDDLE: Status -->
                                 <div>
-                                    {% if response.status == 'draft' %}
-                                    <span class="badge bg-secondary">Draft</span>
-                                    {% elif response.status == 'submitted' %}
-                                    <span class="badge bg-info">Submitted</span>
-                                    {% elif response.status == 'supervisor_approved' %}
-                                    <span class="badge bg-warning">Supervisor OK</span>
-                                    {% elif response.status == 'quality_approved' %}
-                                    <span class="badge bg-success">Quality OK</span>
-                                    {% elif response.status == 'rejected' %}
-                                    <span class="badge bg-danger">Rejected</span>
+                                    {% if param_data.can_fill_now %}
+                                        <span class="badge bg-success">Ready to Fill</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark">Next in {{ param_data.minutes_until_next }} min</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- RIGHT: Action Button -->
+                                <div>
+                                    {% if param_data.can_fill_now %}
+                                        <a href="{% url 'fill_parameter_group' checklist_id=active_checklist.id %}" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-plus me-1"></i> Fill Parameter
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-outline-secondary btn-sm" disabled>
+                                            <i class="fas fa-clock me-1"></i> Not Yet Available
+                                        </button>
                                     {% endif %}
                                 </div>
                             </div>
-                        </a>
-                        {% endfor %}
+                        </div>
                     </div>
                 </div>
-                {% endif %}
             </div>
-        </div>
-    </div>
-</div>
+        {% endfor %}
+    {% endif %}
 
-
-    <!-- FTQ Information Card -->
+    <!-- Quality Dashboard Cards -->
     <div class="row mb-3">
-        <div class="col-md-12">
-            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+        <!-- Today's FTQ -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm" style="background-color: #1a1a1a; color: #fff; border: 1px solid #333;">
                 <div class="card-header text-white" style="background-color: #990000;">
-                    <h5 class="mb-0">First Time Quality (FTQ) Status</h5>
+                    <h6 class="mb-0">Today's FTQ checksheet Record</h6>
                 </div>
                 <div class="card-body">
                     {% if today_ftq %}
                         <div class="compact-stats">
                             <div class="stat-item">
-                                <p class="stat-label text-white">Production</p>
-                                <p class="stat-value text-white">{{ today_ftq.total_inspected }}</p>
+                                <p class="stat-value text-success">{{ today_ftq.total_inspected }}</p>
+                                <p class="stat-label text-muted">Total Production</p>
                             </div>
                             <div class="stat-item">
-                                <p class="stat-label text-white">Defects</p>
-                                <p class="stat-value text-white">{{ today_ftq.total_defects }}</p>
+                                <p class="stat-value text-warning">{{ today_ftq.total_defects }}</p>
+                                <p class="stat-label text-muted">Total Defects</p>
                             </div>
                             <div class="stat-item">
-                                <p class="stat-label text-white">FTQ %</p>
-                                <p class="stat-value {% if ftq_percentage >= 98 %}text-success{% elif ftq_percentage >= 95 %}text-warning{% else %}text-danger{% endif %}">
-                                    {{ ftq_percentage|floatformat:2 }}%
-                                </p>
-                            </div>
-                            <div class="stat-item">
-                                <a href="{% url 'ftq_record_detail' pk=today_ftq.id %}" class="btn btn-outline-light btn-sm">
-                                    <i class="fas fa-eye me-1"></i> View Details
-                                </a>
+                                <p class="stat-value text-info">{{ today_ftq.ftq_percentage }}%</p>
+                                <p class="stat-label text-muted">FTQ %</p>
                             </div>
                         </div>
-                    {% else %}
-                        <div class="text-center">
-                            <p class="text-danger mb-2">No FTQ record for today's shift</p>
-                            <a href="{% url 'ftq_record_create' %}" class="btn btn-danger btn-sm {% if not active_checklist %}disabled{% endif %}" 
-                               {% if not active_checklist %}
-                               data-bs-toggle="tooltip" 
-                               data-bs-placement="top" 
-                               title="You must first create a Daily Verification Sheet"
-                               {% endif %}>
-                                <i class="fas fa-plus me-1"></i> Create FTQ Record
+                        <div class="mt-2 text-center">
+                            <a href="{% url 'ftq_record_detail' today_ftq.id %}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-eye me-1"></i> View Details
                             </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-3">
+                            <p class="text-danger mb-2">No FTQ record for today</p>
+                            {% if active_verification %}
+                                <a href="{% url 'ftq_record_create' %}" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-plus me-1"></i> Create FTQ Record
+                                </a>
+                            {% else %}
+                                <p class="text-muted small">Create verification sheet first</p>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- EPVS Checksheet Card -->
-    <div class="row mb-3">
-        <div class="col-md-12">
-            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+        <!-- EPVS Check Status -->
+        <div class="col-md-6">
+            <div class="card h-100 shadow-sm" style="background-color: #1a1a1a; color: #fff; border: 1px solid #333;">
                 <div class="card-header text-white" style="background-color: #990000;">
-                    <h5 class="mb-0">EPVS Checksheet Status</h5>
+                    <h6 class="mb-0">EPVS CheckSheet Status</h6>
                 </div>
                 <div class="card-body">
                     {% if today_ep_check %}
-                        <div class="compact-stats">
-                            <div class="stat-item">
-                                <p class="stat-label text-white">OK Mechanisms</p>
-                                <p class="stat-value text-success">{{ ep_check_stats.ok_count }}</p>
+                        <div class="text-center py-3">
+                            <div class="mb-2">
+                                <i class="fas fa-shield-alt text-success" style="font-size: 2rem;"></i>
                             </div>
-                            <div class="stat-item">
-                                <p class="stat-label text-white">NG Mechanisms</p>
-                                <p class="stat-value text-danger">{{ ep_check_stats.ng_count }}</p>
-                            </div>
-                            <div class="stat-item">
-                                <p class="stat-label text-white">N/A</p>
-                                <p class="stat-value text-warning">{{ ep_check_stats.na_count }}</p>
-                            </div>
-                            <div class="stat-item">
-                                <p class="stat-label text-white-50">Model</p>
-                                <p class="stat-value">{{ today_ep_check.current_model }}</p>
-                            </div>
-                            <div class="stat-item">
-<span class="badge {% if today_ep_check.status == 'supervisor_approved' or today_ep_check.status == 'quality_approved' %}bg-success{% elif today_ep_check.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
-    {% if today_ep_check.status == 'supervisor_approved' %}
-        Production Supervisor Approved
-    {% elif today_ep_check.status == 'quality_approved' %}
-        Quality Approved
-    {% elif today_ep_check.status == 'rejected' %}
-        Rejected
-    {% elif today_ep_check.status == 'pending' %}
-        Pending
-    {% else %}
-        {{ today_ep_check.get_status_display }}
-    {% endif %}
-</span>
-                            </div>
-                            <div class="stat-item">
-                                <a href="{% url 'ep_check_detail' pk=today_ep_check.pk %}" class="btn btn-outline-light btn-sm">
-                                    <i class="fas fa-eye me-1"></i> View Details
-                                </a>
-                            </div>
+                            <p class="text-success mb-2">✓ Completed</p>
+                            <p class="text-muted small">{{ today_ep_check.created_at|date:"H:i" }}</p>
+                            <a href="{% url 'ep_check_detail' today_ep_check.id %}" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-eye me-1"></i> View Details
+                            </a>
                         </div>
                     {% else %}
-                        <div class="text-center">
-                            <p class="text-danger mb-2">No EPVS Checksheet for today's shift</p>
-                            <a href="{% url 'ep_check_create' %}" class="btn btn-danger btn-sm {% if not active_verification %}disabled{% endif %}" 
-                               {% if not active_verification %}
-                               data-bs-toggle="tooltip" 
-                               data-bs-placement="top" 
-                               title="You must first create a Daily Verification Sheet"
-                               {% endif %}>
-                                <i class="fas fa-shield-alt me-1"></i> Create EPVS Check
-                            </a>
+                        <div class="text-center py-3">
+                            <div class="mb-2">
+                                <i class="fas fa-shield-alt text-danger" style="font-size: 2rem;"></i>
+                            </div>
+                            <p class="text-danger mb-2">Not Completed</p>
+                            {% if active_verification %}
+                                <a href="{% url 'ep_check_create' %}" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-plus me-1"></i> Create EPVS Check
+                                </a>
+                            {% else %}
+                                <p class="text-muted small">Create verification sheet first</p>
+                            {% endif %}
                         </div>
                     {% endif %}
                 </div>
@@ -645,103 +287,226 @@
         </div>
     </div>
 
-    <!-- DTPM Checklist Card -->
+    <!-- Available Checksheets - Individual Cards -->
+    {% if active_checksheets %}
+        {% for checksheet in active_checksheets %}
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <div class="card shadow-sm" style="background-color: #1a1a1a; color: #fff; border: 1px solid #333;">
+                        <div class="card-header text-white" style="background-color: #990000;">
+                            <h6 class="mb-0">{{ checksheet.name }}</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="single-row-content">
+                                <!-- LEFT: Checksheet Info -->
+                                <div>
+                                    {% if checksheet.name_hindi %}
+                                        <h6 class="text-warning mb-1">{{ checksheet.name_hindi }}</h6>
+                                    {% endif %}
+                                    <p class="mb-0 text-muted" style="font-size: 0.85rem;">
+                                        <i class="fas fa-clipboard-list me-1"></i>
+                                        {{ checksheet.total_sections }} section{{ checksheet.total_sections|pluralize }} • {{ checksheet.total_fields }} field{{ checksheet.total_fields|pluralize }}
+                                    </p>
+                                    {% if checksheet.description %}
+                                        <p class="mb-0 text-muted small">{{ checksheet.description|truncatechars:60 }}</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- MIDDLE: Status -->
+                                <div>
+                                    {% comment %} Check if this checksheet was filled today {% endcomment %}
+                                    {% if checksheet in checksheets_need_filling %}
+                                        <span class="badge bg-warning text-dark">Needs Filling</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Completed Today</span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- RIGHT: Action Button -->
+                                <div>
+                                    {% if checksheet in checksheets_need_filling %}
+                                        <a href="{% url 'create_checksheet_response' checksheet.id %}" class="btn btn-danger btn-sm">
+                                            <i class="fas fa-plus me-1"></i> Fill Checksheet
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'checksheet_responses_list' %}" class="btn btn-outline-light btn-sm">
+                                            <i class="fas fa-eye me-1"></i> View Response
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- DTPM Checklist Status -->
     <div class="row mb-3">
         <div class="col-md-12">
-            <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
+            <div class="card shadow-sm" style="background-color: #1a1a1a; color: #fff; border: 1px solid #333;">
                 <div class="card-header text-white" style="background-color: #990000;">
-                    <h5 class="mb-0">Daily TPM Sheet Status</h5>
+                    <h6 class="mb-0">Daily TPM CheckSheet  Status</h6>
                 </div>
                 <div class="card-body">
                     {% if today_dtpm_checklist %}
-                        <div class="compact-stats">
-                            <div class="stat-item">
-                                <p class="stat-label text-white">OK Checkpoints</p>
-                                <p class="stat-value text-success">{{ dtpm_checklist_stats.ok_count }}</p>
+                        <div class="single-row-content">
+                            <div>
+                                <h6 class="text-success mb-1">✓ Completed</h6>
+                                <p class="mb-0 text-muted">{{ today_dtpm_checklist.created_at|date:"H:i" }}</p>
                             </div>
-                            <div class="stat-item">
-                                <p class="stat-label text-white">NG Checkpoints</p>
-                                <p class="stat-value text-danger">{{ dtpm_checklist_stats.ng_count }}</p>
+                            <div>
+                                <span class="badge bg-success">Daily Tracking Complete</span>
                             </div>
-                            <div class="stat-item">
-                                <p class="stat-label text-white">Total</p>
-                                <p class="stat-value text-white">{{ dtpm_checklist_stats.total_checkpoints }}</p>
-                            </div>
-                            <div class="stat-item">
- <span class="badge {% if today_dtpm_checklist.status == 'quality_certified' or today_dtpm_checklist.status == 'supervisor_approved' %}bg-success{% elif today_dtpm_checklist.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
-    {% if today_dtpm_checklist.status == 'supervisor_approved' %}
-        Production Supervisor Approved
-    {% elif today_dtpm_checklist.status == 'quality_certified' %}
-        Quality Approved
-    {% elif today_dtpm_checklist.status == 'rejected' %}
-        Rejected
-    {% elif today_dtpm_checklist.status == 'pending' %}
-        Pending
-    {% else %}
-        {{ today_dtpm_checklist.get_status_display }}
-    {% endif %}
-</span>
-                            </div>
-                            <div class="stat-item">
-                                <a href="{% url 'dtpm_new_detail' pk=today_dtpm_checklist.pk %}" class="btn btn-outline-light btn-sm">
+                            <div>
+                                <a href="{% url 'dtpm_new_detail' today_dtpm_checklist.id %}" class="btn btn-outline-light btn-sm">
                                     <i class="fas fa-eye me-1"></i> View Details
                                 </a>
                             </div>
                         </div>
                     {% else %}
-                        <div class="text-center">
-                            <p class="text-danger mb-2">No DTPM Checklist for today's shift</p>
-                            <a href="{% url 'dtpm_checklist_create' %}" class="btn btn-danger btn-sm {% if not active_verification %}disabled{% endif %}" 
-                               {% if not active_verification %}
-                               data-bs-toggle="tooltip" 
-                               data-bs-placement="top" 
-                               title="You must first create a Daily Verification Sheet"
-                               {% endif %}>
-                                <i class="fas fa-clipboard-check me-1"></i> Create DTPM Checklist
-                            </a>
+                        <div class="single-row-content">
+                            <div>
+                                <h6 class="text-danger mb-1">Not Completed</h6>
+                                <p class="mb-0 text-muted">Daily tracking pending</p>
+                            </div>
+                            <div>
+                                <span class="badge bg-danger">Action Required</span>
+                            </div>
+                            <div>
+                                {% if active_verification %}
+                                    <a href="{% url 'dtpm_checklist_create' %}" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-plus me-1"></i> Create DTPM Checklist
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">Create verification sheet first</span>
+                                {% endif %}
+                            </div>
                         </div>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card shadow-sm" style="background-color: #1a1a1a; color: #fff; border: 1px solid #333;">
+                <div class="card-header text-white" style="background-color: #990000;">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal" data-bs-target="#workflowModal">
+                            <i class="fas fa-info-circle me-1"></i> Show Workflow
+                        </button>
+                        
+                        {% if active_verification %}
+                            {% if not today_ftq %}
+                                <a href="{% url 'ftq_record_create' %}" class="btn btn-danger btn-sm pulse-button">
+                                    <i class="fas fa-plus me-1"></i> Create FTQ Record
+                                </a>
+                            {% endif %}
+                            
+                            {% if not today_ep_check %}
+                                <a href="{% url 'ep_check_create' %}" class="btn btn-warning btn-sm pulse-button">
+                                    <i class="fas fa-shield-alt me-1"></i> Create EPVS Check
+                                </a>
+                            {% endif %}
+                            
+                            {% if not today_dtpm_checklist %}
+                                <a href="{% url 'dtpm_checklist_create' %}" class="btn btn-info btn-sm pulse-button">
+                                    <i class="fas fa-clipboard-check me-1"></i> Create DTPM Checklist
+                                </a>
+                            {% endif %}
+                            
+                            {% comment %} Add parameter group action buttons {% endcomment %}
+                            {% if parameter_groups_need_filling %}
+                                <a href="{% url 'fill_parameter_group' checklist_id=active_checklist.id %}" class="btn btn-success btn-sm pulse-button">
+                                    <i class="fas fa-vial me-1"></i> Fill Parameters ({{ parameter_group_stats.ready_count }} ready)
+                                </a>
+                            {% endif %}
+                            
+                            {% comment %} Add checksheet action buttons {% endcomment %}
+                            {% if checksheets_need_filling %}
+                                {% for checksheet in checksheets_need_filling %}
+                                    <a href="{% url 'create_checksheet_response' checksheet.id %}" class="btn btn-success btn-sm pulse-button">
+                                        <i class="fas fa-clipboard-list me-1"></i> Fill {{ checksheet.name|truncatechars:15 }}
+                                    </a>
+                                {% endfor %}
+                            {% endif %}
+                        {% endif %}
+                        
+                        <a href="{% url 'checksheet_list' %}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-clipboard-list me-1"></i> All Checksheets
+                        </a>
+                        
+                        <a href="{% url 'checksheet_responses_list' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-file-alt me-1"></i> My Responses
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Workflow Instructions Modal -->
+<!-- Workflow Modal -->
 <div class="modal fade" id="workflowModal" tabindex="-1" aria-labelledby="workflowModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content bg-dark text-white border border-danger">
-            <div class="modal-header bg-danger">
-                <h5 class="modal-title" id="workflowModalLabel">Workflow Instructions</h5>
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background-color: #1a1a1a; color: #fff;">
+            <div class="modal-header" style="background-color: #990000; border-bottom: 1px solid #333;">
+                <h5 class="modal-title text-white" id="workflowModalLabel">Daily Workflow Guide</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <h5 class="text-center mb-3">Work Process Steps:</h5>
+                <p class="mb-3">Follow these steps in order to complete your daily quality checks:</p>
                 <ol class="list-group list-group-numbered">
-                    <li class="list-group-item d-flex justify-content-between align-items-start bg-dark text-white border-danger">
+                    <li class="list-group-item d-flex justify-content-between align-items-start {% if not active_verification %}bg-danger text-white{% else %}bg-dark text-white{% endif %} border-danger">
                         <div class="ms-2 me-auto">
-                            <div class="fw-bold">Step 1: Daily Verification Sheet</div>
-                            Create the initial inspection sheet
+                            <div class="fw-bold">Step 1: Create Daily Verification Sheet</div>
+                            Start your shift by creating the main verification document
+                            {% if not active_verification %}
+                            <div class="mt-1"><i class="fas fa-exclamation-circle me-1"></i> <strong>Start Here</strong></div>
+                            {% endif %}
                         </div>
-                        {% if active_checklist %}
+                        {% if active_verification %}
                         <span class="badge bg-success rounded-pill">Complete</span>
                         {% else %}
-                        <span class="badge bg-danger rounded-pill">Not Started</span>
+                        <span class="badge bg-danger rounded-pill">Start Here</span>
                         {% endif %}
                     </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-start bg-dark text-white border-danger">
-                        <div class="ms-2 me-auto">
-                            <div class="fw-bold">Step 2: Subgroup Measurements</div>
-                            Add subgroup measurements every 2 hours (6 total)
-                        </div>
-                        {% if active_checklist and active_checklist.subgroup_entries.count > 0 %}
-                        <span class="badge bg-warning rounded-pill">In Progress ({{ active_checklist.subgroup_entries.count }}/6)</span>
-                        {% elif active_checklist %}
-                        <span class="badge bg-warning rounded-pill">Ready to Start</span>
-                        {% else %}
-                        <span class="badge bg-secondary rounded-pill">Not Ready</span>
-                        {% endif %}
-                    </li>
+                    
+                    {% comment %} Parameter Groups Steps {% endcomment %}
+                    {% if parameter_group_stats.total_parameters > 0 %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start {% if active_verification and parameter_group_stats.ready_count > 0 %}bg-danger text-white{% else %}bg-dark text-white{% endif %} border-danger">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">Step 2: Fill Parameter Groups</div>
+                                Complete all required parameter measurements throughout the shift
+                                <ul class="mt-2 mb-0">
+                                    <li>UV Vacuum Test (5 readings)</li>
+                                    <li>UV Flow Value (5 readings)</li>
+                                    <li>Umbrella Valve Assembly (5 checks)</li>
+                                    <li>UV Clip Pressing (5 checks)</li>
+                                    <li>Workstation Clean (1 check)</li>
+                                    <li>Bin Contamination Check (5 checks)</li>
+                                </ul>
+                                {% if active_verification and parameter_group_stats.ready_count > 0 %}
+                                <div class="mt-1"><i class="fas fa-exclamation-circle me-1"></i> <strong>{{ parameter_group_stats.ready_count }} parameter(s) ready to fill</strong></div>
+                                {% endif %}
+                            </div>
+                            {% if parameter_group_stats.filled_count > 0 %}
+                            <span class="badge bg-warning rounded-pill">In Progress ({{ parameter_group_stats.filled_count }}/{{ parameter_group_stats.total_parameters }})</span>
+                            {% elif active_verification %}
+                            <span class="badge bg-danger rounded-pill">Action Required</span>
+                            {% else %}
+                            <span class="badge bg-secondary rounded-pill">Not Ready</span>
+                            {% endif %}
+                        </li>
+                    {% endif %}
+                    
                     <li class="list-group-item d-flex justify-content-between align-items-start {% if active_verification and not today_ep_check %}bg-danger text-white{% else %}bg-dark text-white{% endif %} border-danger">
                         <div class="ms-2 me-auto">
                             <div class="fw-bold">Step 3: EPVS Checksheet</div>
@@ -806,7 +571,7 @@
                 </ol>                
                 <div class="alert alert-info mt-3">
                     <i class="fas fa-info-circle me-2"></i>
-                    <strong>Note:</strong> You can create FTQ, EPVS Check, and DTPM Checklists as soon as you've created the Daily Verification Sheet. Subgroups will be added throughout the day.
+                    <strong>Note:</strong> You can create FTQ, EPVS Check, and DTPM Checklists as soon as you've created the Daily Verification Sheet. Parameter groups will become available throughout the shift based on their frequency settings.
                 </div>
             </div>
             <div class="modal-footer">
@@ -817,6 +582,10 @@
                         <i class="fas fa-plus me-1"></i> Start Verification Sheet
                     </a>
                     {% endif %}
+                {% elif parameter_groups_need_filling %}
+                <a href="{% url 'fill_parameter_group' checklist_id=active_checklist.id %}" class="btn btn-success me-2">
+                    <i class="fas fa-vial me-1"></i> Fill Parameters
+                </a>
                 {% elif active_verification and not today_ep_check %}
                 <a href="{% url 'ep_check_create' %}" class="btn btn-danger me-2">
                     <i class="fas fa-shield-alt me-1"></i> Create EPVS Check
@@ -828,10 +597,6 @@
                 {% elif active_verification and not today_ftq %}
                 <a href="{% url 'ftq_record_create' %}" class="btn btn-danger">
                     <i class="fas fa-plus me-1"></i> Create FTQ Record
-                </a>
-                {% elif can_add_subgroup %}
-                <a href="{% url 'add_subgroup' checklist_id=active_checklist.id %}" class="btn btn-warning me-2">
-                    <i class="fas fa-plus-circle me-1"></i> Add Subgroup
                 </a>
                 {% endif %}
             </div>
@@ -845,7 +610,7 @@
     // Show workflow modal on page load if active checklist exists and any required records are missing
     document.addEventListener('DOMContentLoaded', function() {
         {% if active_verification %}
-            {% if not today_ftq or not today_ep_check or not today_dtpm_checklist %}
+            {% if not today_ftq or not today_ep_check or not today_dtpm_checklist or parameter_group_stats.ready_count > 0 %}
                 // Show modal automatically when verification exists but any required records are missing
                 const workflowModal = new bootstrap.Modal(document.getElementById('workflowModal'));
                 workflowModal.show();
@@ -871,38 +636,5 @@
     }
     
     setInterval(updateTime, 1000);
-
-    // Update time remaining if exists
-    const timeRemainingElement = document.getElementById('timeRemaining');
-    if (timeRemainingElement) {
-        let totalSeconds = parseInt(timeRemainingElement.dataset.seconds);
-        
-        function updateTimeRemaining() {
-            if (totalSeconds <= 0) {
-                location.reload();
-                return;
-            }
-            
-            // Format as hours and minutes
-            const hours = Math.floor(totalSeconds / 3600);
-            const minutes = Math.floor((totalSeconds % 3600) / 60);
-            
-            let timeText = '';
-            if (hours > 0) {
-                timeText += `${hours} hour${hours !== 1 ? 's' : ''}`;
-            }
-            if (minutes > 0 || hours === 0) {
-                if (hours > 0) timeText += ' ';
-                timeText += `${minutes} min`;
-            }
-            
-            timeRemainingElement.textContent = timeText;
-            
-            totalSeconds--;
-        }
-        
-        updateTimeRemaining();
-        setInterval(updateTimeRemaining, 1000);
-    }
 </script>
 {% endblock %}

@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (selectedModel && frequencyConfigs[selectedModel]) {
             const config = frequencyConfigs[selectedModel];
-            frequencyInfo.style.display = 'block';
+            frequencyInfo.style.display = 'none';
             frequencyDetails.innerHTML = `<p class="mb-0">• Measurement Frequency: Every <strong>${config.frequency_hours}</strong> hour(s)<br>• Maximum Subgroups: <strong>${config.max_subgroups}</strong> per shift<br><span class="text-secondary">• माप आवृत्ति: प्रत्येक <strong>${config.frequency_hours}</strong> घंटे<br>• अधिकतम सबग्रुप: <strong>${config.max_subgroups}</strong> प्रति शिफ्ट</span></p>`;
         } else {
             frequencyInfo.style.display = 'none';

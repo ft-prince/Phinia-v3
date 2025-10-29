@@ -4,18 +4,18 @@ from django.shortcuts import redirect
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Count
+from django.utils import timezone
 
 from .models import (
-    User, Shift, ChecklistBase, SubgroupEntry, SubgroupVerification, 
-    SubgroupEditHistory, Verification, Concern, SubgroupFrequencyConfig, 
+    ParameterGroupEntry,ParameterGroupConfig, User, Shift, ChecklistBase,  
+     Verification, Concern, 
     ChecksheetContentConfig, DailyVerificationStatus, 
     ErrorPreventionCheck, ErrorPreventionMechanism, 
     ErrorPreventionMechanismStatus, ErrorPreventionCheckHistory,
     ErrorPreventionMechanismHistory,
-        # FTQ-related models
+    # FTQ-related models
     FTQRecord, OperationNumber, DefectCategory, DefectType,
     TimeBasedDefectEntry, DefectRecord, CustomDefectType,
-
 )
 
 
@@ -31,23 +31,8 @@ class CustomUserAdmin(UserAdmin):
 admin.site.register(User, CustomUserAdmin)
 
 
-# ============ CONFIGURATION ADMINS ============
 
-@admin.register(SubgroupFrequencyConfig)
-class SubgroupFrequencyConfigAdmin(admin.ModelAdmin):
-    list_display = ['model_name', 'frequency_hours', 'max_subgroups', 'is_active']
-    list_filter = ['is_active', 'frequency_hours']
-    list_editable = ['frequency_hours', 'max_subgroups', 'is_active']
-    
-    fieldsets = (
-        ('Model Configuration', {
-            'fields': ('model_name', 'is_active')
-        }),
-        ('Frequency Settings', {
-            'fields': ('frequency_hours', 'max_subgroups'),
-            'description': 'Configure measurement frequency and maximum subgroups per shift'
-        }),
-    )
+
 
 
 @admin.register(ChecksheetContentConfig)
@@ -88,15 +73,50 @@ class ChecksheetContentConfigAdmin(admin.ModelAdmin):
 
 @admin.register(DailyVerificationStatus)
 class DailyVerificationStatusAdmin(admin.ModelAdmin):
-    list_display = ('id', 'date', 'shift_display', 'status', 'created_by', 'created_at')
+    list_display = ('id', 'date', 'shift_display', 'status_badge', 'created_by', 'notification_status', 'created_at')
     list_filter = ('status', 'date', 'shift__shift_type')
     search_fields = ('created_by__username',)
     date_hierarchy = 'date'
     readonly_fields = ('created_at', 'updated_at')
     
+    actions = ['mark_completed']
+    
     def shift_display(self, obj):
         return obj.shift.get_shift_type_display() if obj.shift else 'N/A'
     shift_display.short_description = 'Shift'
+    
+    def status_badge(self, obj):
+        colors = {
+            'pending': '#6c757d',
+            'in_progress': '#007bff',
+            'completed': '#28a745',
+            'rejected': '#dc3545'
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
+    
+    def notification_status(self, obj):
+        statuses = []
+        if hasattr(obj, 'operator_notified') and obj.operator_notified:
+            statuses.append('👷 Op')
+        if hasattr(obj, 'supervisor_notified') and obj.supervisor_notified:
+            statuses.append('👨‍💼 Sup')
+        if hasattr(obj, 'quality_notified') and obj.quality_notified:
+            statuses.append('🔍 QC')
+        
+        if statuses:
+            return format_html('<small>{}</small>', ' '.join(statuses))
+        return format_html('<span style="color: #6c757d;">None</span>')
+    notification_status.short_description = 'Notifications'
+    
+    def mark_completed(self, request, queryset):
+        updated = queryset.update(status='completed')
+        self.message_user(request, f'✅ Marked {updated} verifications as completed')
+    mark_completed.short_description = "✅ Mark as completed"
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('shift', 'created_by')
@@ -104,10 +124,17 @@ class DailyVerificationStatusAdmin(admin.ModelAdmin):
 
 @admin.register(Shift)
 class ShiftAdmin(admin.ModelAdmin):
-    list_display = ('date', 'shift_type', 'operator', 'shift_supervisor', 'quality_supervisor')
+    list_display = ('date', 'shift_type', 'operator', 'shift_supervisor', 'quality_supervisor', 'verification_count')
     list_filter = ('date', 'shift_type')
     search_fields = ('operator__username', 'shift_supervisor__username', 'quality_supervisor__username')
     date_hierarchy = 'date'
+    
+    def verification_count(self, obj):
+        count = obj.verification_statuses.count()
+        if count > 0:
+            return format_html('<span style="color: #28a745; font-weight: bold;">{}</span>', count)
+        return format_html('<span style="color: #6c757d;">0</span>')
+    verification_count.short_description = 'Verifications'
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('operator', 'shift_supervisor', 'quality_supervisor')
@@ -115,11 +142,184 @@ class ShiftAdmin(admin.ModelAdmin):
 
 # ============ CHECKLIST ADMINS ============
 
-class SubgroupEntryInline(admin.TabularInline):
-    model = SubgroupEntry
+
+class VerificationInline(admin.TabularInline):
+    model = Verification
     extra = 0
-    max_num = 6
-    readonly_fields = ('timestamp',)
+    readonly_fields = ('verified_at',)
+
+
+class ConcernInline(admin.TabularInline):
+    model = Concern
+    extra = 0
+    readonly_fields = ('created_at',)
+
+# ============ CHECKLIST ADMINS ============
+
+# ============ PARAMETER GROUP CONFIGURATION ADMIN ============
+
+@admin.register(ParameterGroupConfig)
+class ParameterGroupConfigAdmin(admin.ModelAdmin):
+    """Configuration for parameter group timing"""
+    list_display = [
+        'model_name',
+        'parameter_group_display',
+        'frequency_minutes',
+        'frequency_display',
+        'display_order',
+        'is_active',
+        'created_at'
+    ]
+    list_filter = ['model_name', 'parameter_group', 'is_active']
+    list_editable = ['frequency_minutes', 'display_order', 'is_active']
+    search_fields = ['model_name', 'parameter_group']
+    ordering = ['model_name', 'display_order', 'frequency_minutes']
+    
+    actions = ['duplicate_to_all_models', 'set_default_timings', 'activate_selected', 'deactivate_selected']
+    
+    fieldsets = (
+        ('Model & Parameter Group', {
+            'fields': ('model_name', 'parameter_group'),
+            'description': '⏰ Configure when each parameter group becomes available for operators'
+        }),
+        ('Timing Configuration', {
+            'fields': ('frequency_minutes', 'display_order'),
+            'description': 'Set minutes after checklist creation when this parameter group appears'
+        }),
+        ('Status', {
+            'fields': ('is_active',),
+        }),
+    )
+    
+    def parameter_group_display(self, obj):
+        """Display parameter group with icon"""
+        icons = {
+            'uv_vacuum': '🔧',
+            'uv_flow': '💧',
+            'umbrella_valve': '☂️',
+            'uv_clip': '📎',
+            'workstation': '🧹',
+            'bin_contamination': '🗑️',
+        }
+        icon = icons.get(obj.parameter_group, '📋')
+        return format_html('{} {}', icon, obj.get_parameter_group_display())
+    parameter_group_display.short_description = 'Parameter Group'
+    
+    def frequency_display(self, obj):
+        """Display frequency in readable format"""
+        if obj.frequency_minutes == 0:
+            return format_html('<span style="color: #28a745; font-weight: bold;">Immediate</span>')
+        elif obj.frequency_minutes < 60:
+            return format_html('<span style="color: #dc3545; font-weight: bold;">After {} min</span>', obj.frequency_minutes)
+        else:
+            hours = round(obj.frequency_minutes / 60, 1)
+            return format_html('<span style="color: #007bff; font-weight: bold;">After {} hours</span>', hours)
+    frequency_display.short_description = 'Availability'
+    
+    def duplicate_to_all_models(self, request, queryset):
+        """Duplicate selected configurations to all models"""
+        count = 0
+        for obj in queryset:
+            for model_choice in [('P703', 'P703'), ('U704', 'U704'), ('FD', 'FD'), ('SA', 'SA'), ('Gnome', 'Gnome')]:
+                model_name = model_choice[0]
+                if model_name != obj.model_name:
+                    config, created = ParameterGroupConfig.objects.get_or_create(
+                        model_name=model_name,
+                        parameter_group=obj.parameter_group,
+                        defaults={
+                            'frequency_minutes': obj.frequency_minutes,
+                            'display_order': obj.display_order,
+                            'is_active': obj.is_active,
+                        }
+                    )
+                    if created:
+                        count += 1
+                    else:
+                        config.frequency_minutes = obj.frequency_minutes
+                        config.display_order = obj.display_order
+                        config.is_active = obj.is_active
+                        config.save()
+                        count += 1
+        
+        self.message_user(request, f'Successfully duplicated {queryset.count()} configurations to {count} models')
+    duplicate_to_all_models.short_description = "🔄 Duplicate to all models"
+    
+    def set_default_timings(self, request, queryset):
+        """Set default timing configurations"""
+        default_timings = {
+            'uv_vacuum': 0,      # Immediate
+            'uv_flow': 30,       # After 30 minutes
+            'umbrella_valve': 60,  # After 1 hour
+            'uv_clip': 90,       # After 1.5 hours
+            'workstation': 120,  # After 2 hours
+            'bin_contamination': 150,  # After 2.5 hours
+        }
+        
+        updated_count = 0
+        for obj in queryset:
+            if obj.parameter_group in default_timings:
+                obj.frequency_minutes = default_timings[obj.parameter_group]
+                obj.save()
+                updated_count += 1
+        
+        self.message_user(request, f'Updated {updated_count} configurations with recommended default timings')
+    set_default_timings.short_description = "⚙️ Set recommended default timings"
+    
+    def activate_selected(self, request, queryset):
+        queryset.update(is_active=True)
+        self.message_user(request, f'✅ Activated {queryset.count()} configurations')
+    activate_selected.short_description = "✅ Activate selected"
+    
+    def deactivate_selected(self, request, queryset):
+        queryset.update(is_active=False)
+        self.message_user(request, f'❌ Deactivated {queryset.count()} configurations')
+    deactivate_selected.short_description = "❌ Deactivate selected"
+
+
+# ============ CHECKLIST ADMINS ============
+
+class ParameterGroupEntryInline(admin.TabularInline):
+    """Parameter group entries inline"""
+    model = ParameterGroupEntry
+    extra = 0
+    readonly_fields = ('timestamp', 'is_completed', 'verification_summary')
+    fields = (
+        'parameter_group', 'timestamp', 'is_completed', 
+        'is_after_maintenance', 'verification_summary'
+    )
+    verbose_name = "Parameter Group Entry"
+    verbose_name_plural = "Parameter Group Entries"
+    
+    def verification_summary(self, obj):
+        """Show verification status inline"""
+        if not obj.pk:
+            return "Save first"
+        
+        badges = []
+        
+        # Supervisor verification
+        supervisor_verif = obj.verifications.filter(verification_type='supervisor').first()
+        if supervisor_verif:
+            if supervisor_verif.status == 'approved':
+                badges.append('✅ Supervisor')
+            else:
+                badges.append('❌ Supervisor')
+        else:
+            badges.append('⏳ Supervisor')
+        
+        # Quality verification
+        quality_verif = obj.verifications.filter(verification_type='quality').first()
+        if quality_verif:
+            if quality_verif.status == 'approved':
+                badges.append('✅ Quality')
+            else:
+                badges.append('❌ Quality')
+        else:
+            badges.append('⏳ Quality')
+        
+        return format_html(' | '.join(badges))
+    
+    verification_summary.short_description = 'Verification Status'
 
 
 class VerificationInline(admin.TabularInline):
@@ -136,12 +336,36 @@ class ConcernInline(admin.TabularInline):
 
 @admin.register(ChecklistBase)
 class ChecklistBaseAdmin(admin.ModelAdmin):
-    list_display = ('id', 'status', 'selected_model', 'shift_display', 'verification_status_link', 'created_at')
+    list_display = (
+        'id', 'status_badge', 'selected_model', 'shift_display', 
+        'verification_status_link', 'parameter_entries_summary', 
+        'completion_progress', 'created_at'
+    )
     list_filter = ('status', 'selected_model', 'shift')
     search_fields = ('id', 'selected_model')
     date_hierarchy = 'created_at'
-    inlines = [SubgroupEntryInline, VerificationInline, ConcernInline]
-    readonly_fields = ('created_at', 'shift')
+    inlines = [
+        ParameterGroupEntryInline,
+        VerificationInline, 
+        ConcernInline
+    ]
+    readonly_fields = ('created_at', 'shift', 'parameter_stats')
+    
+    actions = ['reset_to_pending']
+    
+    def status_badge(self, obj):
+        colors = {
+            'pending': '#6c757d',
+            'supervisor_approved': '#ffc107',
+            'quality_approved': '#28a745',
+            'rejected': '#dc3545'
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="background-color: {}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">{}</span>',
+            color, obj.get_status_display()
+        )
+    status_badge.short_description = 'Status'
     
     def shift_display(self, obj):
         shift_choices = dict(ChecklistBase.SHIFTS)
@@ -152,41 +376,168 @@ class ChecklistBaseAdmin(admin.ModelAdmin):
         if obj.verification_status:
             try:
                 url = reverse('admin:main_dailyverificationstatus_change', args=[obj.verification_status.id])
-                return format_html('<a href="{}">{}</a>', url, f"Verification #{obj.verification_status.id}")
+                return format_html('<a href="{}">📋 Verification #{}</a>', url, obj.verification_status.id)
             except:
                 return f"Verification #{obj.verification_status.id}"
-        return 'N/A'
+        return format_html('<span style="color: #6c757d;">No verification</span>')
     verification_status_link.short_description = 'Verification Status'
+    
+    def parameter_entries_summary(self, obj):
+        """Summary of parameter group entries"""
+        try:
+            total = obj.parameter_entries.count()
+            completed = obj.parameter_entries.filter(is_completed=True).count()
+            
+            # Count by verification status
+            supervisor_approved = 0
+            quality_approved = 0
+            
+            for entry in obj.parameter_entries.all():
+                if entry.verifications.filter(verification_type='supervisor', status='approved').exists():
+                    supervisor_approved += 1
+                if entry.verifications.filter(verification_type='quality', status='approved').exists():
+                    quality_approved += 1
+            
+            if total == 0:
+                return format_html('<span style="color: #6c757d;">No entries</span>')
+            
+            return format_html(
+                '<div style="font-size: 11px;">'
+                '<strong>Total:</strong> {} | '
+                '<strong>Complete:</strong> {} | '
+                '<span style="color: #ffc107;">👨‍💼 {}</span> | '
+                '<span style="color: #28a745;">🔍 {}</span>'
+                '</div>',
+                total, completed, supervisor_approved, quality_approved
+            )
+        except:
+            return format_html('<span style="color: #6c757d;">0</span>')
+    parameter_entries_summary.short_description = 'Parameter Entries'
+    
+    def completion_progress(self, obj):
+        """Visual progress bar for parameter completion"""
+        try:
+            total = obj.parameter_entries.count()
+            if total == 0:
+                return format_html('<span style="color: #999;">No data</span>')
+            
+            completed = obj.parameter_entries.filter(is_completed=True).count()
+            percentage = int((completed / total) * 100)
+            
+            color = '#28a745' if percentage == 100 else '#ffc107' if percentage >= 50 else '#dc3545'
+            
+            return format_html(
+                '<div style="background: #f0f0f0; border-radius: 10px; overflow: hidden; width: 100px; height: 20px;">'
+                '<div style="background: {}; color: white; text-align: center; font-size: 11px; line-height: 20px; width: {}%;">'
+                '{}%'
+                '</div>'
+                '</div>',
+                color, percentage, percentage
+            )
+        except:
+            return format_html('<span style="color: #999;">N/A</span>')
+    completion_progress.short_description = 'Progress'
+    
+    def parameter_stats(self, obj):
+        """Detailed parameter statistics"""
+        if not obj.pk:
+            return "Save checklist first"
+        
+        try:
+            entries = obj.parameter_entries.all()
+            
+            # FIXED: Get choices from the model field directly
+            parameter_choices = dict(ParameterGroupEntry._meta.get_field('parameter_group').choices)
+            
+            # Group by parameter type
+            by_group = {}
+            for entry in entries:
+                group = entry.parameter_group
+                if group not in by_group:
+                    by_group[group] = {
+                        'total': 0,
+                        'completed': 0,
+                        'supervisor_approved': 0,
+                        'quality_approved': 0
+                    }
+                
+                by_group[group]['total'] += 1
+                if entry.is_completed:
+                    by_group[group]['completed'] += 1
+                
+                if entry.verifications.filter(verification_type='supervisor', status='approved').exists():
+                    by_group[group]['supervisor_approved'] += 1
+                
+                if entry.verifications.filter(verification_type='quality', status='approved').exists():
+                    by_group[group]['quality_approved'] += 1
+            
+            html = '<div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px;">'
+            html += '<h3 style="margin-top: 0;">📊 Parameter Group Statistics</h3>'
+            
+            if not by_group:
+                html += '<p style="color: #6c757d;">No parameter entries yet</p>'
+            else:
+                html += '<table style="width: 100%; border-collapse: collapse;">'
+                html += '<thead><tr style="background-color: #e9ecef;">'
+                html += '<th style="padding: 8px; text-align: left;">Parameter Group</th>'
+                html += '<th style="padding: 8px; text-align: center;">Total</th>'
+                html += '<th style="padding: 8px; text-align: center;">Completed</th>'
+                html += '<th style="padding: 8px; text-align: center;">👨‍💼 Supervisor</th>'
+                html += '<th style="padding: 8px; text-align: center;">🔍 Quality</th>'
+                html += '</tr></thead><tbody>'
+                
+                for group, stats in by_group.items():
+                    # FIXED: Use the choices dict we created above
+                    group_name = parameter_choices.get(group, group)
+                    html += '<tr style="border-bottom: 1px solid #dee2e6;">'
+                    html += f'<td style="padding: 8px;"><strong>{group_name}</strong></td>'
+                    html += f'<td style="padding: 8px; text-align: center;">{stats["total"]}</td>'
+                    html += f'<td style="padding: 8px; text-align: center;">{stats["completed"]}</td>'
+                    html += f'<td style="padding: 8px; text-align: center;">{stats["supervisor_approved"]}</td>'
+                    html += f'<td style="padding: 8px; text-align: center;">{stats["quality_approved"]}</td>'
+                    html += '</tr>'
+                
+                html += '</tbody></table>'
+            
+            html += '</div>'
+            
+            return format_html(html)
+        except Exception as e:
+            return format_html(f'<span style="color: #dc3545;">Error: {str(e)}</span>')
+    
+    parameter_stats.short_description = 'Detailed Statistics'
+    
+    def reset_to_pending(self, request, queryset):
+        updated = queryset.update(status='pending')
+        self.message_user(request, f'🔄 Reset {updated} checklists to pending status')
+    reset_to_pending.short_description = "🔄 Reset to pending"
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('verification_status', 'status', 'selected_model', 'new_shift', 'shift')
+            'fields': ('verification_status', 'status', 'selected_model', 'new_shift', 'shift'),
+            'description': '📋 Quality Checklist with Parameter Groups'
         }),
         ('One-time Measurements', {
             'fields': ('line_pressure', 'uv_flow_input_pressure', 'test_pressure_vacuum')
         }),
         ('Status Checks', {
-            'fields': ('oring_condition',  )
+            'fields': ('oring_condition',)
+        }),
+        ('Parameter Statistics', {
+            'fields': ('parameter_stats',),
+            'classes': ('collapse',)
         }),
         ('Tool Information', {
             'fields': ('top_tool_id', 'top_tool_id_status', 'bottom_tool_id', 'bottom_tool_id_status',
                       'uv_assy_stage_id', 'uv_assy_stage_id_status', 'retainer_part_no', 'retainer_part_no_status',
                       'uv_clip_part_no', 'uv_clip_part_no_status', 'umbrella_part_no', 'umbrella_part_no_status',
-                      'retainer_id_lubrication')
+                      'retainer_id_lubrication'),
+            'classes': ('collapse',)
         })
     )
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('verification_status')
-   
-
-@admin.register(SubgroupEntry)
-class SubgroupEntryAdmin(admin.ModelAdmin):
-    list_display = ['checklist', 'subgroup_number', 'timestamp']
-    list_filter = ['timestamp']
-    search_fields = ('checklist__id',)
-    date_hierarchy = 'timestamp'
-    readonly_fields = ('timestamp',)
+        return super().get_queryset(request).select_related('verification_status').prefetch_related('parameter_entries')
 
 
 @admin.register(Verification)
@@ -205,6 +556,85 @@ class ConcernAdmin(admin.ModelAdmin):
     search_fields = ('concern_identified', 'cause_if_known', 'action_taken')
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at',)
+
+
+# ============ CUSTOMIZE ADMIN SITE ============
+
+admin.site.site_header = '🔧 Quality Control System Administration'
+admin.site.site_title = 'Quality Control System'
+admin.site.index_title = '📋 Quality Management Dashboard - Legacy & NEW Category Timing System'
+
+# Change the default empty text
+admin.site.empty_value_display = '—'
+
+# Update verbose names for better organization in admin
+ChecklistBase._meta.verbose_name = 'DPVIS - Quality Checklist'
+ChecklistBase._meta.verbose_name_plural = 'DPVIS - Quality Checklists'
+
+
+DailyVerificationStatus._meta.verbose_name = 'DPVIS - Daily Verification Status'
+DailyVerificationStatus._meta.verbose_name_plural = 'DPVIS - Daily Verification Statuses'
+
+Verification._meta.verbose_name = 'DPVIS - Final Verification'
+Verification._meta.verbose_name_plural = 'DPVIS - Final Verifications'
+
+Concern._meta.verbose_name = 'DPVIS - Quality Concern'
+Concern._meta.verbose_name_plural = 'DPVIS - Quality Concerns'
+
+Shift._meta.verbose_name = 'DPVIS - Work Shift'
+Shift._meta.verbose_name_plural = 'DPVIS - Work Shifts'
+
+ChecksheetContentConfig._meta.verbose_name = 'DPVIS Checksheet - Content Configuration'
+ChecksheetContentConfig._meta.verbose_name_plural = ' DPVIS Checksheet - Content Configurations'
+
+# Update FTQ model verbose names
+try:
+    FTQRecord._meta.verbose_name = 'FTQ - Quality Record'
+    FTQRecord._meta.verbose_name_plural = 'FTQ - Quality Records'
+    
+    OperationNumber._meta.verbose_name = 'FTQ - Operation Number'
+    OperationNumber._meta.verbose_name_plural = 'FTQ - Operation Numbers'
+    
+    DefectCategory._meta.verbose_name = 'FTQ - Defect Category'
+    DefectCategory._meta.verbose_name_plural = 'FTQ - Defect Categories'
+    
+    DefectType._meta.verbose_name = 'FTQ - Defect Type'
+    DefectType._meta.verbose_name_plural = 'FTQ - Defect Types'
+    
+    TimeBasedDefectEntry._meta.verbose_name = 'FTQ - Time-based Defect Entry'
+    TimeBasedDefectEntry._meta.verbose_name_plural = 'FTQ - Time-based Defect Entries'
+    
+    DefectRecord._meta.verbose_name = 'FTQ - Defect Record'
+    DefectRecord._meta.verbose_name_plural = 'FTQ - Defect Records'
+    
+    CustomDefectType._meta.verbose_name = 'FTQ - Custom Defect Type'
+    CustomDefectType._meta.verbose_name_plural = 'FTQ - Custom Defect Types'
+except:
+    pass  # FTQ models might not be available
+
+# Update Error Prevention model verbose names
+try:
+    ErrorPreventionCheck._meta.verbose_name = 'EPVS - Error Prevention Check'
+    ErrorPreventionCheck._meta.verbose_name_plural = 'EPVS - Error Prevention Checks'
+    
+    ErrorPreventionMechanism._meta.verbose_name = 'EPVS - Error Prevention Mechanism'
+    ErrorPreventionMechanism._meta.verbose_name_plural = 'EPVS - Error Prevention Mechanisms'
+    
+    ErrorPreventionMechanismStatus._meta.verbose_name = 'EPVS - Mechanism Status'
+    ErrorPreventionMechanismStatus._meta.verbose_name_plural = 'EPVS - Mechanism Statuses'
+    
+    ErrorPreventionCheckHistory._meta.verbose_name = 'EPVS - Check History'
+    ErrorPreventionCheckHistory._meta.verbose_name_plural = 'EPVS - Check Histories'
+    
+    ErrorPreventionMechanismHistory._meta.verbose_name = 'EPVS - Mechanism History'
+    ErrorPreventionMechanismHistory._meta.verbose_name_plural = 'EPVS - Mechanism Histories'
+except:
+    pass  # EPVS models might not be available
+
+
+ParameterGroupConfig._meta.verbose_name = 'DPVIS SUB Group Configuration'
+ParameterGroupConfig._meta.verbose_name_plural = 'DPVIS SUB Group Configurations'
+
 
 
 # ============ ERROR PREVENTION - MASTER MECHANISM ADMIN ============
@@ -1375,7 +1805,7 @@ from django.utils.safestring import mark_safe
 from django.db.models import Count
 from .models import (
     User, Shift, DailyVerificationStatus, ChecklistBase,
-    SubgroupFrequencyConfig, Checksheet, ChecksheetSection,
+     Checksheet, ChecksheetSection,
     ChecksheetField, ChecksheetResponse, ChecksheetFieldResponse
 )
 
@@ -1494,12 +1924,22 @@ class ChecksheetAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
     
     def name_with_status(self, obj):
-        """Display name with active/inactive badge"""
+        """Display name prefixed with 'New CHECKSHEET' and show active/inactive badge"""
         if obj.is_active:
-            badge = '<span style="background-color: #28a745; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; margin-left: 8px;">ACTIVE</span>'
+            badge = (
+                '<span style="background-color: #28a745; color: white; padding: 3px 8px; '
+                'border-radius: 3px; font-size: 11px; margin-left: 8px;">ACTIVE</span>'
+            )
         else:
-            badge = '<span style="background-color: #dc3545; color: white; padding: 3px 8px; border-radius: 3px; font-size: 11px; margin-left: 8px;">INACTIVE</span>'
-        return format_html('<strong>{}</strong> {}', obj.name, badge)
+            badge = (
+                '<span style="background-color: #dc3545; color: white; padding: 3px 8px; '
+                'border-radius: 3px; font-size: 11px; margin-left: 8px;">INACTIVE</span>'
+            )
+        
+        return format_html(
+            obj.name,
+            format_html(badge)
+        )
     
     name_with_status.short_description = 'Checksheet Name'
     name_with_status.admin_order_field = 'name'
@@ -2055,6 +2495,28 @@ class ChecksheetResponseAdmin(admin.ModelAdmin):
         )
     
     response_summary.short_description = 'Summary'
+
+
+
+
+# ============ ADMIN LABEL CUSTOMIZATION ============
+
+# Rename models for better admin display
+
+Checksheet._meta.verbose_name = "New CHECKSHEET"
+Checksheet._meta.verbose_name_plural = "New CHECKSHEETS"
+
+ChecksheetSection._meta.verbose_name = "New CHECKSHEET Section"
+ChecksheetSection._meta.verbose_name_plural = "New CHECKSHEET Sections"
+
+ChecksheetField._meta.verbose_name = "New CHECKSHEET Field"
+ChecksheetField._meta.verbose_name_plural = "New CHECKSHEET Fields"
+
+ChecksheetResponse._meta.verbose_name = "New CHECKSHEET Response"
+ChecksheetResponse._meta.verbose_name_plural = "New CHECKSHEET Responses"
+
+ChecksheetFieldResponse._meta.verbose_name = "New CHECKSHEET Field Response"
+ChecksheetFieldResponse._meta.verbose_name_plural = "New CHECKSHEET Field Responses"
 
 
 # ============ CUSTOMIZE ADMIN SITE ============

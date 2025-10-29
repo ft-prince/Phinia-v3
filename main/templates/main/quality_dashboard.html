@@ -15,19 +15,18 @@
         border-radius: 8px !important;
         overflow: hidden !important;
         box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2) !important;
-        margin-bottom: 1rem; /* Reduced spacing */
+        margin-bottom: 1rem;
     }
     
     .card-header {
         border-bottom: 2px solid rgba(255, 255, 255, 0.2) !important;
-        padding: 0.5rem 1rem; /* Reduced padding */
+        padding: 0.5rem 1rem;
     }
     
     .card-body {
-        padding: 0.75rem 1rem; /* Reduced padding */
+        padding: 0.75rem 1rem;
     }
     
-    /* Single line layouts */
     .single-line-stats {
         display: flex;
         justify-content: space-around;
@@ -52,7 +51,31 @@
         margin: 0;
     }
     
-    /* Quick actions compact styling */
+    .overview-stats {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .overview-stat {
+        background-color: rgba(0,0,0,0.3);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        text-align: center;
+        flex: 1;
+    }
+    
+    .overview-stat h6 {
+        margin: 0 0 0.25rem 0;
+        font-size: 0.875rem;
+        color: #CC0000;
+    }
+    
+    .overview-stat .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0;
+    }
+    
     .quick-actions {
         display: flex;
         gap: 1rem;
@@ -66,7 +89,6 @@
         padding: 1rem;
     }
     
-    /* Phinia theme colors */
     .bg-phinia-red {
         background-color: #CC0000 !important;
         color: white !important;
@@ -127,7 +149,6 @@
         color: #aaa !important;
     }
     
-    /* Info block styling */
     .info-card {
         transition: all 0.3s;
     }
@@ -136,7 +157,6 @@
         transform: translateY(-5px);
     }
     
-    /* Measurement badge styling */
     .measurement-badge {
         display: inline-block;
         min-width: 100px;
@@ -146,6 +166,29 @@
         color: white;
         font-weight: 500;
         margin: 2px;
+    }
+    
+    .tab-content {
+        padding: 1rem 0;
+    }
+    
+    .nav-tabs .nav-link {
+        color: #aaa;
+        background-color: transparent;
+        border: 1px solid transparent;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .nav-tabs .nav-link:hover {
+        color: #fff;
+        border-color: #444;
+    }
+    
+    .nav-tabs .nav-link.active {
+        color: #CC0000;
+        background-color: transparent;
+        border-color: #444 #444 transparent;
+        border-bottom: 2px solid #CC0000;
     }
 </style>
 {% endblock %}
@@ -169,10 +212,58 @@
                             <p class="stat-label">Date</p>
                             <p class="stat-value">{{ current_date|date:"d M Y" }}</p>
                         </div>
-                     
                         <div class="stat-item">
                             <p class="stat-label">Quality Supervisor</p>
                             <p class="stat-value">{{ request.user.username }}</p>
+                        </div>
+                        <div class="stat-item">
+                            <p class="stat-label">User Type</p>
+                            <p class="stat-value">{{ request.user.get_user_type_display|title }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Overview Stats -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-phinia-red">
+                    <h5 class="mb-0">Quality Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="overview-stats">
+                        <div class="overview-stat">
+                            <h6>Pending Verifications</h6>
+                            <p class="stat-number text-warning">{{ verification_summary.pending_count }}</p>
+                            <small class="text-muted">
+                                {{ verification_stats.parameter_pending }} Parameters + 
+                                {{ verification_stats.checksheet_pending }} Checksheets
+                            </small>
+                        </div>
+                        <div class="overview-stat">
+                            <h6>Approved Today</h6>
+                            <p class="stat-number text-success">{{ verification_summary.approved_today }}</p>
+                            <small class="text-muted">
+                                {{ parameter_approved_today }} Parameters + 
+                                {{ checksheet_approved_today }} Checksheets
+                            </small>
+                        </div>
+                        <div class="overview-stat">
+                            <h6>Rejected Today</h6>
+                            <p class="stat-number text-danger">{{ verification_summary.rejected_today }}</p>
+                            <small class="text-muted">
+                                {{ parameter_rejected_today }} Parameters + 
+                                {{ checksheet_rejected_today }} Checksheets
+                            </small>
+                        </div>
+                        <div class="overview-stat">
+                            <h6>Overall FTQ</h6>
+                            <p class="stat-number {% if ftq_percentage >= 98 %}text-success{% elif ftq_percentage >= 95 %}text-warning{% else %}text-danger{% endif %}">
+                                {% if ftq_percentage %}{{ ftq_percentage|floatformat:1 }}%{% else %}N/A{% endif %}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -180,53 +271,148 @@
         </div>
     </div>
     
-    <!-- Pending Quality Verifications -->
+    <!-- Pending Quality Verifications with Tabs -->
     <div class="row mb-3">
         <div class="col">
             <div class="card">
                 <div class="card-header bg-phinia-red d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Pending Quality Verifications</h5>
-                    <span class="badge bg-light text-dark">{{ verification_summary.pending_count }} Pending</span>
+                    <span class="badge bg-light text-dark">{{ verification_summary.pending_count }} Total</span>
                 </div>
                 <div class="card-body">
-                    {% if pending_verifications %}
-                    <div class="table-responsive">
-                        <table class="table table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Model</th>
-                                    <th>Subgroup</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for subgroup in pending_verifications %}
-                                <tr>
-                                    <td>{{ subgroup.timestamp|time:"H:i" }}</td>
-                                    <td>{{ subgroup.checklist.selected_model }}</td>
-                                    <td>#{{ subgroup.subgroup_number }}</td>
-                  
-                                    <td>
-                                        <a href="{% url 'checklist_detail' subgroup.checklist.id %}" 
-                                           class="btn btn-outline-light btn-sm">View</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="parameters-tab" data-bs-toggle="tab" data-bs-target="#parameters" type="button" role="tab">
+                                <i class="fas fa-vial"></i> Parameters 
+                                <span class="badge bg-warning text-dark ms-1">{{ verification_stats.parameter_pending }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="checksheets-tab" data-bs-toggle="tab" data-bs-target="#checksheets" type="button" role="tab">
+                                <i class="fas fa-clipboard-list"></i> Checksheets 
+                                <span class="badge bg-warning text-dark ms-1">{{ verification_stats.checksheet_pending }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        <!-- Parameters Tab -->
+                        <div class="tab-pane fade show active" id="parameters" role="tabpanel">
+                            {% if pending_parameter_entries %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Model</th>
+                                            <th>Parameter Group</th>
+                                            <th>Operator</th>
+                                            <th>Supervisor Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for entry in pending_parameter_entries %}
+                                        <tr>
+                                            <td>{{ entry.timestamp|date:"d M" }} {{ entry.timestamp|time:"H:i" }}</td>
+                                            <td>{{ entry.checklist.selected_model }}</td>
+                                            <td>
+                                                <span class="badge bg-info">{{ entry.parameter_display_name }}</span>
+                                            </td>
+                                            <td>{{ entry.checklist.verification_status.created_by.username }}</td>
+                                            <td>
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check"></i> Approved
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'checklist_detail' entry.checklist.id %}" 
+                                                   class="btn btn-outline-light btn-sm">
+                                                    <i class="fas fa-clipboard-check"></i> Verify
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {% if pending_by_group %}
+                            <div class="mt-3">
+                                <h6 class="text-white">Pending by Parameter Group:</h6>
+                                <div class="d-flex gap-2 flex-wrap">
+                                    {% for group, count in pending_by_group.items %}
+                                    <span class="badge bg-secondary">
+                                        {{ group|title }}: {{ count }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                                <p class="text-success mt-2 mb-0">No pending parameter verifications!</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Checksheets Tab -->
+                        <div class="tab-pane fade" id="checksheets" role="tabpanel">
+                            {% if pending_checksheet_responses %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Checksheet Name</th>
+                                            <th>Operator</th>
+                                            <th>Supervisor Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for response in pending_checksheet_responses %}
+                                        <tr>
+                                            <td>{{ response.submitted_at|date:"d M" }} {{ response.submitted_at|time:"H:i" }}</td>
+                                            <td>{{ response.checksheet.name }}</td>
+                                            <td>{{ response.filled_by.username }}</td>
+                                            <td>
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check"></i> Approved
+                                                </span>
+                                                <br>
+                                                <small class="text-muted">
+                                                    by {{ response.supervisor_approved_by.username }}
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'checksheet_response_detail' response.id %}" 
+                                                   class="btn btn-outline-light btn-sm">
+                                                    <i class="fas fa-clipboard-check"></i> Verify
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-check-circle text-success" style="font-size: 3rem;"></i>
+                                <p class="text-success mt-2 mb-0">No pending checksheet verifications!</p>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
-                    {% else %}
-                    <div class="text-center py-2">
-                        <p class="text-muted mb-0">No pending quality verifications.</p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Recent Quality Verifications -->
+    <!-- Recent Quality Verifications with Tabs -->
     <div class="row mb-3">
         <div class="col">
             <div class="card">
@@ -235,43 +421,128 @@
                     <span class="badge bg-light text-dark">{{ verification_summary.approved_today|add:verification_summary.rejected_today }} Today</span>
                 </div>
                 <div class="card-body">
-                    {% if verified_entries %}
-                    <div class="table-responsive">
-                        <table class="table table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Date & Time</th>
-                                    <th>Verified By</th>
-                                    <th>Subgroup</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for verification in verified_entries %}
-                                <tr>
-                                    <td>{{ verification.verified_at|date:"d M" }} {{ verification.verified_at|time:"H:i" }}</td>
-                                    <td>{{ verification.verified_by.username }}</td>
-                                    <td>#{{ verification.subgroup.subgroup_number }}</td>
-                                    <td>
-                                        <span class="badge {% if verification.status == 'rejected' %}bg-danger{% else %}bg-success{% endif %}">
-                                            {{ verification.get_status_display }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="{% url 'checklist_detail' verification.subgroup.checklist.id %}" 
-                                           class="btn btn-sm btn-outline-light">View</a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    <!-- Nav Tabs -->
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="recent-parameters-tab" data-bs-toggle="tab" data-bs-target="#recent-parameters" type="button" role="tab">
+                                <i class="fas fa-vial"></i> Parameters 
+                                <span class="badge bg-success ms-1">{{ parameter_approved_today|add:parameter_rejected_today }}</span>
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="recent-checksheets-tab" data-bs-toggle="tab" data-bs-target="#recent-checksheets" type="button" role="tab">
+                                <i class="fas fa-clipboard-list"></i> Checksheets 
+                                <span class="badge bg-success ms-1">{{ checksheet_approved_today|add:checksheet_rejected_today }}</span>
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        <!-- Recent Parameters Tab -->
+                        <div class="tab-pane fade show active" id="recent-parameters" role="tabpanel">
+                            {% if recent_parameter_verifications %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date & Time</th>
+                                            <th>Verified By</th>
+                                            <th>Parameter Group</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for verification in recent_parameter_verifications %}
+                                        <tr>
+                                            <td>{{ verification.verified_at|date:"d M" }} {{ verification.verified_at|time:"H:i" }}</td>
+                                            <td>{{ verification.verified_by.username }}</td>
+                                            <td>
+                                                <span class="badge bg-info">
+                                                    {{ verification.parameter_entry.parameter_display_name }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if verification.status == 'approved' %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check"></i> Approved
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-times"></i> Rejected
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'checklist_detail' verification.parameter_entry.checklist.id %}" 
+                                                   class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-3">
+                                <p class="text-muted mb-0">No parameter verifications completed yet.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Recent Checksheets Tab -->
+                        <div class="tab-pane fade" id="recent-checksheets" role="tabpanel">
+                            {% if recent_checksheet_verifications %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Date & Time</th>
+                                            <th>Verified By</th>
+                                            <th>Checksheet Name</th>
+                                            <th>Operator</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for response in recent_checksheet_verifications %}
+                                        <tr>
+                                            <td>{{ response.quality_approved_at|date:"d M" }} {{ response.quality_approved_at|time:"H:i" }}</td>
+                                            <td>{{ response.quality_approved_by.username }}</td>
+                                            <td>{{ response.checksheet.name }}</td>
+                                            <td>{{ response.filled_by.username }}</td>
+                                            <td>
+                                                {% if response.status == 'approved' %}
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check"></i> Approved
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-times"></i> Rejected
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'checksheet_response_detail' response.id %}" 
+                                                   class="btn btn-sm btn-outline-light">
+                                                    <i class="fas fa-eye"></i> View
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="text-center py-3">
+                                <p class="text-muted mb-0">No checksheet verifications completed yet.</p>
+                            </div>
+                            {% endif %}
+                        </div>
                     </div>
-                    {% else %}
-                    <div class="text-center py-2">
-                        <p class="text-muted mb-0">No verifications have been completed yet.</p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -345,19 +616,19 @@
                             </div>
                             <div class="stat-item">
                                 <p class="stat-label text-white-50">Status</p>
-<span class="badge {% if today_ep_check.status == 'supervisor_approved' or today_ep_check.status == 'quality_approved' %}bg-success{% elif today_ep_check.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
-    {% if today_ep_check.status == 'supervisor_approved' %}
-        Production Supervisor Approved
-    {% elif today_ep_check.status == 'quality_approved' %}
-        Quality Approved
-    {% elif today_ep_check.status == 'rejected' %}
-        Rejected
-    {% elif today_ep_check.status == 'pending' %}
-        Pending
-    {% else %}
-        {{ today_ep_check.get_status_display }}
-    {% endif %}
-</span>
+                                <span class="badge {% if today_ep_check.status == 'supervisor_approved' or today_ep_check.status == 'quality_approved' %}bg-success{% elif today_ep_check.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {% if today_ep_check.status == 'supervisor_approved' %}
+                                        Supervisor Approved
+                                    {% elif today_ep_check.status == 'quality_approved' %}
+                                        Quality Approved
+                                    {% elif today_ep_check.status == 'rejected' %}
+                                        Rejected
+                                    {% elif today_ep_check.status == 'pending' %}
+                                        Pending
+                                    {% else %}
+                                        {{ today_ep_check.get_status_display }}
+                                    {% endif %}
+                                </span>
                             </div>
                             <div class="stat-item">
                                 <a href="{% url 'ep_check_detail' pk=today_ep_check.pk %}" class="btn btn-outline-light btn-sm">
@@ -380,7 +651,7 @@
         <div class="col-md-12">
             <div class="card shadow-lg" style="background: linear-gradient(135deg, #111111, #222222); color: #fff;">
                 <div class="card-header text-white" style="background-color: #990000;">
-                    <h5 class="mb-0">Daily TPM Sheet status </h5>
+                    <h5 class="mb-0">Daily TPM Sheet Status</h5>
                 </div>
                 <div class="card-body">
                     {% if today_dtpm_checklist %}
@@ -399,19 +670,19 @@
                             </div>
                             <div class="stat-item">
                                 <p class="stat-label text-white-50">Status</p>
-       <span class="badge {% if today_dtpm_checklist.status == 'quality_certified' or today_dtpm_checklist.status == 'supervisor_approved' %}bg-success{% elif today_dtpm_checklist.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
-    {% if today_dtpm_checklist.status == 'supervisor_approved' %}
-        Production Supervisor Approved
-    {% elif today_dtpm_checklist.status == 'quality_certified' %}
-        Quality Approved
-    {% elif today_dtpm_checklist.status == 'rejected' %}
-        Rejected
-    {% elif today_dtpm_checklist.status == 'pending' %}
-        Pending
-    {% else %}
-        {{ today_dtpm_checklist.get_status_display }}
-    {% endif %}
-</span>
+                                <span class="badge {% if today_dtpm_checklist.status == 'quality_certified' or today_dtpm_checklist.status == 'supervisor_approved' %}bg-success{% elif today_dtpm_checklist.status == 'rejected' %}bg-danger{% else %}bg-warning{% endif %}">
+                                    {% if today_dtpm_checklist.status == 'supervisor_approved' %}
+                                        Supervisor Approved
+                                    {% elif today_dtpm_checklist.status == 'quality_certified' %}
+                                        Quality Approved
+                                    {% elif today_dtpm_checklist.status == 'rejected' %}
+                                        Rejected
+                                    {% elif today_dtpm_checklist.status == 'pending' %}
+                                        Pending
+                                    {% else %}
+                                        {{ today_dtpm_checklist.get_status_display }}
+                                    {% endif %}
+                                </span>
                             </div>
                             <div class="stat-item">
                                 <a href="{% url 'dtpm_new_detail' pk=today_dtpm_checklist.pk %}" class="btn btn-outline-light btn-sm">

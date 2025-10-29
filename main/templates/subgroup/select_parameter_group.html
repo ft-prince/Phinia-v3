@@ -1,0 +1,237 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Select Parameter Group - Checklist #{{ checklist.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    html, body {
+        background-color: black !important;
+        color: white !important;
+    }
+    
+    .card {
+        background-color: #111 !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(255, 0, 0, 0.2);
+    }
+    
+    .card-header {
+        background-color: #CC0000 !important;
+        border-bottom: 2px solid #ffffff !important;
+        color: white !important;
+    }
+    
+    .parameter-card {
+        background: linear-gradient(145deg, #1a1a1a, #0d0d0d);
+        border: 2px solid #ffffff;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .parameter-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(204, 0, 0, 0.4);
+        border-color: #CC0000;
+    }
+    
+    .parameter-card.available {
+        border-color: #28a745;
+    }
+    
+    .parameter-card.available:hover {
+        box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+    }
+    
+    .parameter-card.pending {
+        border-color: #ffc107;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    
+    .parameter-card.completed {
+        border-color: #6c757d;
+        cursor: default;
+        opacity: 0.6;
+    }
+    
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 5px 15px;
+        border-radius: 20px;
+        float: right;
+    }
+    
+    .countdown-timer {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #ffc107;
+        margin-top: 10px;
+    }
+    
+    .progress {
+        height: 25px;
+        border-radius: 5px;
+        background-color: #222;
+    }
+    
+    .progress-bar {
+        background-color: #CC0000;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header Card -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">
+                <i class="fas fa-list-check"></i> Parameter Groups Status
+                <span style="font-size: 85%; font-weight: normal; margin-left: 10px;">पैरामीटर समूह स्थिति</span>
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Model:</strong> {{ checklist.selected_model }}</p>
+                    <p class="mb-1"><strong>Shift:</strong> {{ checklist.verification_status.shift.get_shift_type_display }}</p>
+                    <p class="mb-1"><strong>Date:</strong> {{ checklist.verification_status.date }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-1"><strong>Started At:</strong> {{ checklist.created_at|date:"H:i:s" }}</p>
+                    <p class="mb-1"><strong>Operator:</strong> {{ checklist.verification_status.shift.operator.get_full_name }}</p>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="mt-3">
+                {% with total=availability.completed|length|add:availability.available|length|add:availability.pending|length %}
+                {% widthratio availability.completed|length total 100 as percentage %}
+                <div class="progress">
+                    <div class="progress-bar" style="width: {{ percentage }}%;">
+                        {{ availability.completed|length }}/{{ total }} Completed ({{ percentage }}%)
+                    </div>
+                </div>
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Parameters -->
+    {% if availability.available %}
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #28a745 !important;">
+            <h5 class="mb-0">
+                <i class="fas fa-check-circle"></i> Available to Fill Now
+                <span style="font-size: 85%; font-weight: normal;">अभी भरने के लिए उपलब्ध</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for param_group in availability.available %}
+                <a href="{% url 'fill_parameter_group_with_param' checklist.id param_group %}" style="text-decoration: none;">
+                    <div class="parameter-card available">
+                        <span class="status-badge bg-success">Available</span>
+                        <h5 style="color: #28a745;">
+                            {{ param_group|upper|replace:"_":" " }}
+                        </h5>
+                        <p class="text-light mb-0">
+                            <i class="fas fa-arrow-right"></i> Click to fill now
+                        </p>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Pending Parameters -->
+    {% if availability.pending %}
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #ffc107 !important;">
+            <h5 class="mb-0">
+                <i class="fas fa-clock"></i> Waiting for Time
+                <span style="font-size: 85%; font-weight: normal;">समय की प्रतीक्षा में</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for pending in availability.pending %}
+                <div class="parameter-card pending">
+                    <span class="status-badge bg-warning text-dark">Pending</span>
+                    <h5 style="color: #ffc107;">{{ pending.display_name }}</h5>
+                    <p class="text-light">
+                        <i class="fas fa-clock"></i> Available after {{ pending.frequency_minutes }} minutes
+                        <br>
+                        <i class="fas fa-calendar-clock"></i> Will unlock at: <strong>{{ pending.available_at|date:"H:i:s" }}</strong>
+                    </p>
+                    <div class="countdown-timer" id="countdown-{{ forloop.counter }}">
+                        ⏱️ {{ pending.minutes_remaining }}m {{ pending.seconds_remaining }}s remaining
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Completed Parameters -->
+    {% if availability.completed %}
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #6c757d !important;">
+            <h5 class="mb-0">
+                <i class="fas fa-check-double"></i> Completed
+                <span style="font-size: 85%; font-weight: normal;">पूर्ण</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% for param_group in availability.completed %}
+                <div class="parameter-card completed">
+                    <span class="status-badge bg-secondary">✓ Completed</span>
+                    <h5 style="color: #6c757d;">
+                        {{ param_group|upper|replace:"_":" " }}
+                    </h5>
+                    <p class="text-light mb-0">
+                        <i class="fas fa-check"></i> Already filled
+                    </p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="text-center mt-4">
+        <a href="{% url 'checklist_detail' checklist.id %}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-arrow-left"></i> Back to Checklist
+        </a>
+        <a href="{% url 'checklist_parameter_status' checklist.id %}" class="btn btn-info btn-lg">
+            <i class="fas fa-chart-line"></i> View Details
+        </a>
+    </div>
+</div>
+
+<script>
+// Auto-refresh page every 30 seconds to update timing
+setTimeout(function() {
+    location.reload();
+}, 30000);
+
+// Countdown timers
+{% for pending in availability.pending %}
+let remaining{{ forloop.counter }} = {{ pending.minutes_remaining }} * 60 + {{ pending.seconds_remaining }};
+setInterval(function() {
+    remaining{{ forloop.counter }}--;
+    if (remaining{{ forloop.counter }} <= 0) {
+        location.reload();
+    }
+    let mins = Math.floor(remaining{{ forloop.counter }} / 60);
+    let secs = remaining{{ forloop.counter }} % 60;
+    document.getElementById('countdown-{{ forloop.counter }}').innerHTML = 
+        '⏱️ ' + mins + 'm ' + secs + 's remaining';
+}, 1000);
+{% endfor %}
+</script>
+{% endblock %}

@@ -472,20 +472,7 @@
                     </h4>
                     <small class="text-white-50">Generated on {{ checklist.verification_status.shift.date }}</small>
                 </div>
-                <div class="d-flex gap-2">
-                    <div class="px-2 py-1 bg-black bg-opacity-25 rounded" style="border: 1px solid white;">
-                        <i class="fas fa-clipboard-check me-1"></i>
-                        {{ subgroup_metrics.total_count }}/{{ shift_max_subgroups|default:"6" }}
-                        <span class="hindi-text">माप</span>
-                    </div>
-                    <a href="{% url 'export_checklist_excel' checklist.id %}" 
-                       class="px-2 py-1 bg-black bg-opacity-25 rounded text-white hover:bg-opacity-30 text-decoration-none"
-                       style="border: 1px solid white;">
-                        <i class="fas fa-download me-1"></i>
-                        Excel
-                        <span class="hindi-text">निर्यात</span>
-                    </a>
-                </div>
+
             </div>
         </div>
         
@@ -510,64 +497,8 @@
                 </div>
             </div>
             
-            <!-- Two-row layout -->
-            <div class="row g-1">
-                <!-- Status & Progress (1st row) -->
-                <div class="col-md-12">
-                    <div class="info-card py-1 px-2 border rounded" style="border-color: white !important; background-color: #111 !important;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-chart-line text-danger me-1"></i>
-                                <span class="text-danger fw-bold">Status & Progress <small class="hindi-text">स्थिति और प्रगति</small></span>
-                            </div>
-                            
-                            <div>
-                                <span class="badge {% if checklist.status == 'quality_approved' %}bg-success{% else %}bg-warning{% endif %} px-2 py-1">
-                                    {{ checklist.get_status_display }}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex align-items-center mt-1">
-                            <div class="progress flex-grow-1 me-2" style="height: 15px;">
-                                <div class="progress-bar {% if subgroup_metrics.completion_percentage == 100 %}bg-success{% endif %}"
-                                     role="progressbar"
-                                     style="width: {{ subgroup_metrics.completion_percentage }}%">
-                                </div>
-                            </div>
-                            <div class="text-nowrap">
-                                <small>{{ total_subgroups }}/{{ shift_max_subgroups|default:"6" }} ({{ subgroup_metrics.completion_percentage|floatformat:0 }}%)</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row g-1 mt-1">
-                <!-- Verification Status (2nd row) -->
-                <div class="col-md-12">
-                    <div class="info-card py-1 px-2 border rounded" style="border-color: white !important; background-color: #111 !important;">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-check-double text-danger me-1"></i>
-                                <span class="text-danger fw-bold">Verification Status <small class="hindi-text">सत्यापन स्थिति</small></span>
-                            </div>
-                            
-                            <div class="d-flex align-items-center">
-                                <span class="me-1">Supervisor<small class="hindi-text">सुपरवाइजर</small>:</span>
-                                <span class="badge {% if checklist.status == 'supervisor_approved' or checklist.status == 'quality_approved' %}bg-success{% else %}bg-warning{% endif %} px-1 py-1 me-2">
-                                    {% if checklist.status == 'supervisor_approved' or checklist.status == 'quality_approved' %}Approved{% else %}Pending{% endif %}
-                                </span>
-                                
-                                <span class="me-1">Quality<small class="hindi-text">क्वालिटी</small>:</span>
-                                <span class="badge {% if checklist.status == 'quality_approved' %}bg-success{% else %}bg-warning{% endif %} px-1 py-1">
-                                    {% if checklist.status == 'quality_approved' %}Approved{% else %}Pending{% endif %}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+
+ 
         </div>
     </div>
         
@@ -955,1029 +886,540 @@
 
     <!-- Subgroup Measurements -->
     <div class="row mb-reduced">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
-                    <div>
-                        <h5 class="mb-0 section-title">
-                            Periodic Measurement Records (21 Total Readings)
-                            <span class="section-title-hindi">आवधिक माप रिकॉर्ड (कुल 21 रीडिंग)</span>
-                        </h5>
-                        <small class="text-white-50">
-                            {% if frequency_hours %}{{ frequency_hours }}-Hour{% else %}2-Hour{% endif %} Interval Measurements
-                            <span class="hindi-text">{% if frequency_hours %}{{ frequency_hours }}{% else %}2{% endif %} घंटे के अंतराल पर माप</span>
-                        </small>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Subgroup Measurements Table View -->
-                    <div class="table-responsive mb-2">
-                        <table class="table table-bordered table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 5%" rowspan="2" class="text-center">
-                                        S No.
-                                        <span class="hindi-text">क्र.सं.</span>
-                                    </th>
-                                    <th style="width: 8%" rowspan="2" class="text-center">
-                                        Time
-                                        <span class="hindi-text">समय</span>
-                                    </th>
-                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
-                                        <span class="english-text">UV Vacuum Test</span>
-                                        <span class="hindi-text">यूवी वैक्यूम टेस्ट</span>
-                                        <span class="range-text">(-43 to -35 kPa)</span>
-                                        <span class="range-text">Avg / Individual</span>
-                                    </th>
-                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
-                                        <span class="english-text">UV Flow Value</span>
-                                        <span class="hindi-text">यूवी फ्लो वैल्यू</span>
-                                        <span class="range-text">(30-40 LPM)</span>
-                                        <span class="range-text">Avg / Individual</span>
-                                    </th>
-                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
-                                        <span class="english-text">Umbrella Valve</span>
-                                        <span class="hindi-text">अम्ब्रेला वाल्व</span>
-                                        <span class="range-text">OK Count/5</span>
-                                    </th>
-                                    <th style="width: 12%" rowspan="2" class="subgroup-header">
-                                        <span class="english-text">UV Clip Pressing</span>
-                                        <span class="hindi-text">यूवी क्लिप प्रेसिंग</span>
-                                        <span class="range-text">OK Count/5</span>
-                                    </th>
-                                    <th style="width: 19%" colspan="2" class="text-center">
-                                        <span class="english-text">Cleanliness</span>
-                                        <span class="hindi-text">स्वच्छता</span>
-                                    </th>
-                                    <th style="width: 15%" rowspan="2" class="subgroup-header">
-                                        <span class="english-text">Verification</span>
-                                        <span class="hindi-text">सत्यापन</span>
-                                    </th>
-                                    <th style="width: 7%" rowspan="2" class="subgroup-header">
-                                        <span class="english-text">Actions</span>
-                                        <span class="hindi-text">कार्यवाही</span>
-                                    </th>
-                                </tr>
-                                <tr>
-                                    <th class="subgroup-header">
-                                        <span class="english-text">Work Station</span>
-                                        <span class="hindi-text">वर्कस्टेशन</span>
-                                        <span class="range-text">Single Check</span>
-                                    </th>
-                                    <th class="subgroup-header">
-                                        <span class="english-text">Bin</span>
-                                        <span class="hindi-text">बिन</span>
-                                        <span class="range-text">Yes Count/5</span>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for subgroup in subgroups %}
-                                <tr {% if subgroup.has_been_edited %}style="border-left: 4px solid orange;"{% endif %} 
-                                    {% if subgroup.is_after_maintenance %}class="maintenance-indicator"{% endif %}>
-                                    <!-- Serial Number with indicators -->
-                                    <td class="text-center text-light fw-bold">
-                                        {{ subgroup.subgroup_number }}
-                                        {% if subgroup.is_after_maintenance %}
-                                            <i class="fas fa-tools" style="color: #FFA500;" title="After Maintenance"></i>
-                                        {% endif %}
-                                        {% if subgroup.has_been_edited %}
-                                            <i class="fas fa-edit" style="color: orange;" title="Edited"></i>
-                                        {% endif %}
-                                    </td>
-                                    
-                                    <!-- Time -->
-                                    <td class="text-light">
-                                        {{ subgroup.timestamp|time:"H:i" }}
-                                        {% if subgroup.has_been_edited %}
-                                            <br><small style="color: orange;">Edited</small>
-                                        {% endif %}
-                                        {% if subgroup.is_after_maintenance %}
-                                            <br><small style="color: #FFA500;">Post-Maint.</small>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- UV Vacuum Test -->
-                                    <td class="text-center {% if subgroup.validation_status.uv_vacuum_test_ok %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
-                                        <div class="readings-display">
-                                            <div class="readings-summary">
-                                                <span class="badge {% if subgroup.validation_status.uv_vacuum_test_ok %}bg-success{% else %}bg-danger{% endif %}">
-                                                    Avg: {{ subgroup.uv_vacuum_average|floatformat:1 }} kPa
-                                                </span>
-                                            </div>
-                                            <div class="individual-readings">
-                                                {{ subgroup.uv_vacuum_test_1|floatformat:1 }}, 
-                                                {{ subgroup.uv_vacuum_test_2|floatformat:1 }}, 
-                                                {{ subgroup.uv_vacuum_test_3|floatformat:1 }}, 
-                                                {{ subgroup.uv_vacuum_test_4|floatformat:1 }}, 
-                                                {{ subgroup.uv_vacuum_test_5|floatformat:1 }}
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Show comment if exists -->
-                                        {% if subgroup.uv_vacuum_comment %}
-                                            <div class="nok-comment">
-                                                <small><strong>Comment:</strong> {{ subgroup.uv_vacuum_comment }}</small>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- UV Flow Value -->
-                                    <td class="text-center {% if subgroup.validation_status.uv_flow_value_ok %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
-                                        <div class="readings-display">
-                                            <div class="readings-summary">
-                                                <span class="badge {% if subgroup.validation_status.uv_flow_value_ok %}bg-success{% else %}bg-danger{% endif %}">
-                                                    Avg: {{ subgroup.uv_flow_average|floatformat:1 }} LPM
-                                                </span>
-                                            </div>
-                                            <div class="individual-readings">
-                                                {{ subgroup.uv_flow_value_1|floatformat:1 }}, 
-                                                {{ subgroup.uv_flow_value_2|floatformat:1 }}, 
-                                                {{ subgroup.uv_flow_value_3|floatformat:1 }}, 
-                                                {{ subgroup.uv_flow_value_4|floatformat:1 }}, 
-                                                {{ subgroup.uv_flow_value_5|floatformat:1 }}
-                                            </div>
-                                        </div>
-                                        
-                                        {% if subgroup.uv_flow_comment %}
-                                            <div class="nok-comment">
-                                                <small><strong>Comment:</strong> {{ subgroup.uv_flow_comment }}</small>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Umbrella Valve Assembly -->
-                                    <td class="text-center {% if subgroup.umbrella_valve_ok_count == 5 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
-                                        <div class="readings-display">
-                                            <div class="readings-summary">
-                                                <span class="badge {% if subgroup.umbrella_valve_ok_count == 5 %}bg-success{% else %}bg-danger{% endif %}">
-                                                    {{ subgroup.umbrella_valve_ok_count }}/5 OK
-                                                </span>
-                                            </div>
-                                            <div class="individual-readings">
-                                                {{ subgroup.umbrella_valve_assembly_1 }}, 
-                                                {{ subgroup.umbrella_valve_assembly_2 }}, 
-                                                {{ subgroup.umbrella_valve_assembly_3 }}, 
-                                                {{ subgroup.umbrella_valve_assembly_4 }}, 
-                                                {{ subgroup.umbrella_valve_assembly_5 }}
-                                            </div>
-                                        </div>
-                                        
-                                        {% if subgroup.umbrella_valve_comment %}
-                                            <div class="nok-comment">
-                                                <small><strong>Comment:</strong> {{ subgroup.umbrella_valve_comment }}</small>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- UV Clip Pressing -->
-                                    <td class="text-center {% if subgroup.uv_clip_ok_count == 5 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
-                                        <div class="readings-display">
-                                            <div class="readings-summary">
-                                                <span class="badge {% if subgroup.uv_clip_ok_count == 5 %}bg-success{% else %}bg-danger{% endif %}">
-                                                    {{ subgroup.uv_clip_ok_count }}/5 OK
-                                                </span>
-                                            </div>
-                                            <div class="individual-readings">
-                                                {{ subgroup.uv_clip_pressing_1 }}, 
-                                                {{ subgroup.uv_clip_pressing_2 }}, 
-                                                {{ subgroup.uv_clip_pressing_3 }}, 
-                                                {{ subgroup.uv_clip_pressing_4 }}, 
-                                                {{ subgroup.uv_clip_pressing_5 }}
-                                            </div>
-                                        </div>
-                                        
-                                        {% if subgroup.uv_clip_comment %}
-                                            <div class="nok-comment">
-                                                <small><strong>Comment:</strong> {{ subgroup.uv_clip_comment }}</small>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Workstation Clean -->
-                                    <td class="text-center {% if subgroup.workstation_status == 'Yes' %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
-                                        <div class="readings-display">
-                                            <div class="readings-summary">
-                                                <span class="badge {% if subgroup.workstation_status == 'Yes' %}bg-success{% else %}bg-danger{% endif %}">
-                                                    {{ subgroup.workstation_status|default:"—" }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        
-                                        {% if subgroup.workstation_comment %}
-                                            <div class="nok-comment">
-                                                <small><strong>Comment:</strong> {{ subgroup.workstation_comment }}</small>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Bin Contamination Check -->
-                                    <td class="text-center {% if subgroup.bin_contamination_yes_count == 5 %}bg-success-subtle{% else %}bg-danger-subtle{% endif %}">
-                                        <div class="readings-display">
-                                            <div class="readings-summary">
-                                                <span class="badge {% if subgroup.bin_contamination_yes_count == 5 %}bg-success{% else %}bg-danger{% endif %}">
-                                                    {{ subgroup.bin_contamination_yes_count }}/5 Yes
-                                                </span>
-                                            </div>
-                                            <div class="individual-readings">
-                                                {{ subgroup.bin_contamination_check_1 }}, 
-                                                {{ subgroup.bin_contamination_check_2 }}, 
-                                                {{ subgroup.bin_contamination_check_3 }}, 
-                                                {{ subgroup.bin_contamination_check_4 }}, 
-                                                {{ subgroup.bin_contamination_check_5 }}
-                                            </div>
-                                        </div>
-                                        
-                                        {% if subgroup.bin_comment %}
-                                            <div class="nok-comment">
-                                                <small><strong>Comment:</strong> {{ subgroup.bin_comment }}</small>
-                                            </div>
-                                        {% endif %}
-                                    </td>
-
-                                    <!-- Verification Status -->
-                                    <td>
-                                        <div class="d-flex flex-column gap-1">
-                                            <!-- Supervisor Verification -->
-                                            <div class="card border-light mb-1">
-                                                <div class="card-body p-1">
-                                                    <div class="d-flex align-items-center gap-1 mb-1">
-                                                        <small class="text-muted">
-                                                            <span class="hindi-text">सुपरवाइजर</span>Supervisor:
-                                                        </small>
-                                                        {% if subgroup.supervisor_verification %}
-                                                            {% if subgroup.supervisor_verification.status == 'rejected' %}
-                                                                <span class="badge bg-danger">Rejected</span>
-                                                            {% else %}
-                                                                <span class="badge bg-success">Approved</span>
-                                                            {% endif %}
-                                                            <small class="text-muted ms-1">
-                                                                {{ subgroup.supervisor_verification.verified_at|timesince }} ago
-                                                            </small>
-                                                            {% if subgroup.supervisor_verification.comments %}
-                                                                <div class="small text-muted mt-1">
-                                                                    <strong>Comment:</strong> {{ subgroup.supervisor_verification.comments }}
-                                                                </div>
-                                                            {% endif %}
-                                                        {% else %}
-                                                            <span class="badge bg-warning">Pending</span>
-                                                            {% if user.user_type == 'shift_supervisor' %}
-                                                                <button type="button" class="btn btn-sm btn-outline-primary mt-1 toggle-verification-form" 
-                                                                        data-subgroup-id="{{ subgroup.id }}" data-verifier-type="supervisor">
-                                                                    Verify
-                                                                </button>
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                    
-                                            <!-- Quality Verification -->
-                                            <div class="card border-light">
-                                                <div class="card-body p-1">
-                                                    <div class="d-flex align-items-center gap-1 mb-1">
-                                                        <small class="text-muted">
-                                                            <span class="hindi-text">क्वालिटी</span>Quality:
-                                                        </small>
-                                                        {% if subgroup.quality_verification %}
-                                                            {% if subgroup.quality_verification.status == 'rejected' %}
-                                                                <span class="badge bg-danger">Rejected</span>
-                                                            {% else %}
-                                                                <span class="badge bg-success">Approved</span>
-                                                            {% endif %}
-                                                            <small class="text-muted ms-1">
-                                                                {{ subgroup.quality_verification.verified_at|timesince }} ago
-                                                            </small>
-                                                            {% if subgroup.quality_verification.comments %}
-                                                                <div class="small text-muted mt-1">
-                                                                    <strong>Comment:</strong> {{ subgroup.quality_verification.comments }}
-                                                                </div>
-                                                            {% endif %}
-                                                        {% else %}
-                                                            {% if subgroup.supervisor_verification %}
-                                                                {% if subgroup.supervisor_verification.status == 'rejected' %}
-                                                                    <span class="badge bg-secondary">Waiting</span>
-                                                                {% else %}
-                                                                    <span class="badge bg-warning">Pending</span>
-                                                                    {% if user.user_type == 'quality_supervisor' %}
-                                                                        <button type="button" class="btn btn-sm btn-outline-primary mt-1 toggle-verification-form" 
-                                                                                data-subgroup-id="{{ subgroup.id }}" data-verifier-type="quality">
-                                                                            Verify
-                                                                        </button>
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            {% else %}
-                                                                <span class="badge bg-secondary">Waiting</span>
-                                                            {% endif %}
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Inline Verification Form -->
-                                            <div id="verification-form-{{ subgroup.id }}" class="verification-form mt-1" style="display: none;">
-                                                <div class="card border-light bg-dark">
-                                                    <div class="card-body p-1">
-                                                        <form id="inline-verification-form-{{ subgroup.id }}" class="inline-verification-form" 
-                                                              action="{% url 'verify_subgroup_measurement' subgroup.id %}" method="post">
-                                                            {% csrf_token %}
-                                                            <input type="hidden" name="from_ajax" value="1">
-                                                            <input type="hidden" name="verifier_type" id="verifier-type-{{ subgroup.id }}" value="">
-                                                            
-                                                            <div class="mb-1">
-                                                                <label class="form-label small text-muted">
-                                                                    Status <span class="hindi-text">स्थिति</span>
-                                                                </label>
-                                                                <select name="status" class="form-select form-select-sm">
-                                                                    <option value="supervisor_verified">Approved</option>
-                                                                    <option value="rejected">Rejected</option>
-                                                                </select>
-                                                            </div>
-                                                            
-                                                            <div class="mb-1">
-                                                                <label class="form-label small text-muted">
-                                                                    Comments <span class="hindi-text">टिप्पणियां</span>
-                                                                </label>
-                                                                <textarea name="comments" class="form-control form-control-sm" rows="2" 
-                                                                          placeholder="Optional comments"></textarea>
-                                                            </div>
-                                                            
-                                                            <div class="d-flex gap-1 mt-1">
-                                                                <button type="submit" class="btn btn-sm btn-success">
-                                                                    <i class="fas fa-check"></i> Submit
-                                                                </button>
-                                                                <button type="button" class="btn btn-sm btn-secondary cancel-verification">
-                                                                    <i class="fas fa-times"></i> Cancel
-                                                                </button>
-                                                            </div>
-                                                        </form>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <!-- Actions -->
-                                    <td class="text-center">
-                                        <div class="d-flex flex-column gap-1">
-                                            <!-- Edit Button -->
-                                            <a href="{% url 'edit_subgroup' checklist.id subgroup.id %}" 
-                                            class="btn btn-sm btn-outline-primary {% if user.user_type != 'operator' or checklist.status != 'pending' %}disabled{% endif %}">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </a>
-                                            
-                                            <!-- More Detail Button - Shows when there are NOK values or comments -->
-                                            {% if not subgroup.all_checks_passed or subgroup.has_been_edited or subgroup.is_after_maintenance %}
-                                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#detailModal{{ subgroup.id }}">
-                                                    <i class="fas fa-info-circle"></i> More Detail
-                                                </button>
-                                            {% endif %}
-                                            
-                                            {% if subgroup.has_been_edited %}
-                                                <small style="color: orange;">
-                                                    <i class="fas fa-user"></i> {{ subgroup.edited_by.username }}<br>
-                                                    <i class="fas fa-clock"></i> {{ subgroup.last_edited_at|timesince }} ago
-                                                </small>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-
-                                </tr>
-                                
-                                <!-- Show maintenance comment row if exists -->
-                                {% if subgroup.is_after_maintenance %}
-                                <tr class="maintenance-indicator">
-                                    <td colspan="10">
-                                        <div class="comment-box">
-                                            <div class="comment-label">
-                                                <i class="fas fa-tools me-1"></i>Maintenance Activity
-                                                <span class="hindi-text">रखरखाव गतिविधि</span>
-                                            </div>
-                                            <div class="comment-text">
-                                                {{ subgroup.maintenance_comment|default:"No description provided" }}
-                                            </div>
-                                            {% if subgroup.effectiveness_comment %}
-                                            <div class="comment-label mt-2">
-                                                <i class="fas fa-check-circle me-1"></i>Effectiveness Assessment
-                                                <span class="hindi-text">प्रभावशीलता मूल्यांकन</span>
-                                            </div>
-                                            <div class="comment-text">
-                                                {{ subgroup.effectiveness_comment }}
-                                            </div>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                
-                                {% empty %}
-                                <tr>
-                                    <td colspan="10" class="text-center py-3 text-muted">
-                                        <i class="fas fa-clipboard-list fa-2x mb-2 d-block"></i>
-                                        No measurements recorded yet
-                                        <span class="hindi-text">अभी तक कोई माप दर्ज नहीं किया गया है</span>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                
-                                <!-- Add Subgroup Button -->
-                                {% if can_add_subgroup and total_subgroups < shift_max_subgroups and user.user_type == 'operator' and checklist.status == 'pending' %}
-                                <tr class="table-info">
-                                    <td class="text-center fw-bold">{{ total_subgroups|add:1 }}</td>
-                                    <td colspan="9" class="text-center py-3">
-                                        <a href="{% url 'add_subgroup' checklist.id %}" class="btn btn-success btn-lg">
-                                            <i class="fas fa-plus-circle me-2"></i>
-                                            Add Next Subgroup (21 Readings)
-                                            <span class="hindi-text d-block">अगला सबग्रुप जोड़ें (21 रीडिंग)</span>
-                                        </a>
-                                        <br>
-                                        <small class="text-muted mt-2">
-                                            Record: 5 UV vacuum, 5 UV flow, 5 umbrella valve, 5 UV clip, 1 workstation, 5 bin checks
-                                            <span class="hindi-text">रिकॉर्ड: 5 यूवी वैक्यूम, 5 यूवी फ्लो, 5 अम्ब्रेला वाल्व, 5 यूवी क्लिप, 1 वर्कस्टेशन, 5 बिन चेक</span>
-                                        </small>
-                                    </td>
-                                </tr>
-                                {% endif %}
-                                
-                                <!-- Future subgroup slots -->
-                                {% if remaining_subgroups > 0 %}
-                                    {% for i in "123456"|make_list %}
-                                        {% with slot_num=forloop.counter|add:total_subgroups %}
-                                            {% if slot_num <= shift_max_subgroups and slot_num > total_subgroups %}
-                                                <tr class="table-light text-muted">
-                                                    <td class="text-center fw-bold">{{ slot_num }}</td>
-                                                    <td colspan="9" class="text-center py-2">
-                                                        <i class="fas fa-clock me-1"></i>
-                                                        Scheduled for later
-                                                        <span class="hindi-text">बाद के लिए निर्धारित</span>
-                                                    </td>
-                                                </tr>
-                                            {% endif %}
-                                        {% endwith %}
-                                    {% endfor %}
-                                {% endif %}
-                            </tbody>
 
 
-
-
-                       </table>
-                    </div>
-
-<!-- Detail Modals for each subgroup -->
-{% for subgroup in subgroups %}
-<div class="modal fade" id="detailModal{{ subgroup.id }}" tabindex="-1" aria-labelledby="detailModalLabel{{ subgroup.id }}" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content" style="background-color: #111; color: white; border: 2px solid white;">
-            <div class="modal-header" style="border-bottom: 2px solid white;">
-                <h5 class="modal-title" id="detailModalLabel{{ subgroup.id }}">
-                    <i class="fas fa-clipboard-list"></i> Subgroup #{{ subgroup.subgroup_number }} Details
-                    {% if subgroup.has_been_edited %}
-                        <span class="badge bg-warning text-dark"><i class="fas fa-edit"></i> Edited</span>
-                    {% endif %}
-                    {% if subgroup.is_after_maintenance %}
-                        <span class="badge" style="background-color: #FFA500;"><i class="fas fa-tools"></i> Post-Maintenance</span>
-                    {% endif %}
+<!-- ENHANCED: Parameter Entries Section with Verification -->
+{% if parameter_entries or can_add_parameters %}
+<div class="row mb-reduced">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 section-title">
+                    <i class="fas fa-list-alt"></i> Parameter Entries with Verification
+                    <span class="section-title-hindi">पैरामीटर प्रविष्टियाँ और सत्यापन</span>
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-2">
-                
-                <!-- Compact Status Overview -->
-                <div class="alert {% if subgroup.all_checks_passed %}alert-success{% else %}alert-danger{% endif %} mb-2 py-2">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <strong>Time:</strong> {{ subgroup.timestamp|date:"Y-m-d H:i" }} | 
-                            <strong>Status:</strong> {% if subgroup.all_checks_passed %}✓ Passed{% else %}✗ Has Issues{% endif %}
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <strong>Completion:</strong> {{ subgroup.total_readings_count }}/21 ({{ subgroup.completion_percentage|floatformat:0 }}%)
-                        </div>
-                    </div>
-                </div>
-
-                <!-- UV Vacuum Test -->
-                <div class="card mb-2" style="background-color: #1a1a1a;">
-                    <div class="card-header py-1" style="background-color: {% if subgroup.validation_status.uv_vacuum_test_ok %}#28a745{% else %}#dc3545{% endif %};">
-                        <small><strong>UV Vacuum Test (kPa)</strong> - Range: -43 to -35 | Avg: 
-                            <span class="badge bg-dark">{{ subgroup.uv_vacuum_average|floatformat:2 }}</span>
-                        </small>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="row g-1">
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_1 and -43 <= subgroup.uv_vacuum_test_1 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#1</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_vacuum_test_1|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_vacuum_test_1_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_vacuum_test_1_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_2 and -43 <= subgroup.uv_vacuum_test_2 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#2</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_vacuum_test_2|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_vacuum_test_2_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_vacuum_test_2_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_3 and -43 <= subgroup.uv_vacuum_test_3 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#3</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_vacuum_test_3|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_vacuum_test_3_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_vacuum_test_3_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_4 and -43 <= subgroup.uv_vacuum_test_4 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#4</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_vacuum_test_4|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_vacuum_test_4_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_vacuum_test_4_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_vacuum_test_5 and -43 <= subgroup.uv_vacuum_test_5 <= -35 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#5</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_vacuum_test_5|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_vacuum_test_5_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_vacuum_test_5_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- UV Flow Value -->
-                <div class="card mb-2" style="background-color: #1a1a1a;">
-                    <div class="card-header py-1" style="background-color: {% if subgroup.validation_status.uv_flow_value_ok %}#28a745{% else %}#dc3545{% endif %};">
-                        <small><strong>UV Flow Value (LPM)</strong> - Range: 30-40 | Avg: 
-                            <span class="badge bg-dark">{{ subgroup.uv_flow_average|floatformat:2 }}</span>
-                        </small>
-                    </div>
-                    <div class="card-body p-2">
-                        <div class="row g-1">
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_flow_value_1 and 30 <= subgroup.uv_flow_value_1 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#1</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_flow_value_1|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_flow_value_1_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_flow_value_1_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_flow_value_2 and 30 <= subgroup.uv_flow_value_2 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#2</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_flow_value_2|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_flow_value_2_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_flow_value_2_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_flow_value_3 and 30 <= subgroup.uv_flow_value_3 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#3</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_flow_value_3|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_flow_value_3_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_flow_value_3_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_flow_value_4 and 30 <= subgroup.uv_flow_value_4 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#4</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_flow_value_4|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_flow_value_4_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_flow_value_4_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="col">
-                                <div class="text-center p-1 {% if subgroup.uv_flow_value_5 and 30 <= subgroup.uv_flow_value_5 <= 40 %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                    <small class="d-block"><strong>#5</strong></small>
-                                    <small class="d-block">{{ subgroup.uv_flow_value_5|floatformat:2|default:"-" }}</small>
-                                    {% if subgroup.uv_flow_value_5_comment %}
-                                    <div class="mt-1 px-1" style="background-color: rgba(255,193,7,0.2); border-radius: 3px;">
-                                        <small class="text-warning d-block" style="font-size: 9px; line-height: 1.2;">
-                                            {{ subgroup.uv_flow_value_5_comment|truncatewords:5 }}
-                                        </small>
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- OK/NOK Checks -->
-                <div class="row g-1 mb-2">
-                    <!-- Umbrella Valve -->
-                    <div class="col-md-6">
-                        <div class="card h-100" style="background-color: #1a1a1a;">
-                            <div class="card-header py-1" style="background-color: {% if subgroup.umbrella_valve_ok_count == 5 %}#28a745{% else %}#dc3545{% endif %};">
-                                <small><strong>Umbrella Valve</strong> ({{ subgroup.umbrella_valve_ok_count }}/5 OK)</small>
-                            </div>
-                            <div class="card-body p-1">
-                                <div class="d-flex gap-1">
-                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_1 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_1|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_2 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_2|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_3 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_3|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_4 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_4|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.umbrella_valve_assembly_5 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.umbrella_valve_assembly_5|default:"-" }}</small>
-                                    </div>
-                                </div>
-                                {% if subgroup.umbrella_valve_comment %}
-                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
-                                    <small class="text-warning d-block" style="font-size: 10px;">
-                                        <strong>Comment:</strong> {{ subgroup.umbrella_valve_comment }}
-                                    </small>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- UV Clip -->
-                    <div class="col-md-6">
-                        <div class="card h-100" style="background-color: #1a1a1a;">
-                            <div class="card-header py-1" style="background-color: {% if subgroup.uv_clip_ok_count == 5 %}#28a745{% else %}#dc3545{% endif %};">
-                                <small><strong>UV Clip Pressing</strong> ({{ subgroup.uv_clip_ok_count }}/5 OK)</small>
-                            </div>
-                            <div class="card-body p-1">
-                                <div class="d-flex gap-1">
-                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_1 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.uv_clip_pressing_1|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_2 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.uv_clip_pressing_2|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_3 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.uv_clip_pressing_3|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_4 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.uv_clip_pressing_4|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.uv_clip_pressing_5 == 'OK' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.uv_clip_pressing_5|default:"-" }}</small>
-                                    </div>
-                                </div>
-                                {% if subgroup.uv_clip_comment %}
-                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
-                                    <small class="text-warning d-block" style="font-size: 10px;">
-                                        <strong>Comment:</strong> {{ subgroup.uv_clip_comment }}
-                                    </small>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Cleanliness -->
-                <div class="row g-1 mb-2">
-                    <div class="col-md-4">
-                        <div class="card" style="background-color: #1a1a1a;">
-                            <div class="card-header py-1 bg-secondary">
-                                <small><strong>Workstation</strong></small>
-                            </div>
-                            <div class="card-body p-2 text-center">
-                                <span class="badge {% if subgroup.workstation_clean == 'Yes' %}bg-success{% else %}bg-danger{% endif %}">
-                                    {{ subgroup.workstation_clean|default:"-" }}
-                                </span>
-                                {% if subgroup.workstation_comment %}
-                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
-                                    <small class="text-warning d-block" style="font-size: 10px;">
-                                        {{ subgroup.workstation_comment }}
-                                    </small>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-8">
-                        <div class="card" style="background-color: #1a1a1a;">
-                            <div class="card-header py-1 bg-secondary">
-                                <small><strong>Bin Contamination</strong> ({{ subgroup.bin_contamination_yes_count }}/5 Yes)</small>
-                            </div>
-                            <div class="card-body p-1">
-                                <div class="d-flex gap-1">
-                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_1 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.bin_contamination_check_1|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_2 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.bin_contamination_check_2|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_3 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.bin_contamination_check_3|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_4 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.bin_contamination_check_4|default:"-" }}</small>
-                                    </div>
-                                    <div class="flex-fill text-center p-1 {% if subgroup.bin_contamination_check_5 == 'Yes' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 rounded">
-                                        <small class="d-block">{{ subgroup.bin_contamination_check_5|default:"-" }}</small>
-                                    </div>
-                                </div>
-                                {% if subgroup.bin_comment %}
-                                <div class="mt-2 p-1" style="background-color: rgba(255,193,7,0.1); border-radius: 3px;">
-                                    <small class="text-warning d-block" style="font-size: 10px;">
-                                        <strong>Comment:</strong> {{ subgroup.bin_comment }}
-                                    </small>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Maintenance Info -->
-                {% if subgroup.is_after_maintenance %}
-                <div class="alert alert-warning py-2 mb-2">
-                    <small>
-                        <strong><i class="fas fa-tools"></i> Maintenance:</strong> {{ subgroup.maintenance_comment }}
-                        {% if subgroup.effectiveness_comment %}
-                        <br><strong>Effectiveness:</strong> {{ subgroup.effectiveness_comment }}
-                        {% endif %}
-                    </small>
-                </div>
+                {% if can_add_parameters %}
+                <a href="{% url 'fill_parameter_group' checklist.id %}" class="btn btn-success">
+                    <i class="fas fa-edit"></i> 
+                    Fill Parameters
+                    <span class="hindi-text">पैरामीटर भरें</span>
+                </a>
                 {% endif %}
-
-                <!-- Edit History -->
-                {% if subgroup.has_been_edited %}
-                <div class="card" style="background-color: #1a1a1a;">
-                    <div class="card-header py-1 bg-warning text-dark">
-                        <small><strong><i class="fas fa-history"></i> Edit History</strong> - Last: {{ subgroup.last_edited_at|timesince }} ago by {{ subgroup.edited_by.username }}</small>
+            </div>
+            <div class="card-body">
+                {% if parameter_entries %}
+                    <!-- Statistics Bar -->
+                    <div style="background: linear-gradient(145deg, #CC0000, #990000); padding: 12px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-around;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #fff;">{{ parameter_entries.count }}</div>
+                            <div style="font-size: 0.85rem; color: #ddd;">Total Entries <span class="hindi-text">कुल प्रविष्टियाँ</span></div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #fff;">{{ parameter_metrics.total_count }}</div>
+                            <div style="font-size: 0.85rem; color: #ddd;">Parameters <span class="hindi-text">पैरामीटर</span></div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 1.5rem; font-weight: bold; color: #fff;">{{ parameter_metrics.completion_percentage }}%</div>
+                            <div style="font-size: 0.85rem; color: #ddd;">Complete <span class="hindi-text">पूर्ण</span></div>
+                        </div>
                     </div>
-                    <div class="card-body p-2">
-                        <div class="table-responsive" style="max-height: 150px; overflow-y: auto;">
-                            <table class="table table-sm table-dark table-striped mb-0">
-                                <thead class="sticky-top" style="background-color: #1a1a1a;">
+
+                    {% for param_data in parameter_entries_grouped %}
+                    <div style="background: linear-gradient(145deg, #1a1a1a, #0d0d0d); border: 2px solid #28a745; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                        <!-- Parameter Header with Verification Stats -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #444; padding-bottom: 10px;">
+                            <div>
+                                <span style="font-size: 1.2rem; font-weight: bold; color: #fff;">
+                                    <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                                    {{ param_data.display_name }}
+                                </span>
+                                <span style="background: #CC0000; color: white; padding: 3px 12px; border-radius: 15px; font-size: 0.8rem; margin-left: 10px;">
+                                    {{ param_data.entry_count }} entries
+                                </span>
+                                {% if param_data.has_range %}
+                                <span style="background: rgba(40, 167, 69, 0.2); border: 1px solid #28a745; color: #28a745; padding: 3px 12px; border-radius: 15px; font-size: 0.75rem; margin-left: 5px;">
+                                    ✓ Range: {{ param_data.range_text }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                        </div>
+                        
+                        <!-- Entries Table -->
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm" style="margin-bottom: 0; background: #000;">
+                                <thead style="background: #222; color: white;">
                                     <tr>
-                                        <th style="font-size: 11px;">Field</th>
-                                        <th style="font-size: 11px;">From → To</th>
-                                        <th style="font-size: 11px;">By</th>
-                                        <th style="font-size: 11px;">When</th>
+                                        <th style="width: 4%; text-align: center; vertical-align: middle;">Entry<br>#</th>
+                                        <th style="width: 10%; vertical-align: middle;">Time<br>Submitted</th>
+                                        
+                                        <!-- Dynamic headers based on parameter type -->
+                                        {% if param_data.parameter_group == 'uv_vacuum' %}
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R1<br>(kPa)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R2<br>(kPa)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R3<br>(kPa)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R4<br>(kPa)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R5<br>(kPa)</th>
+                                        
+                                        {% elif param_data.parameter_group == 'uv_flow' %}
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R1<br>(LPM)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R2<br>(LPM)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R3<br>(LPM)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R4<br>(LPM)</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">R5<br>(LPM)</th>
+                                        
+                                        {% elif param_data.parameter_group == 'umbrella_valve' %}
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 1</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 2</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 3</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 4</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 5</th>
+                                        
+                                        {% elif param_data.parameter_group == 'uv_clip' %}
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 1</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 2</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 3</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 4</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Check 5</th>
+                                        
+                                        {% elif param_data.parameter_group == 'workstation' %}
+                                        <th style="width: 15%; text-align: center; vertical-align: middle;">Status</th>
+                                        
+                                        {% elif param_data.parameter_group == 'bin_contamination' %}
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Bin 1</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Bin 2</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Bin 3</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Bin 4</th>
+                                        <th style="width: 8%; text-align: center; vertical-align: middle;">Bin 5</th>
+                                        {% endif %}
+                                        
+                                        <th style="width: 15%; text-align: center; vertical-align: middle;">Comments</th>
+                                        <th style="width: 12%; text-align: center; vertical-align: middle;">Verification</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for edit in subgroup.edit_history.all|slice:":10" %}
-                                    <tr>
-                                        <td style="font-size: 10px;">{{ edit.field_name }}</td>
-                                        <td style="font-size: 10px;">
-                                            <span class="badge bg-secondary">{{ edit.old_value|default:"—" }}</span>
-                                            <i class="fas fa-arrow-right" style="font-size: 8px;"></i>
-                                            <span class="badge bg-primary">{{ edit.new_value|default:"—" }}</span>
+                                    {% for entry in param_data.entries %}
+                                    <tr style="{% if entry.is_after_maintenance %}background-color: rgba(255, 193, 7, 0.15);{% else %}background: #1a1a1a;{% endif %}">
+                                        <!-- Entry Number -->
+                                        <td class="text-center fw-bold" style="color: #ffc107; font-size: 1.1rem; vertical-align: middle;">
+                                            {{ forloop.counter }}
                                         </td>
-                                        <td style="font-size: 10px;">{{ edit.edited_by.username }}</td>
-                                        <td style="font-size: 10px;">{{ edit.edited_at|timesince }}</td>
+                                        
+                                        <!-- Timestamp -->
+                                        <td style="color: white; vertical-align: middle; font-size: 0.85rem;">
+                                            <div><i class="fas fa-calendar"></i> {{ entry.timestamp|date:"d M Y" }}</div>
+                                            <div><i class="fas fa-clock"></i> {{ entry.timestamp|date:"H:i:s" }}</div>
+                                            {% if entry.is_after_maintenance %}
+                                            <div class="mt-1">
+                                                <span class="badge bg-warning text-dark" style="font-size: 0.7rem;">
+                                                    <i class="fas fa-tools"></i> After Maintenance
+                                                </span>
+                                            </div>
+                                            {% endif %}
+                                        </td>
+                                        
+                                        <!-- Parameter Values (UV Vacuum) -->
+                                        {% if param_data.parameter_group == 'uv_vacuum' %}
+                                            {% with r1=entry.uv_vacuum_test_1 r2=entry.uv_vacuum_test_2 r3=entry.uv_vacuum_test_3 r4=entry.uv_vacuum_test_4 r5=entry.uv_vacuum_test_5 %}
+                                            <td class="text-center" style="{% if r1 and r1 > -35 or r1 and r1 < -43 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r1 %}{{ r1 }}{% if r1 > -35 or r1 < -43 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r2 and r2 > -35 or r2 and r2 < -43 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r2 %}{{ r2 }}{% if r2 > -35 or r2 < -43 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r3 and r3 > -35 or r3 and r3 < -43 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r3 %}{{ r3 }}{% if r3 > -35 or r3 < -43 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r4 and r4 > -35 or r4 and r4 < -43 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r4 %}{{ r4 }}{% if r4 > -35 or r4 < -43 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r5 and r5 > -35 or r5 and r5 < -43 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r5 %}{{ r5 }}{% if r5 > -35 or r5 < -43 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            {% endwith %}
+                                        
+                                        <!-- Parameter Values (UV Flow) -->
+                                        {% elif param_data.parameter_group == 'uv_flow' %}
+                                            {% with r1=entry.uv_flow_value_1 r2=entry.uv_flow_value_2 r3=entry.uv_flow_value_3 r4=entry.uv_flow_value_4 r5=entry.uv_flow_value_5 %}
+                                            <td class="text-center" style="{% if r1 and r1 < 30 or r1 and r1 > 40 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r1 %}{{ r1 }}{% if r1 < 30 or r1 > 40 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r2 and r2 < 30 or r2 and r2 > 40 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r2 %}{{ r2 }}{% if r2 < 30 or r2 > 40 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r3 and r3 < 30 or r3 and r3 > 40 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r3 %}{{ r3 }}{% if r3 < 30 or r3 > 40 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r4 and r4 < 30 or r4 and r4 > 40 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r4 %}{{ r4 }}{% if r4 < 30 or r4 > 40 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            <td class="text-center" style="{% if r5 and r5 < 30 or r5 and r5 > 40 %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} color: white; font-weight: bold; font-size: 0.95rem; vertical-align: middle;">
+                                                {% if r5 %}{{ r5 }}{% if r5 < 30 or r5 > 40 %}<br><small style="color: #ff6b6b;">⚠️ Out</small>{% endif %}{% else %}<span style="color: #666;">—</span>{% endif %}
+                                            </td>
+                                            {% endwith %}
+                                        
+                                        <!-- Parameter Values (Umbrella Valve) -->
+                                        {% elif param_data.parameter_group == 'umbrella_valve' %}
+                                        <td class="text-center" style="{% if entry.umbrella_valve_assembly_1 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.umbrella_valve_assembly_1 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.umbrella_valve_assembly_1|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.umbrella_valve_assembly_2 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.umbrella_valve_assembly_2 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.umbrella_valve_assembly_2|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.umbrella_valve_assembly_3 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.umbrella_valve_assembly_3 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.umbrella_valve_assembly_3|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.umbrella_valve_assembly_4 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.umbrella_valve_assembly_4 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.umbrella_valve_assembly_4|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.umbrella_valve_assembly_5 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.umbrella_valve_assembly_5 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.umbrella_valve_assembly_5|default:"—" }}
+                                            </span>
+                                        </td>
+                                        
+                                        <!-- Parameter Values (UV Clip) -->
+                                        {% elif param_data.parameter_group == 'uv_clip' %}
+                                        <td class="text-center" style="{% if entry.uv_clip_pressing_1 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.uv_clip_pressing_1 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.uv_clip_pressing_1|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.uv_clip_pressing_2 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.uv_clip_pressing_2 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.uv_clip_pressing_2|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.uv_clip_pressing_3 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.uv_clip_pressing_3 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.uv_clip_pressing_3|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.uv_clip_pressing_4 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.uv_clip_pressing_4 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.uv_clip_pressing_4|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.uv_clip_pressing_5 == 'NOK' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.uv_clip_pressing_5 == 'OK' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.uv_clip_pressing_5|default:"—" }}
+                                            </span>
+                                        </td>
+                                        
+                                        <!-- Parameter Values (Workstation) -->
+                                        {% elif param_data.parameter_group == 'workstation' %}
+                                        <td class="text-center" style="{% if entry.workstation_clean == 'No' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.workstation_clean == 'Yes' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 1rem; padding: 8px 20px;">
+                                                {{ entry.workstation_clean|default:"—" }}
+                                            </span>
+                                        </td>
+                                        
+                                        <!-- Parameter Values (Bin Contamination) -->
+                                        {% elif param_data.parameter_group == 'bin_contamination' %}
+                                        <td class="text-center" style="{% if entry.bin_contamination_check_1 == 'No' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.bin_contamination_check_1 == 'Yes' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.bin_contamination_check_1|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.bin_contamination_check_2 == 'No' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.bin_contamination_check_2 == 'Yes' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.bin_contamination_check_2|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.bin_contamination_check_3 == 'No' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.bin_contamination_check_3 == 'Yes' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.bin_contamination_check_3|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.bin_contamination_check_4 == 'No' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.bin_contamination_check_4 == 'Yes' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.bin_contamination_check_4|default:"—" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center" style="{% if entry.bin_contamination_check_5 == 'No' %}background-color: rgba(220, 53, 69, 0.3); border: 2px solid #dc3545;{% endif %} vertical-align: middle;">
+                                            <span class="badge {% if entry.bin_contamination_check_5 == 'Yes' %}bg-success{% else %}bg-danger{% endif %}" style="font-size: 0.85rem; padding: 5px 10px;">
+                                                {{ entry.bin_contamination_check_5|default:"—" }}
+                                            </span>
+                                        </td>
+                                        {% endif %}
+                                        
+                                        <!-- Comments Column (Condensed) -->
+                                        <td style="vertical-align: middle; padding: 8px; background: rgba(0,0,0,0.3); font-size: 0.8rem;">
+                                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                                {% if param_data.parameter_group == 'uv_vacuum' %}
+                                                    {% if entry.uv_vacuum_test_1_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R1:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_vacuum_test_1_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_vacuum_test_2_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R2:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_vacuum_test_2_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_vacuum_test_3_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R3:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_vacuum_test_3_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_vacuum_test_4_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R4:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_vacuum_test_4_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_vacuum_test_5_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R5:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_vacuum_test_5_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                {% elif param_data.parameter_group == 'uv_flow' %}
+                                                    {% if entry.uv_flow_value_1_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R1:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_flow_value_1_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_flow_value_2_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R2:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_flow_value_2_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_flow_value_3_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R3:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_flow_value_3_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_flow_value_4_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R4:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_flow_value_4_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_flow_value_5_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">R5:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_flow_value_5_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                {% elif param_data.parameter_group == 'umbrella_valve' %}
+                                                    {% if entry.umbrella_valve_assembly_1_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C1:</strong> <span style="color: #fff; font-style: italic;">{{ entry.umbrella_valve_assembly_1_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.umbrella_valve_assembly_2_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C2:</strong> <span style="color: #fff; font-style: italic;">{{ entry.umbrella_valve_assembly_2_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.umbrella_valve_assembly_3_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C3:</strong> <span style="color: #fff; font-style: italic;">{{ entry.umbrella_valve_assembly_3_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.umbrella_valve_assembly_4_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C4:</strong> <span style="color: #fff; font-style: italic;">{{ entry.umbrella_valve_assembly_4_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.umbrella_valve_assembly_5_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C5:</strong> <span style="color: #fff; font-style: italic;">{{ entry.umbrella_valve_assembly_5_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                {% elif param_data.parameter_group == 'uv_clip' %}
+                                                    {% if entry.uv_clip_pressing_1_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C1:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_clip_pressing_1_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_clip_pressing_2_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C2:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_clip_pressing_2_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_clip_pressing_3_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C3:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_clip_pressing_3_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_clip_pressing_4_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C4:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_clip_pressing_4_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.uv_clip_pressing_5_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">C5:</strong> <span style="color: #fff; font-style: italic;">{{ entry.uv_clip_pressing_5_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                {% elif param_data.parameter_group == 'workstation' %}
+                                                    {% if entry.workstation_clean_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">Note:</strong> <span style="color: #fff; font-style: italic;">{{ entry.workstation_clean_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                {% elif param_data.parameter_group == 'bin_contamination' %}
+                                                    {% if entry.bin_contamination_check_1_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">B1:</strong> <span style="color: #fff; font-style: italic;">{{ entry.bin_contamination_check_1_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.bin_contamination_check_2_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">B2:</strong> <span style="color: #fff; font-style: italic;">{{ entry.bin_contamination_check_2_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.bin_contamination_check_3_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">B3:</strong> <span style="color: #fff; font-style: italic;">{{ entry.bin_contamination_check_3_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.bin_contamination_check_4_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">B4:</strong> <span style="color: #fff; font-style: italic;">{{ entry.bin_contamination_check_4_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                    {% if entry.bin_contamination_check_5_comment %}<div style="background: rgba(255, 193, 7, 0.15); border-left: 2px solid #ffc107; padding: 4px 6px; border-radius: 3px;"><strong style="color: #ffc107;">B5:</strong> <span style="color: #fff; font-style: italic;">{{ entry.bin_contamination_check_5_comment|truncatewords:5 }}</span></div>{% endif %}
+                                                {% endif %}
+                                                
+                                                {% if entry.is_after_maintenance and entry.maintenance_comment %}
+                                                <div style="background: rgba(255, 193, 7, 0.25); border-left: 2px solid #ff9800; padding: 4px 6px; border-radius: 3px; margin-top: 3px;">
+                                                    <strong style="color: #ff9800;"><i class="fas fa-tools"></i></strong> 
+                                                    <span style="color: #fff; font-style: italic;">{{ entry.maintenance_comment|truncatewords:5 }}</span>
+                                                </div>
+                                                {% endif %}
+                                                
+                                                {% if not entry.uv_vacuum_test_1_comment and not entry.uv_vacuum_test_2_comment and not entry.uv_vacuum_test_3_comment and not entry.uv_vacuum_test_4_comment and not entry.uv_vacuum_test_5_comment and not entry.uv_flow_value_1_comment and not entry.uv_flow_value_2_comment and not entry.uv_flow_value_3_comment and not entry.uv_flow_value_4_comment and not entry.uv_flow_value_5_comment and not entry.umbrella_valve_assembly_1_comment and not entry.umbrella_valve_assembly_2_comment and not entry.umbrella_valve_assembly_3_comment and not entry.umbrella_valve_assembly_4_comment and not entry.umbrella_valve_assembly_5_comment and not entry.uv_clip_pressing_1_comment and not entry.uv_clip_pressing_2_comment and not entry.uv_clip_pressing_3_comment and not entry.uv_clip_pressing_4_comment and not entry.uv_clip_pressing_5_comment and not entry.workstation_clean_comment and not entry.bin_contamination_check_1_comment and not entry.bin_contamination_check_2_comment and not entry.bin_contamination_check_3_comment and not entry.bin_contamination_check_4_comment and not entry.bin_contamination_check_5_comment and not entry.maintenance_comment %}
+                                                <div style="color: #666; font-style: italic; text-align: center; padding: 8px;">
+                                                    <i class="fas fa-check-circle"></i> No issues
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        
+                                        <!-- VERIFICATION COLUMN - FIXED VERSION -->
+                                        <td style="vertical-align: middle; padding: 6px; background: rgba(0,0,0,0.5);">
+                                            {% if entry.is_fully_verified %}
+                                                <!-- Fully Verified -->
+                                                <div class="text-center">
+                                                    {% if entry.supervisor_verification.status == 'approved' and entry.quality_verification.status == 'approved' %}
+                                                        <span class="badge bg-success" style="font-size: 0.75rem; padding: 5px 8px; display: block; margin-bottom: 5px;">
+                                                            <i class="fas fa-check-double"></i> Approved
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger" style="font-size: 0.75rem; padding: 5px 8px; display: block; margin-bottom: 5px;">
+                                                            <i class="fas fa-times-circle"></i> Rejected
+                                                        </span>
+                                                    {% endif %}
+                                                    
+                                                    <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#verify-{{ entry.id }}" style="font-size: 0.7rem; padding: 3px 8px;">
+                                                        <i class="fas fa-eye"></i> Details
+                                                    </button>
+                                                    
+                                                    <div class="collapse mt-2" id="verify-{{ entry.id }}">
+                                                        <div style="background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px; text-align: left; font-size: 0.7rem;">
+                                                            <!-- Supervisor Verification Details -->
+                                                            <div class="mb-2" style="border-bottom: 1px solid #444; padding-bottom: 5px;">
+                                                                <strong style="color: #ffc107;">
+                                                                    <i class="fas fa-user-tie"></i> Supervisor:
+                                                                </strong>
+                                                                <div style="margin-left: 0.5rem; margin-top: 3px;">
+                                                                    {% if entry.supervisor_verification.status == 'approved' %}
+                                                                        <span class="badge bg-success" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-check"></i> Approved
+                                                                        </span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-danger" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-times"></i> Rejected
+                                                                        </span>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <div style="color: #999; font-size: 0.65rem; margin-left: 0.5rem; margin-top: 2px;">
+                                                                    {{ entry.supervisor_verification.verified_by.get_full_name|default:entry.supervisor_verification.verified_by.username }}
+                                                                </div>
+                                                                <div style="color: #999; font-size: 0.65rem; margin-left: 0.5rem;">
+                                                                    {{ entry.supervisor_verification.verified_at|date:"d M, H:i" }}
+                                                                </div>
+                                                                {% if entry.supervisor_verification.comment %}
+                                                                <div style="color: #aaa; font-style: italic; margin-left: 0.5rem; margin-top: 3px; background: rgba(255,255,255,0.05); padding: 3px 5px; border-radius: 3px;">
+                                                                    "{{ entry.supervisor_verification.comment|truncatewords:10 }}"
+                                                                </div>
+                                                                {% endif %}
+                                                            </div>
+                                                            
+                                                            <!-- Quality Verification Details -->
+                                                            <div>
+                                                                <strong style="color: #17a2b8;">
+                                                                    <i class="fas fa-award"></i> Quality:
+                                                                </strong>
+                                                                <div style="margin-left: 0.5rem; margin-top: 3px;">
+                                                                    {% if entry.quality_verification.status == 'approved' %}
+                                                                        <span class="badge bg-success" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-check"></i> Approved
+                                                                        </span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-danger" style="font-size: 0.65rem;">
+                                                                            <i class="fas fa-times"></i> Rejected
+                                                                        </span>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <div style="color: #999; font-size: 0.65rem; margin-left: 0.5rem; margin-top: 2px;">
+                                                                    {{ entry.quality_verification.verified_by.get_full_name|default:entry.quality_verification.verified_by.username }}
+                                                                </div>
+                                                                <div style="color: #999; font-size: 0.65rem; margin-left: 0.5rem;">
+                                                                    {{ entry.quality_verification.verified_at|date:"d M, H:i" }}
+                                                                </div>
+                                                                {% if entry.quality_verification.comment %}
+                                                                <div style="color: #aaa; font-style: italic; margin-left: 0.5rem; margin-top: 3px; background: rgba(255,255,255,0.05); padding: 3px 5px; border-radius: 3px;">
+                                                                    "{{ entry.quality_verification.comment|truncatewords:10 }}"
+                                                                </div>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                            {% elif entry.is_supervisor_verified %}
+                                                <!-- Supervisor Verified, Quality Pending -->
+                                                <div class="text-center">
+                                                    <!-- Show supervisor status with color -->
+                                                    {% if entry.supervisor_verification.status == 'approved' %}
+                                                        <span class="badge bg-success" style="font-size: 0.7rem; padding: 4px 6px; display: block; margin-bottom: 5px;">
+                                                            <i class="fas fa-check"></i> Sup: Approved
+                                                        </span>
+                                                    {% else %}
+                                                        <span class="badge bg-danger" style="font-size: 0.7rem; padding: 4px 6px; display: block; margin-bottom: 5px;">
+                                                            <i class="fas fa-times"></i> Sup: Rejected
+                                                        </span>
+                                                    {% endif %}
+                                                    
+                                                    {% if can_verify_quality %}
+                                                    <button class="btn btn-sm btn-info" type="button" data-bs-toggle="collapse" data-bs-target="#quality-form-{{ entry.id }}" style="font-size: 0.7rem; padding: 3px 8px;">
+                                                        <i class="fas fa-clipboard-check"></i> Verify
+                                                    </button>
+                                                    
+                                                    <div class="collapse mt-2" id="quality-form-{{ entry.id }}">
+                                                        <form method="post" action="{% url 'verify_parameter_entry' entry.id %}" style="background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;">
+                                                            {% csrf_token %}
+                                                            
+                                                            <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                                                                <input type="radio" class="btn-check" name="status" id="q-approve-{{ entry.id }}" value="approved" required>
+                                                                <label class="btn btn-outline-success" for="q-approve-{{ entry.id }}" style="font-size: 0.7rem; padding: 3px;">
+                                                                    <i class="fas fa-check"></i>
+                                                                </label>
+                                                                
+                                                                <input type="radio" class="btn-check" name="status" id="q-reject-{{ entry.id }}" value="rejected" required>
+                                                                <label class="btn btn-outline-danger" for="q-reject-{{ entry.id }}" style="font-size: 0.7rem; padding: 3px;">
+                                                                    <i class="fas fa-times"></i>
+                                                                </label>
+                                                            </div>
+                                                            
+                                                            <textarea 
+                                                                class="form-control form-control-sm mb-2" 
+                                                                name="comment" 
+                                                                rows="2" 
+                                                                placeholder="Comment (optional)"
+                                                                style="font-size: 0.7rem; background: rgba(0,0,0,0.7); color: white; border-color: #444;"
+                                                            ></textarea>
+                                                            
+                                                            <button type="submit" class="btn btn-sm btn-info w-100" style="font-size: 0.7rem; padding: 3px;">
+                                                                <i class="fas fa-check-circle"></i> Submit
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                    {% else %}
+                                                    <div style="font-size: 0.65rem; color: #aaa; margin-top: 5px;">
+                                                        <i class="fas fa-hourglass-half"></i> Quality Pending
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                
+                                            {% else %}
+                                                <!-- Supervisor Verification Pending -->
+                                                {% if can_verify_supervisor %}
+                                                <div class="text-center">
+                                                    <button class="btn btn-sm btn-warning" type="button" data-bs-toggle="collapse" data-bs-target="#supervisor-form-{{ entry.id }}" style="font-size: 0.7rem; padding: 3px 8px;">
+                                                        <i class="fas fa-clipboard-check"></i> Verify
+                                                    </button>
+                                                    
+                                                    <div class="collapse mt-2" id="supervisor-form-{{ entry.id }}">
+                                                        <form method="post" action="{% url 'verify_parameter_entry' entry.id %}" style="background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;">
+                                                            {% csrf_token %}
+                                                            
+                                                            <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                                                                <input type="radio" class="btn-check" name="status" id="s-approve-{{ entry.id }}" value="approved" required>
+                                                                <label class="btn btn-outline-success" for="s-approve-{{ entry.id }}" style="font-size: 0.7rem; padding: 3px;">
+                                                                    <i class="fas fa-check"></i>
+                                                                </label>
+                                                                
+                                                                <input type="radio" class="btn-check" name="status" id="s-reject-{{ entry.id }}" value="rejected" required>
+                                                                <label class="btn btn-outline-danger" for="s-reject-{{ entry.id }}" style="font-size: 0.7rem; padding: 3px;">
+                                                                    <i class="fas fa-times"></i>
+                                                                </label>
+                                                            </div>
+                                                            
+                                                            <textarea 
+                                                                class="form-control form-control-sm mb-2" 
+                                                                name="comment" 
+                                                                rows="2" 
+                                                                placeholder="Comment (optional)"
+                                                                style="font-size: 0.7rem; background: rgba(0,0,0,0.7); color: white; border-color: #444;"
+                                                            ></textarea>
+                                                            
+                                                            <button type="submit" class="btn btn-sm btn-warning w-100" style="font-size: 0.7rem; padding: 3px;">
+                                                                <i class="fas fa-check-circle"></i> Submit
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <div class="text-center">
+                                                    <span class="badge bg-secondary" style="font-size: 0.7rem; padding: 4px 6px;">
+                                                        <i class="fas fa-hourglass-half"></i> Pending
+                                                    </span>
+                                                </div>
+                                                {% endif %}
+                                            {% endif %}
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                </div>
+                    {% endfor %}
+                    
+                {% else %}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox" style="font-size: 4rem; color: #444;"></i>
+                        <h5 class="mt-3" style="color: #aaa;">
+                            No Parameter Entries Yet
+                            <span class="hindi-text">कोई पैरामीटर प्रविष्टि नहीं</span>
+                        </h5>
+                        {% if can_add_parameters %}
+                        <a href="{% url 'fill_parameter_group' checklist.id %}" class="btn btn-success mt-3">
+                            <i class="fas fa-plus-circle"></i> Start Filling Parameters
+                            <span class="hindi-text">पैरामीटर भरना शुरू करें</span>
+                        </a>
+                        {% endif %}
+                    </div>
                 {% endif %}
-
-            </div>
-            <div class="modal-footer py-2" style="border-top: 2px solid white;">
-                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
-{% endfor %}
- 
-                    <!-- Maintenance & Quality Tracking Summary -->
-                    {% if maintenance_subgroups or nok_approval_subgroups %}
-                    <div class="mt-3 mb-3">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning text-dark">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-tools me-2"></i>Maintenance & Quality Tracking Summary
-                                    <span class="hindi-text">रखरखाव और गुणवत्ता ट्रैकिंग सारांश</span>
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                {% if maintenance_subgroups %}
-                                <div class="mb-3">
-                                    <h6 class="text-warning">
-                                        <i class="fas fa-wrench me-1"></i>After Maintenance/ME Activity
-                                        <span class="hindi-text">रखरखाव/एमई गतिविधि के बाद</span>
-                                    </h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-sm">
-                                            <thead class="table-dark">
-                                                <tr>
-                                                    <th style="width: 8%">Subgroup</th>
-                                                    <th style="width: 12%">Time</th>
-                                                    <th style="width: 35%">Maintenance Activity</th>
-                                                    <th style="width: 35%">Effectiveness Comment</th>
-                                                    <th style="width: 10%">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for subgroup in maintenance_subgroups %}
-                                                <tr class="{% if subgroup.all_checks_passed %}table-success{% else %}table-warning{% endif %}">
-                                                    <td class="text-center fw-bold">#{{ subgroup.subgroup_number }}</td>
-                                                    <td class="text-center">{{ subgroup.timestamp|time:"H:i" }}</td>
-                                                    <td>
-                                                        <strong>Activity:</strong> {{ subgroup.maintenance_comment|default:"No description provided" }}
-                                                    </td>
-                                                    <td>
-                                                        {% if subgroup.effectiveness_comment %}
-                                                            <strong>Effectiveness:</strong> {{ subgroup.effectiveness_comment }}
-                                                        {% else %}
-                                                            <span class="text-muted fst-italic">No effectiveness comment yet</span>
-                                                        {% endif %}
-                                                    </td>
-                                                    <td class="text-center">
-                                                        {% if subgroup.all_checks_passed %}
-                                                            <span class="badge bg-success">All OK</span>
-                                                        {% else %}
-                                                            <span class="badge bg-warning text-dark">Has Issues</span>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                {% endif %}
+{% endif %}
+<!-- END: Enhanced Parameter Entries Section with Verification -->
 
-                                {% if nok_approval_subgroups %}
-                                <div>
-                                    <h6 class="text-danger">
-                                        <i class="fas fa-exclamation-circle me-1"></i>Subgroups Requiring NOK Approval
-                                        <span class="hindi-text">NOK अनुमोदन की आवश्यकता वाले सबग्रुप</span>
-                                    </h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-bordered table-sm">
-                                            <thead class="table-dark">
-                                                <tr>
-                                                    <th style="width: 10%">Subgroup</th>
-                                                    <th style="width: 15%">Time</th>
-                                                    <th style="width: 75%">NOK Values & Comments</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for subgroup in nok_approval_subgroups %}
-                                                <tr class="table-danger">
-                                                    <td class="text-center fw-bold">#{{ subgroup.subgroup_number }}</td>
-                                                    <td class="text-center">{{ subgroup.timestamp|time:"H:i" }}</td>
-                                                    <td>
-                                                        {% if not subgroup.validation_status.uv_vacuum_test_ok and subgroup.uv_vacuum_comment %}
-                                                            <div class="mb-2">
-                                                                <strong class="text-danger">UV Vacuum:</strong> 
-                                                                Avg {{ subgroup.uv_vacuum_average|floatformat:1 }} kPa (Out of range)<br>
-                                                                <small><strong>Comment:</strong> {{ subgroup.uv_vacuum_comment }}</small>
-                                                            </div>
-                                                        {% endif %}
-                                                        
-                                                        {% if not subgroup.validation_status.uv_flow_value_ok and subgroup.uv_flow_comment %}
-                                                            <div class="mb-2">
-                                                                <strong class="text-danger">UV Flow:</strong> 
-                                                                Avg {{ subgroup.uv_flow_average|floatformat:1 }} LPM (Out of range)<br>
-                                                                <small><strong>Comment:</strong> {{ subgroup.uv_flow_comment }}</small>
-                                                            </div>
-                                                        {% endif %}
-                                                        
-                                                        {% if subgroup.umbrella_valve_ok_count < 5 and subgroup.umbrella_valve_comment %}
-                                                            <div class="mb-2">
-                                                                <strong class="text-danger">Umbrella Valve:</strong> 
-                                                                {{ subgroup.umbrella_valve_ok_count }}/5 OK<br>
-                                                                <small><strong>Comment:</strong> {{ subgroup.umbrella_valve_comment }}</small>
-                                                            </div>
-                                                        {% endif %}
-                                                        
-                                                        {% if subgroup.uv_clip_ok_count < 5 and subgroup.uv_clip_comment %}
-                                                            <div class="mb-2">
-                                                                <strong class="text-danger">UV Clip:</strong> 
-                                                                {{ subgroup.uv_clip_ok_count }}/5 OK<br>
-                                                                <small><strong>Comment:</strong> {{ subgroup.uv_clip_comment }}</small>
-                                                            </div>
-                                                        {% endif %}
-                                                        
-                                                        {% if subgroup.workstation_status != 'Yes' and subgroup.workstation_comment %}
-                                                            <div class="mb-2">
-                                                                <strong class="text-danger">Workstation:</strong> 
-                                                                {{ subgroup.workstation_status }}<br>
-                                                                <small><strong>Comment:</strong> {{ subgroup.workstation_comment }}</small>
-                                                            </div>
-                                                        {% endif %}
-                                                        
-                                                        {% if subgroup.bin_contamination_yes_count < 5 and subgroup.bin_comment %}
-                                                            <div class="mb-2">
-                                                                <strong class="text-danger">Bin Contamination:</strong> 
-                                                                {{ subgroup.bin_contamination_yes_count }}/5 Yes<br>
-                                                                <small><strong>Comment:</strong> {{ subgroup.bin_comment }}</small>
-                                                            </div>
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    {% endif %}
 
-                    <!-- Measurement Progress -->
-                    <div class="mt-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0 text-danger">
-                                Measurement Progress
-                                <span class="hindi-text">माप प्रगति</span>
-                            </h6>
-                            <small class="text-muted">
-                                Target: {{ shift_max_subgroups|default:"6" }} measurements ({{ shift_max_subgroups|default:"6"|multiply:21 }} total readings)
-                                <span class="hindi-text">लक्ष्य: {{ shift_max_subgroups|default:"6" }} माप (कुल {{ shift_max_subgroups|default:"6"|multiply:21 }} रीडिंग)</span>
-                            </small>
-                        </div>
-                        
-                        <div class="progress" style="height: 20px;">
-                            <div class="progress-bar" 
-                                 role="progressbar" 
-                                 style="width: {% if shift_max_subgroups %}{{ total_subgroups|multiply:100|divide:shift_max_subgroups }}{% else %}0{% endif %}%">
-                                {{ total_subgroups }}/{{ shift_max_subgroups|default:"6" }} Complete 
-                                ({{ total_subgroups|multiply:21 }}/{{ shift_max_subgroups|default:"6"|multiply:21 }} readings)
-                            </div>
-                        </div>
-
-                        {% if timing_info.schedule %}
-                        <div class="mt-2">
-                            <h6>Shift Schedule ({{ timing_info.shift_display }}):</h6>
-                            <div class="row">
-                                {% for schedule_item in timing_info.schedule %}
-                                <div class="col-md-2 mb-1">
-                                    <small class="badge {% if schedule_item.is_completed %}bg-success{% elif schedule_item.is_available %}bg-warning{% else %}bg-secondary{% endif %}">
-                                        {{ schedule_item.subgroup_number }}: {{ schedule_item.time_display }}
-                                        {% if schedule_item.is_completed %}✓{% elif schedule_item.is_available %}○{% else %}—{% endif %}
-                                    </small>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
+          
                 </div>
             </div>
         </div>
@@ -2026,13 +1468,13 @@
                         <tbody>
                             {% for concern in concerns %}
                             <tr>
-                                <td class="text-center align-middle text-dark fw-bold">{{ forloop.counter }}</td>
-                                <td class="text-dark">{{ concern.concern.concern_identified }}</td>
-                                <td class="text-dark">{{ concern.concern.cause_if_known|default:"—" }}</td>
-                                <td class="text-dark">{{ concern.concern.action_taken|default:"Pending" }}</td>
+                                <td class="text-center align-middle text-light fw-bold">{{ forloop.counter }}</td>
+                                <td class="text-light">{{ concern.concern_identified }}</td>
+                                <td class="text-light">{{ concern.cause_if_known|default:"—" }}</td>
+                                <td class="text-light">{{ concern.action_taken|default:"Pending" }}</td>
                                 <td class="text-center align-middle">
-                                    <div class="small text-black-50">
-                                        {{ concern.concern.created_at|date:"Y-m-d H:i" }}
+                                    <div class="small text-white-50">
+                                        {{ concern.created_at|date:"Y-m-d H:i" }}
                                     </div>
                                 </td>
                             </tr>

@@ -1631,3 +1631,175 @@ class DTPMChecklistNewFilterForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+
+
+
+
+
+
+# forms
+
+# FORMS.PY - Progressive Parameter Entry Form
+
+# CORRECTED FORMS.PY - Progressive Parameter Entry Form
+
+from django import forms
+from .models import ParameterGroupEntry
+
+class ParameterGroupEntryForm(forms.ModelForm):
+    """
+    Form that shows only fields for the selected parameter group
+    """
+    
+    class Meta:
+        model = ParameterGroupEntry
+        exclude = ['checklist', 'parameter_group', 'timestamp', 'is_completed']
+    
+    def __init__(self, *args, **kwargs):
+        # FIXED: Make parameter_group and checklist optional in __init__
+        self.parameter_group = kwargs.pop('parameter_group', None)
+        # Remove checklist from kwargs - we'll set it on save in the view
+        kwargs.pop('checklist', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # Apply styling - your black/red theme
+        for field_name, field in self.fields.items():
+            field.widget.attrs.update({
+                'class': 'form-control reading-input',
+                'style': 'background-color: #222; color: white; border: 2px solid white;'
+            })
+            
+            if isinstance(field, forms.FloatField):
+                field.widget.attrs.update({
+                    'step': 'any',
+                    'type': 'number'
+                })
+        
+        # Filter fields based on parameter group
+        if self.parameter_group:
+            self._filter_fields_by_parameter_group()
+    
+    def _filter_fields_by_parameter_group(self):
+        """Remove fields not applicable to this parameter group"""
+        # Create temporary instance to get applicable fields
+        temp_instance = ParameterGroupEntry(parameter_group=self.parameter_group)
+        applicable_fields = temp_instance.get_applicable_fields()
+        
+        # Remove non-applicable fields
+        all_field_names = list(self.fields.keys())
+        for field_name in all_field_names:
+            if field_name not in applicable_fields:
+                del self.fields[field_name]
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        errors = []
+        warnings = []
+        
+        # Maintenance validation
+        is_after_maintenance = cleaned_data.get('is_after_maintenance')
+        maintenance_comment = cleaned_data.get('maintenance_comment')
+        
+        if is_after_maintenance and not maintenance_comment:
+            errors.append('Maintenance activity description is required when marking as after maintenance')
+        
+        # Parameter-specific validation
+        if self.parameter_group == 'uv_vacuum':
+            self._validate_uv_vacuum(cleaned_data, errors, warnings)
+        elif self.parameter_group == 'uv_flow':
+            self._validate_uv_flow(cleaned_data, errors, warnings)
+        elif self.parameter_group == 'umbrella_valve':
+            self._validate_umbrella_valve(cleaned_data, errors)
+        elif self.parameter_group == 'uv_clip':
+            self._validate_uv_clip(cleaned_data, errors)
+        elif self.parameter_group == 'workstation':
+            self._validate_workstation(cleaned_data, errors)
+        elif self.parameter_group == 'bin_contamination':
+            self._validate_bin_contamination(cleaned_data, errors)
+        
+        # Store warnings
+        if warnings:
+            self.warnings = warnings
+        
+        if errors:
+            raise forms.ValidationError(errors)
+        
+        return cleaned_data
+    
+    def _validate_uv_vacuum(self, data, errors, warnings):
+        """Validate UV Vacuum readings"""
+        readings = []
+        for i in range(1, 6):
+            reading = data.get(f'uv_vacuum_test_{i}')
+            if reading is None:
+                errors.append(f'UV Vacuum Test {i} is required')
+            else:
+                readings.append(reading)
+                # Check range: -43 to -35 kPa
+                if reading < -43 or reading > -35:
+                    warnings.append(f'UV Vacuum Test {i} ({reading} kPa) is outside recommended range (-43 to -35 kPa)')
+    
+    def _validate_uv_flow(self, data, errors, warnings):
+        """Validate UV Flow readings"""
+        readings = []
+        for i in range(1, 6):
+            reading = data.get(f'uv_flow_value_{i}')
+            if reading is None:
+                errors.append(f'UV Flow Value {i} is required')
+            else:
+                readings.append(reading)
+                # Check range: 30-40 LPM
+                if reading < 30 or reading > 40:
+                    warnings.append(f'UV Flow Value {i} ({reading} LPM) is outside recommended range (30-40 LPM)')
+    
+    def _validate_umbrella_valve(self, data, errors):
+        """Validate Umbrella Valve Assembly checks"""
+        for i in range(1, 6):
+            field = f'umbrella_valve_assembly_{i}'
+            comment_field = f'umbrella_valve_assembly_{i}_comment'
+            
+            if not data.get(field):
+                errors.append(f'Umbrella Valve Assembly {i} is required')
+            elif data.get(field) == 'NOK' and not data.get(comment_field):
+                errors.append(f'Comment required for Umbrella Valve Assembly {i} when marked as NOK')
+    
+    def _validate_uv_clip(self, data, errors):
+        """Validate UV Clip Pressing checks"""
+        for i in range(1, 6):
+            field = f'uv_clip_pressing_{i}'
+            comment_field = f'uv_clip_pressing_{i}_comment'
+            
+            if not data.get(field):
+                errors.append(f'UV Clip Pressing {i} is required')
+            elif data.get(field) == 'NOK' and not data.get(comment_field):
+                errors.append(f'Comment required for UV Clip Pressing {i} when marked as NOK')
+    
+    def _validate_workstation(self, data, errors):
+        """Validate Workstation Clean check"""
+        if not data.get('workstation_clean'):
+            errors.append('Workstation Clean status is required')
+        elif data.get('workstation_clean') == 'No' and not data.get('workstation_clean_comment'):
+            errors.append('Comment required when workstation is not clean')
+    
+    def _validate_bin_contamination(self, data, errors):
+        """Validate Bin Contamination checks"""
+        for i in range(1, 6):
+            field = f'bin_contamination_check_{i}'
+            comment_field = f'bin_contamination_check_{i}_comment'
+            
+            if not data.get(field):
+                errors.append(f'Bin Contamination Check {i} is required')
+            elif data.get(field) == 'No' and not data.get(comment_field):
+                errors.append(f'Comment required for Bin Contamination Check {i} when marked as No')
+    
+    def save(self, commit=True):
+        """Save - checklist and parameter_group will be set by the view"""
+        instance = super().save(commit=False)
+        
+        # Don't set checklist or parameter_group here - the view will do it
+        
+        if commit:
+            instance.save()
+        
+        return instance

@@ -1,0 +1,258 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Entry - {{ checklist.selected_model }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Add Entry - {{ checklist.selected_model }}</h2>
+            <p class="text-muted">Checklist created on {{ checklist.created_at|date:"d M Y H:i" }}</p>
+            
+            {% if available_categories %}
+                <div class="alert alert-info">
+                    <strong>Available Categories:</strong> {{ available_categories|length }} 
+                    categor{{ available_categories|length|pluralize:"y,ies" }} ready for readings
+                </div>
+                
+                <!-- Category Selection -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Select Category</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            {% for cat in available_categories %}
+                            <a href="?category={{ cat.code }}" 
+                               class="list-group-item list-group-item-action {% if selected_category == cat.code %}active{% endif %}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ cat.display }}</h6>
+                                    <span>
+                                        {% if cat.is_overdue %}
+                                            <span class="badge bg-danger">Overdue</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Due Now</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <p class="mb-1">
+                                    <small>
+                                        Readings: {{ cat.readings_count }}/{{ cat.max_readings }}
+                                        | Due: {{ cat.due_time|date:"H:i" }}
+                                    </small>
+                                </p>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if selected_category and category_fields %}
+                <!-- Entry Form -->
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            Enter Readings: 
+                            {% for cat in available_categories %}
+                                {% if cat.code == selected_category %}{{ cat.display }}{% endif %}
+                            {% endfor %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" id="entryForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="category" value="{{ selected_category }}">
+                            
+                            <!-- Help Text -->
+                            {% if category_fields.help_text %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> {{ category_fields.help_text }}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Maintenance Checkbox -->
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="is_after_maintenance" name="is_after_maintenance">
+                                <label class="form-check-label" for="is_after_maintenance">
+                                    <strong>Entry after maintenance/ME activity</strong>
+                                </label>
+                            </div>
+                            
+                            <!-- Maintenance Comments (shown when checkbox is checked) -->
+                            <div id="maintenanceFields" style="display: none;">
+                                <div class="mb-3">
+                                    <label for="maintenance_comment" class="form-label">
+                                        Maintenance Activity Comment
+                                    </label>
+                                    <textarea class="form-control" id="maintenance_comment" 
+                                              name="maintenance_comment" rows="2"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="effectiveness_comment" class="form-label">
+                                        Effectiveness Comment
+                                    </label>
+                                    <textarea class="form-control" id="effectiveness_comment" 
+                                              name="effectiveness_comment" rows="2"></textarea>
+                                </div>
+                            </div>
+                            
+                            <!-- Dynamic Fields Based on Category -->
+                            <div class="row">
+                                {% for field in category_fields.fields %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <label for="{{ field.name }}" class="form-label">
+                                                <strong>{{ field.label }}</strong>
+                                                {% if field.unit %}
+                                                    <small class="text-muted">({{ field.unit }})</small>
+                                                {% endif %}
+                                            </label>
+                                            
+                                            {% if field.type == 'number' %}
+                                                <input type="number" step="0.01" 
+                                                       class="form-control" 
+                                                       id="{{ field.name }}" 
+                                                       name="{{ field.name }}"
+                                                       {% if field.min %}min="{{ field.min }}"{% endif %}
+                                                       {% if field.max %}max="{{ field.max }}"{% endif %}
+                                                       required>
+                                                {% if field.min and field.max %}
+                                                <small class="form-text text-muted">
+                                                    Range: {{ field.min }} to {{ field.max }} {{ field.unit }}
+                                                </small>
+                                                {% endif %}
+                                            {% elif field.type == 'select' %}
+                                                <select class="form-select" 
+                                                        id="{{ field.name }}" 
+                                                        name="{{ field.name }}" 
+                                                        required>
+                                                    <option value="">-- Select --</option>
+                                                    {% for choice in field.choices %}
+                                                    <option value="{{ choice }}">{{ choice }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            {% endif %}
+                                            
+                                            <!-- Comment Field -->
+                                            <div class="mt-2">
+                                                <label for="{{ field.name }}_comment" class="form-label">
+                                                    <small>Comment (optional)</small>
+                                                </label>
+                                                <textarea class="form-control form-control-sm" 
+                                                          id="{{ field.name }}_comment" 
+                                                          name="{{ field.name }}_comment" 
+                                                          rows="1"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <!-- Submit Buttons -->
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                <a href="{% url 'checklist_detail' checklist.id %}" 
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Checklist
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Save Entry
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    Please select a category from the list above.
+                </div>
+                {% endif %}
+                
+            {% else %}
+                <div class="alert alert-warning">
+                    <h5>No Categories Available</h5>
+                    <p>All categories have reached their maximum readings or are not yet due.</p>
+                    <a href="{% url 'checklist_detail' checklist.id %}" class="btn btn-primary">
+                        View Checklist
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Toggle maintenance fields
+    const maintenanceCheckbox = document.getElementById('is_after_maintenance');
+    const maintenanceFields = document.getElementById('maintenanceFields');
+    
+    if (maintenanceCheckbox) {
+        maintenanceCheckbox.addEventListener('change', function() {
+            maintenanceFields.style.display = this.checked ? 'block' : 'none';
+        });
+    }
+    
+    // Validate numeric inputs on change
+    const numericInputs = document.querySelectorAll('input[type="number"]');
+    numericInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const min = parseFloat(this.getAttribute('min'));
+            const max = parseFloat(this.getAttribute('max'));
+            const value = parseFloat(this.value);
+            
+            if (value < min || value > max) {
+                this.classList.add('is-invalid');
+                // You can add a warning message here
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+    });
+    
+    // Form submission validation
+    const form = document.getElementById('entryForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // Add any additional validation here
+            const requiredFields = form.querySelectorAll('[required]');
+            let allFilled = true;
+            
+            requiredFields.forEach(field => {
+                if (!field.value) {
+                    allFilled = false;
+                    field.classList.add('is-invalid');
+                }
+            });
+            
+            if (!allFilled) {
+                e.preventDefault();
+                alert('Please fill in all required fields');
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.list-group-item.active {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.is-invalid {
+    border-color: #dc3545;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-body {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}
