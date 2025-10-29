@@ -842,14 +842,21 @@ def create_checklist(request):
         for config in SubgroupFrequencyConfig.objects.filter(is_active=True)
     }
 
+    # Group dynamic parameters by model and section
     dynamic_parameters = {}
     for model_choice in ChecklistBase.MODEL_CHOICES:
         model_name = model_choice[0]
         params = ChecksheetContentConfig.objects.filter(
             model_name=model_name, is_active=True
-        ).order_by('order')
-        dynamic_parameters[model_name] = [
-            {
+        ).order_by('section', 'order')
+        
+        # Group by section
+        sections = {}
+        for p in params:
+            section_key = p.section
+            if section_key not in sections:
+                sections[section_key] = []
+            sections[section_key].append({
                 'id': p.id,
                 'parameter_name': p.parameter_name,
                 'parameter_name_hindi': p.parameter_name_hindi,
@@ -859,8 +866,8 @@ def create_checklist(request):
                 'unit': p.unit,
                 'requires_comment_if_nok': p.requires_comment_if_nok,
                 'help_text': f"Range: {p.min_value} - {p.max_value} {p.unit}" if p.min_value is not None else ""
-            } for p in params
-        ]
+            })
+        dynamic_parameters[model_name] = sections
 
     if request.method == 'POST':
         form = ChecklistBaseForm(request.POST, user=request.user)
@@ -921,8 +928,7 @@ def create_checklist(request):
                         for warning in form.warnings:
                             messages.warning(request, warning)
                     
-                    # 7. REDIRECT TO FILL PARAMETERS (NEW!)
-                    # Instead of add_subgroup, redirect to parameter filling
+                    # 7. REDIRECT TO FILL PARAMETERS
                     return redirect('fill_parameter_group', checklist_id=checklist.id)
 
             except Exception as e:
@@ -936,6 +942,7 @@ def create_checklist(request):
         'dynamic_parameters_json': json.dumps(dynamic_parameters)
     }
     return render(request, 'main/create_checklist.html', context)
+
 
 
 # ============================================
@@ -3232,8 +3239,25 @@ def checklist_detail(request, checklist_id):
     # Concerns
     concerns = checklist.concern_set.all().order_by('-created_at')
     
-    # Dynamic values
-    dynamic_values = checklist.dynamic_values.select_related('parameter').order_by('parameter__order', 'parameter__id')
+    # ============================================================================
+    # Group dynamic values by section
+    # ============================================================================
+    
+    dynamic_values_all = checklist.dynamic_values.select_related('parameter').order_by('parameter__section', 'parameter__order')
+    
+    # Group by section
+    dynamic_values_grouped = {
+        'initial_setup': [],
+        'standard_measurements': [],
+        'status_checks': [],
+        'ids_part_numbers': [],
+        'model_specific': []
+    }
+    
+    for dv in dynamic_values_all:
+        section = dv.parameter.section
+        if section in dynamic_values_grouped:
+            dynamic_values_grouped[section].append(dv)
     
     # Can add more parameters?
     can_add_parameters = (
@@ -3257,10 +3281,11 @@ def checklist_detail(request, checklist_id):
         'verification_status_info': verification_status_info,
         'user_permissions': user_permissions,
         'concerns': concerns,
-        'dynamic_values': dynamic_values,
+        'dynamic_values_grouped': dynamic_values_grouped,
     }
     
     return render(request, 'main/checklist_detail.html', context)
+
 
 
 # ============================================================================

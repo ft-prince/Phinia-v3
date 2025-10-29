@@ -59,7 +59,7 @@
                             }
                         </style>
                         
-                        <div class="form-section">
+                        <div class="form-section" id="initialSetupSection">
                             <h6 class="section-header text-danger">Initial Setup <span style="font-size: 85%; font-weight: normal; color: #ddd;">प्रारंभिक सेटअप</span></h6>
                             <div class="form-row">
                                 <div class="form-label-col"><label for="new_shift" class="form-label"><div class="label-text">Shift</div><div class="help-text text-secondary">Shift select करना है</div></label></div>
@@ -77,9 +77,10 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- Dynamic fields for initial_setup will be inserted here -->
                         </div>
 
-                        <div class="form-section">
+                        <div class="form-section" id="standardMeasurementsSection">
                             <h6 class="section-header text-danger">Standard Measurements <span style="font-size: 85%; font-weight: normal; color: #ddd;">मानक मापन</span></h6>
                             <div class="form-row">
                                 <div class="form-label-col"><label for="line_pressure" class="form-label"><div class="label-text">Line Pressure (4.5 - 5.5 bar)</div><div class="help-text text-secondary">लाइन प्रेशर 4.5 से 5.5 बार के बीच होना चाहिए</div></label></div>
@@ -93,29 +94,19 @@
                                 <div class="form-label-col"><label for="test_pressure_vacuum" class="form-label"><div class="label-text">Test Pressure for Vacuum generation (0.25 - 0.3 MPa)</div><div class="help-text text-secondary">वैक्यूम जनरेशन के लिए टेस्ट प्रेशर 0.25 - 0.3 MPa के बीच होना चाहिए</div></label></div>
                                 <div class="form-input-col">{{ form.test_pressure_vacuum }}</div>
                             </div>
+                            <!-- Dynamic fields for standard_measurements will be inserted here -->
                         </div>
 
-                        <div class="form-section">
+                        <div class="form-section" id="statusChecksSection">
                             <h6 class="section-header text-danger">Status Checks <span style="font-size: 85%; font-weight: normal; color: #ddd;">स्टेटस चेक</span></h6>
                             <div class="form-row">
                                 <div class="form-label-col"><label for="oring_condition" class="form-label"><div class="label-text">O-ring condition (UV Flow check sealing area)</div><div class="help-text text-secondary">O-ring सील की स्थिति सही होनी चाहिए</div></label></div>
                                 <div class="form-input-col">{{ form.oring_condition }}</div>
                             </div>
-                            {% comment %} <div class="form-row">
-                                <div class="form-label-col"><label for="master_verification_lvdt" class="form-label"><div class="label-text">Master Verification for LVDT</div><div class="help-text text-secondary">LVDT के लिए मास्टर वेरिफिकेशन करें</div></label></div>
-                                <div class="form-input-col">{{ form.master_verification_lvdt }}</div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-label-col"><label for="good_bad_master_verification" class="form-label"><div class="label-text">Good/Bad master verification (refer EPVS)</div><div class="help-text text-secondary">गुड/बैड मास्टर वेरिफिकेशन (EPVS देखें)</div></label></div>
-                                <div class="form-input-col">{{ form.good_bad_master_verification }}</div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-label-col"><label for="tool_alignment" class="form-label"><div class="label-text">Tool Alignment (Top & Bottom)</div><div class="help-text text-secondary">Tool Alignment सही होना चाहिए</div></label></div>
-                                <div class="form-input-col">{{ form.tool_alignment }}</div>
-                            </div> {% endcomment %}
+                            <!-- Dynamic fields for status_checks will be inserted here -->
                         </div>
 
-                        <div class="form-section">
+                        <div class="form-section" id="idsPartNumbersSection">
                             <h6 class="section-header text-danger">IDs and Part Numbers <span style="font-size: 85%; font-weight: normal; color: #ddd;">आईडी और पार्ट नंबर</span></h6>
                             <div class="form-row"><div class="form-label-col"><label for="top_tool_id" class="form-label"><div class="label-text">Tool Id: Top Tool ID</div><div class="help-text text-muted">FMA-03-35-T05 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">टॉप टूल आईडी</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.top_tool_id }}</div>{{ form.top_tool_id_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
                             <div class="form-row"><div class="form-label-col"><label for="bottom_tool_id" class="form-label"><div class="label-text">Bottom Tool ID</div><div class="help-text text-muted">FMA-03-35-T06 (P703/U704/SA/FD)</div><div class="help-text text-muted">FMA-03-35-T08 (Gnome)</div><div class="help-text text-secondary">बॉटम टूल आईडी</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.bottom_tool_id }}</div>{{ form.bottom_tool_id_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
@@ -124,7 +115,7 @@
                             <div class="form-row"><div class="form-label-col"><label for="uv_clip_part_no" class="form-label"><div class="label-text">UV Clip Part No</div><div class="help-text text-muted">42000829 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">यूवी क्लिप पार्ट नंबर</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.uv_clip_part_no }}</div>{{ form.uv_clip_part_no_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
                             <div class="form-row"><div class="form-label-col"><label for="umbrella_part_no" class="form-label"><div class="label-text">Umbrella Part No</div><div class="help-text text-muted">25094588 (P703/U704/SA/FD/Gnome)</div><div class="help-text text-secondary">अम्ब्रेला पार्ट नंबर</div></label></div><div class="form-input-col"><div style="display: flex; align-items: center; gap: 10px;"><div style="display: none;">{{ form.umbrella_part_no }}</div>{{ form.umbrella_part_no_status }}</div><div class="auto-selected">Auto-selected based on model</div><div class="auto-selected" style="color: #8a8a8a;">मॉडल के आधार पर स्वचालित रूप से चयनित</div></div></div>
                             <div class="form-row"><div class="form-label-col"><label for="retainer_id_lubrication" class="form-label"><div class="label-text">Retainer ID Lubrication - Visual Check</div><div class="help-text text-secondary">रिटेनर आईडी लुब्रिकेशन - दृश्य जांच</div></label></div><div class="form-input-col">{{ form.retainer_id_lubrication }}</div></div>
-                            {% comment %} <div class="form-row"><div class="form-label-col"><label for="error_proofing_verification" class="form-label"><div class="label-text">All Error proofing / Error detection verification done</div><div class="help-text text-secondary">सभी एरर प्रूफिंग / एरर डिटेक्शन वेरिफिकेशन पूरी हो गई है</div></label></div><div class="form-input-col">{{ form.error_proofing_verification }}</div></div> {% endcomment %}
+                            <!-- Dynamic fields for ids_part_numbers will be inserted here -->
                         </div>
 
                         <div id="dynamicFieldsContainer"></div>
@@ -197,43 +188,71 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateDynamicFields() {
         const selectedModel = modelSelector.value;
-        const container = document.getElementById('dynamicFieldsContainer');
-        container.innerHTML = '';
         
-        if (selectedModel && dynamicParameters[selectedModel] && dynamicParameters[selectedModel].length > 0) {
-            const section = document.createElement('div');
-            section.className = 'dynamic-section';
-            section.innerHTML = '<h6 class="section-header text-danger" style="margin: -25px 0 15px 15px;">Model-Specific Parameters <span style="font-size: 85%; font-weight: normal; color: #ddd;">मॉडल-विशिष्ट पैरामीटर</span></h6>';
+        // Clear any previously added dynamic fields
+        document.querySelectorAll('.dynamic-field-row').forEach(el => el.remove());
+        
+        if (selectedModel && dynamicParameters[selectedModel]) {
+            const sections = dynamicParameters[selectedModel];
             
-            dynamicParameters[selectedModel].forEach(param => {
-                const fieldRow = document.createElement('div');
-                fieldRow.className = 'form-row';
-                
-                let labelHtml = `<label class="form-label"><div class="label-text">${param.parameter_name}</div>`;
-                if (param.parameter_name_hindi) labelHtml += `<div class="help-text text-secondary">${param.parameter_name_hindi}</div>`;
-                if (param.help_text) labelHtml += `<div class="help-text text-muted">${param.help_text}</div>`;
-                labelHtml += `</label>`;
-                
-                const fieldName = `dynamic_${param.id}`;
-                let inputHtml = '';
-                if (param.measurement_type === 'numeric') {
-                    inputHtml = `<input type="number" step="any" name="${fieldName}" id="id_${fieldName}" class="form-control" placeholder="${param.min_value}-${param.max_value} ${param.unit}">`;
-                } else if (param.measurement_type === 'ok_nok') {
-                    inputHtml = `<select name="${fieldName}" id="id_${fieldName}" class="form-control nok-select"><option value="">---</option><option value="OK">OK</option><option value="NOK">NOK</option></select>`;
-                } else if (param.measurement_type === 'yes_no') {
-                    inputHtml = `<select name="${fieldName}" id="id_${fieldName}" class="form-control yes-no-select"><option value="">---</option><option value="Yes">Yes</option><option value="No">No</option></select>`;
-                }
-                
-                if (param.requires_comment_if_nok) {
-                    inputHtml += `<div class="nok-comment-field" id="comment_${fieldName}"><textarea name="${fieldName}_comment" rows="2" class="form-control mt-2" placeholder="Comment required if NOK/No"></textarea></div>`;
-                }
+            // Map section keys to their container IDs in the template
+            const sectionContainers = {
+                'initial_setup': 'initialSetupSection',
+                'standard_measurements': 'standardMeasurementsSection',
+                'status_checks': 'statusChecksSection',
+                'ids_part_numbers': 'idsPartNumbersSection',
+                'model_specific': 'dynamicFieldsContainer'
+            };
+            
+            // Process each section
+            Object.keys(sectionContainers).forEach(sectionKey => {
+                if (sections[sectionKey] && sections[sectionKey].length > 0) {
+                    const containerId = sectionContainers[sectionKey];
+                    let container = document.getElementById(containerId);
+                    
+                    // For model_specific, create a new section if it doesn't exist
+                    if (sectionKey === 'model_specific') {
+                        const dynamicContainer = document.getElementById('dynamicFieldsContainer');
+                        dynamicContainer.innerHTML = '';
+                        const section = document.createElement('div');
+                        section.className = 'dynamic-section';
+                        section.innerHTML = '<h6 class="section-header text-danger">Model-Specific Parameters <span style="font-size: 85%; font-weight: normal; color: #ddd;">मॉडल-विशिष्ट पैरामीटर</span></h6>';
+                        dynamicContainer.appendChild(section);
+                        container = section;
+                    }
+                    
+                    if (container) {
+                        sections[sectionKey].forEach(param => {
+                            const fieldRow = document.createElement('div');
+                            fieldRow.className = 'form-row dynamic-field-row';
+                            
+                            let labelHtml = `<label class="form-label"><div class="label-text">${param.parameter_name}</div>`;
+                            if (param.parameter_name_hindi) labelHtml += `<div class="help-text text-secondary">${param.parameter_name_hindi}</div>`;
+                            if (param.help_text) labelHtml += `<div class="help-text text-muted">${param.help_text}</div>`;
+                            labelHtml += `</label>`;
+                            
+                            const fieldName = `dynamic_${param.id}`;
+                            let inputHtml = '';
+                            if (param.measurement_type === 'numeric') {
+                                inputHtml = `<input type="number" step="any" name="${fieldName}" id="id_${fieldName}" class="form-control" placeholder="${param.min_value}-${param.max_value} ${param.unit}">`;
+                            } else if (param.measurement_type === 'ok_nok') {
+                                inputHtml = `<select name="${fieldName}" id="id_${fieldName}" class="form-control nok-select"><option value="">---</option><option value="OK">OK</option><option value="NOK">NOK</option></select>`;
+                            } else if (param.measurement_type === 'yes_no') {
+                                inputHtml = `<select name="${fieldName}" id="id_${fieldName}" class="form-control yes-no-select"><option value="">---</option><option value="Yes">Yes</option><option value="No">No</option></select>`;
+                            }
+                            
+                            if (param.requires_comment_if_nok) {
+                                inputHtml += `<div class="nok-comment-field" id="comment_${fieldName}"><textarea name="${fieldName}_comment" rows="2" class="form-control mt-2" placeholder="Comment required if NOK/No"></textarea></div>`;
+                            }
 
-                fieldRow.innerHTML = `<div class="form-label-col">${labelHtml}</div><div class="form-input-col">${inputHtml}</div>`;
-                section.appendChild(fieldRow);
+                            fieldRow.innerHTML = `<div class="form-label-col">${labelHtml}</div><div class="form-input-col">${inputHtml}</div>`;
+                            container.appendChild(fieldRow);
+                        });
+                    }
+                }
             });
             
-            container.appendChild(section);
-            
+            // Add event listeners for NOK/No comment fields
             document.querySelectorAll('.nok-select, .yes-no-select').forEach(select => {
                 select.addEventListener('change', function() {
                     const fieldId = this.id.replace('id_', '');

@@ -502,75 +502,226 @@
         </div>
     </div>
         
-        <!-- Dynamic Checkpoints Configuration Display -->
- <div class="row mb-reduced">
-        <div class="col-12">
-            <div class="card shadow-lg">
-                <div class="card-header bg-primary text-white">
+<!-- Initial Setup & Tooling Measurements - WITH DYNAMIC VALUES (Only show if there are values) -->
+{% if dynamic_values_grouped.initial_setup or dynamic_values_grouped.model_specific %}
+<div class="row mb-reduced">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0 section-title">
+                    Initial Setup & Tooling Measurements
+                    <span class="section-title-hindi">प्रारंभिक सेटअप और टूलिंग माप</span>
+                </h5>
+            </div>
+            <div class="card-body p-2">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle table-sm compact-table">
+                        <thead class="table-light">
+                            <tr class="table-header-with-hindi">
+                                <th style="width: 35%;">
+                                    Parameter
+                                    <span class="hindi-text">पैरामीटर</span>
+                                </th>
+                                <th style="width: 25%;">
+                                    Acceptable Range
+                                    <span class="hindi-text">स्वीकार्य रेंज</span>
+                                </th>
+                                <th style="width: 20%;" class="text-center">
+                                    Recorded Value
+                                    <span class="hindi-text">दर्ज मान</span>
+                                </th>
+                                <th style="width: 20%;">
+                                    Comment
+                                    <span class="hindi-text">टिप्पणी</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dv in dynamic_values_grouped.initial_setup %}
+                            <tr class="{% if dv.is_out_of_range or dv.is_nok %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+                                <td>
+                                    <strong>{{ dv.parameter.parameter_name }}</strong>
+                                    {% if dv.parameter.parameter_name_hindi %}
+                                        <div class="hindi-text small">{{ dv.parameter.parameter_name_hindi }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if dv.parameter.measurement_type == 'numeric' %}
+                                        {% if dv.parameter.min_value is not None and dv.parameter.max_value is not None %}
+                                            <strong>{{ dv.parameter.min_value }} to {{ dv.parameter.max_value }}</strong>
+                                            {% if dv.parameter.unit %} {{ dv.parameter.unit }}{% endif %}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    {% elif dv.parameter.measurement_type == 'ok_nok' %}
+                                        Must be <strong>OK</strong>
+                                    {% elif dv.parameter.measurement_type == 'yes_no' %}
+                                        Must be <strong>Yes</strong>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {% if dv.is_out_of_range or dv.is_nok %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                                        {{ dv.value }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if dv.comment %}
+                                        <div class="nok-comment" style="margin-top: 0; padding: 4px;">
+                                            <small>{{ dv.comment }}</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                            
+                            {% for dv in dynamic_values_grouped.model_specific %}
+                            <tr class="{% if dv.is_out_of_range or dv.is_nok %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+                                <td>
+                                    <strong>{{ dv.parameter.parameter_name }}</strong>
+                                    {% if dv.parameter.parameter_name_hindi %}
+                                        <div class="hindi-text small">{{ dv.parameter.parameter_name_hindi }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if dv.parameter.measurement_type == 'numeric' %}
+                                        {% if dv.parameter.min_value is not None and dv.parameter.max_value is not None %}
+                                            <strong>{{ dv.parameter.min_value }} to {{ dv.parameter.max_value }}</strong>
+                                            {% if dv.parameter.unit %} {{ dv.parameter.unit }}{% endif %}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    {% elif dv.parameter.measurement_type == 'ok_nok' %}
+                                        Must be <strong>OK</strong>
+                                    {% elif dv.parameter.measurement_type == 'yes_no' %}
+                                        Must be <strong>Yes</strong>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {% if dv.is_out_of_range or dv.is_nok %}bg-danger{% else %}bg-success{% endif %} fs-6">
+                                        {{ dv.value }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if dv.comment %}
+                                        <div class="nok-comment" style="margin-top: 0; padding: 4px;">
+                                            <small>{{ dv.comment }}</small>
+                                        </div>
+                                    {% else %}
+                                        <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+<!-- Initial Quality Control Card - WITH DYNAMIC VALUES -->
+<div class="row mb-reduced">
+    <div class="col-12">
+        <div class="card shadow-lg">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
+                <div>
                     <h5 class="mb-0 section-title">
-                        Initial Setup & Tooling Measurements
-                        <span class="section-title-hindi">प्रारंभिक सेटअप और टूलिंग माप</span>
+                        Initial Quality Control Measurements
+                        <span class="section-title-hindi">प्रारंभिक गुणवत्ता नियंत्रण माप</span>
                     </h5>
                 </div>
-                <div class="card-body p-2">
-                    {% if dynamic_values %}
+                <h6 class="text-white-40">
+                    Running Model: {{ checklist.selected_model }}
+                    <span class="hindi-text">चल रहा मॉडल</span>
+                </h6>
+            </div>
+            <div class="card-body">
+                <!-- Standard Measurements Section - WITH DYNAMIC VALUES -->
+                <div class="mb-reduced">
+                    <h6 class="border-bottom pb-1 mb-2 text-danger">
+                        Process Measurements
+                        <span class="hindi-text">प्रक्रिया माप</span>
+                    </h6>
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle table-sm compact-table">
+                        <table class="table table-bordered align-middle table-header-with-hindi">
                             <thead class="table-light">
-                                <tr class="table-header-with-hindi">
-                                    <th style="width: 35%;">
+                                <tr>
+                                    <th style="width: 40%">
                                         Parameter
                                         <span class="hindi-text">पैरामीटर</span>
                                     </th>
-                                    <th style="width: 25%;">
-                                        Acceptable Range
-                                        <span class="hindi-text">स्वीकार्य रेंज</span>
+                                    <th style="width: 20%">
+                                        Value
+                                        <span class="hindi-text">मान</span>
                                     </th>
-                                    <th style="width: 20%;" class="text-center">
-                                        Recorded Value
-                                        <span class="hindi-text">दर्ज मान</span>
-                                    </th>
-                                    <th style="width: 20%;">
-                                        Comment
-                                        <span class="hindi-text">टिप्पणी</span>
+                                    <th style="width: 40%">
+                                        Recommended Range
+                                        <span class="hindi-text">अनुशंसित रेंज</span>
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for dv in dynamic_values %}
-                                <tr class="{% if dv.is_out_of_range or dv.is_nok %}bg-danger-subtle{% else %}bg-success-subtle{% endif %}">
+                                <tr>
                                     <td>
-                                        <strong>{{ dv.parameter.parameter_name }}</strong>
-                                        {% if dv.parameter.parameter_name_hindi %}
-                                            <div class="hindi-text small">{{ dv.parameter.parameter_name_hindi }}</div>
-                                        {% endif %}
+                                        Line Pressure
+                                        <span class="hindi-text">लाइन प्रेशर</span>
                                     </td>
+                                    <td class="text-center">
+                                        <span class="validation-badge badge {% if measurement_validation.base_measurements.line_pressure_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ checklist.line_pressure }} bar
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">4.5 - 5.5 bar</td>
+                                </tr>
+                                <tr>
                                     <td>
-                                        {% if dv.parameter.measurement_type == 'numeric' %}
-                                            {% if dv.parameter.min_value is not None and dv.parameter.max_value is not None %}
-                                                <strong>{{ dv.parameter.min_value }} to {{ dv.parameter.max_value }}</strong>
-                                                {% if dv.parameter.unit %} {{ dv.parameter.unit }}{% endif %}
-                                            {% else %}
-                                                <span class="text-muted">N/A</span>
-                                            {% endif %}
-                                        {% elif dv.parameter.measurement_type == 'ok_nok' %}
-                                            Must be <strong>OK</strong>
-                                        {% elif dv.parameter.measurement_type == 'yes_no' %}
-                                            Must be <strong>Yes</strong>
+                                        UV Flow Input Test Pressure
+                                        <span class="hindi-text">यूवी फ्लो इनपुट टेस्ट प्रेशर</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="validation-badge badge {% if measurement_validation.base_measurements.uv_flow_input_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ checklist.uv_flow_input_pressure }} kPa
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">11 - 15 kPa</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Test Pressure for Vacuum Generation
+                                        <span class="hindi-text">वैक्यूम जनरेशन के लिए टेस्ट प्रेशर</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="validation-badge badge {% if measurement_validation.base_measurements.test_pressure_ok %}bg-success{% else %}bg-danger{% endif %}">
+                                            {{ checklist.test_pressure_vacuum }} MPa
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">0.25 - 0.3 MPa</td>
+                                </tr>
+                                
+                                <!-- Dynamic Standard Measurements -->
+                                {% for dv in dynamic_values_grouped.standard_measurements %}
+                                <tr>
+                                    <td>
+                                        {{ dv.parameter.parameter_name }}
+                                        {% if dv.parameter.parameter_name_hindi %}
+                                            <span class="hindi-text">{{ dv.parameter.parameter_name_hindi }}</span>
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge {% if dv.is_out_of_range or dv.is_nok %}bg-danger{% else %}bg-success{% endif %} fs-6">
-                                            {{ dv.value }}
+                                        <span class="validation-badge badge {% if dv.is_out_of_range or dv.is_nok %}bg-danger{% else %}bg-success{% endif %}">
+                                            {{ dv.value }}{% if dv.parameter.unit %} {{ dv.parameter.unit }}{% endif %}
                                         </span>
                                     </td>
-                                    <td>
-                                        {% if dv.comment %}
-                                            <div class="nok-comment" style="margin-top: 0; padding: 4px;">
-                                                <small>{{ dv.comment }}</small>
-                                            </div>
-                                        {% else %}
-                                            <span class="text-muted">--</span>
+                                    <td class="text-muted">
+                                        {% if dv.parameter.measurement_type == 'numeric' and dv.parameter.min_value is not None %}
+                                            {{ dv.parameter.min_value }} - {{ dv.parameter.max_value }}{% if dv.parameter.unit %} {{ dv.parameter.unit }}{% endif %}
+                                        {% elif dv.parameter.measurement_type == 'ok_nok' %}
+                                            Must be OK
+                                        {% elif dv.parameter.measurement_type == 'yes_no' %}
+                                            Must be Yes
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -578,325 +729,230 @@
                             </tbody>
                         </table>
                     </div>
-                    {% else %}
-                    <div class="alert alert-secondary text-center mb-0">
-                        No initial setup or tooling measurements were recorded for this checklist.
-                        <span class="hindi-text d-block">इस चेकलिस्ट के लिए कोई प्रारंभिक सेटअप या टूलिंग माप दर्ज नहीं किया गया।</span>
-                    </div>
-                    {% endif %}
                 </div>
-            </div>
-        </div>
-    </div>
-        
-    <!-- Initial Quality Control Card -->
-    <div class="row mb-reduced">
-        <div class="col-12">
-            <div class="card shadow-lg">
-                <div class="card-header d-flex justify-content-between align-items-center bg-primary text-white">
-                    <div>
-                        <h5 class="mb-0 section-title">
-                            Initial Quality Control Measurements
-                            <span class="section-title-hindi">प्रारंभिक गुणवत्ता नियंत्रण माप</span>
-                        </h5>
-                    </div>
-                    <h6 class="text-white-40">
-                        Running Model: {{ checklist.selected_model }}
-                        <span class="hindi-text">चल रहा मॉडल</span>
+
+                <!-- Quality Checks Section - WITH DYNAMIC VALUES -->
+                <div class="mb-reduced">
+                    <h6 class="border-bottom pb-1 mb-2 text-danger">
+                        Quality Checks
+                        <span class="hindi-text">गुणवत्ता जांच</span>
                     </h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle table-header-with-hindi">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 40%">
+                                        Check Parameter
+                                        <span class="hindi-text">जांच पैरामीटर</span>
+                                    </th>
+                                    <th style="width: 20%">
+                                        Status
+                                        <span class="hindi-text">स्थिति</span>
+                                    </th>
+                                    <th style="width: 40%">
+                                        Recommendation
+                                        <span class="hindi-text">अनुशंसा</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        Current Model Running
+                                        <span class="hindi-text">वर्तमान चल रहा मॉडल</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="metric-value text-fa-bold">{{ checklist.selected_model }}</div>
+                                    </td>
+                                    <td class="text-muted">Program selection on HMI</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        O-ring Condition
+                                        <span class="hindi-text">O-ring सील की स्थिति</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if checklist.oring_condition == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                            {{ checklist.oring_condition }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">No damage / wear out</td>
+                                </tr>
+                                
+                                <!-- Dynamic Status Checks -->
+                                {% for dv in dynamic_values_grouped.status_checks %}
+                                <tr>
+                                    <td>
+                                        {{ dv.parameter.parameter_name }}
+                                        {% if dv.parameter.parameter_name_hindi %}
+                                            <span class="hindi-text">{{ dv.parameter.parameter_name_hindi }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if dv.is_nok or dv.value == 'NOK' or dv.value == 'No' %}bg-danger{% else %}bg-success{% endif %} px-4">
+                                            {{ dv.value }}
+                                        </span>
+                                    </td>
+                                    <td class="text-muted">
+                                        {% if dv.parameter.measurement_type == 'ok_nok' %}
+                                            Should be OK
+                                        {% elif dv.parameter.measurement_type == 'yes_no' %}
+                                            Should be Yes
+                                        {% elif dv.parameter.measurement_type == 'numeric' and dv.parameter.min_value is not None %}
+                                            {{ dv.parameter.min_value }} - {{ dv.parameter.max_value }}{% if dv.parameter.unit %} {{ dv.parameter.unit }}{% endif %}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <!-- Measurements Section -->
-                    <div class="mb-reduced">
-                        <h6 class="border-bottom pb-1 mb-2 text-danger">
-                            Process Measurements
-                            <span class="hindi-text">प्रक्रिया माप</span>
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle table-header-with-hindi">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 40%">
-                                            Parameter
-                                            <span class="hindi-text">पैरामीटर</span>
-                                        </th>
-                                        <th style="width: 20%">
-                                            Value
-                                            <span class="hindi-text">मान</span>
-                                        </th>
-                                        <th style="width: 40%">
-                                            Recommended Range
-                                            <span class="hindi-text">अनुशंसित रेंज</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            Line Pressure
-                                            <span class="hindi-text">लाइन प्रेशर</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="validation-badge badge {% if measurement_validation.base_measurements.line_pressure_ok %}bg-success{% else %}bg-danger{% endif %}">
-                                                {{ checklist.line_pressure }} bar
-                                            </span>
-                                        </td>
-                                        <td class="text-muted">4.5 - 5.5 bar</td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            UV Flow Input Test Pressure
-                                            <span class="hindi-text">यूवी फ्लो इनपुट टेस्ट प्रेशर</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="validation-badge badge {% if measurement_validation.base_measurements.uv_flow_input_ok %}bg-success{% else %}bg-danger{% endif %}">
-                                                {{ checklist.uv_flow_input_pressure }} kPa
-                                            </span>
-                                        </td>
-                                        <td class="text-muted">11 - 15 kPa</td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Test Pressure for Vacuum Generation
-                                            <span class="hindi-text">वैक्यूम जनरेशन के लिए टेस्ट प्रेशर</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="validation-badge badge {% if measurement_validation.base_measurements.test_pressure_ok %}bg-success{% else %}bg-danger{% endif %}">
-                                                {{ checklist.test_pressure_vacuum }} MPa
-                                            </span>
-                                        </td>
-                                        <td class="text-muted">0.25 - 0.3 MPa</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
 
-                    <!-- Quality Checks Section -->
-                    <div class="mb-reduced">
-                        <h6 class="border-bottom pb-1 mb-2 text-danger">
-                            Quality Checks
-                            <span class="hindi-text">गुणवत्ता जांच</span>
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle table-header-with-hindi">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 40%">
-                                            Check Parameter
-                                            <span class="hindi-text">जांच पैरामीटर</span>
-                                        </th>
-                                        <th style="width: 20%">
-                                            Status
-                                            <span class="hindi-text">स्थिति</span>
-                                        </th>
-                                        <th style="width: 40%">
-                                            Recommendation
-                                            <span class="hindi-text">अनुशंसा</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            Current Model Running
-                                            <span class="hindi-text">वर्तमान चल रहा मॉडल</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="metric-value text-fa-bold">{{ checklist.selected_model }}</div>
-                                        </td>
-                                        <td class="text-muted">Program selection on HMI</td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            O-ring Condition
-                                            <span class="hindi-text">O-ring सील की स्थिति</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if checklist.oring_condition == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
-                                                {{ checklist.oring_condition }}
-                                            </span>
-                                        </td>
-                                        <td class="text-muted">No damage / wear out</td>
-                                    </tr>
-                                    {% comment %} <tr>
-                                        <td>
-                                            Master Verification for LVDT
-                                            <span class="hindi-text">LVDT वेरिफिकेशन</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if checklist.master_verification_lvdt == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
-                                                {{ checklist.master_verification_lvdt }}
-                                            </span>
-                                        </td>
-                                        <td class="text-muted">In specified range</td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Good/Bad Master Verification
-                                            <span class="hindi-text">गुड/बैड मास्टर</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if checklist.good_bad_master_verification == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
-                                                {{ checklist.good_bad_master_verification }}
-                                            </span>
-                                        </td>
-                                        <td class="text-muted">Machine judgement</td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Tool Alignment
-                                            <span class="hindi-text">टूल अलाइनमेंट</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if checklist.tool_alignment == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
-                                                {{ checklist.tool_alignment }}
-                                            </span>
-                                        </td>
-                                        <td class="text-muted">Should be OK</td>
-                                    </tr> {% endcomment %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Tool IDs and Part Numbers Section -->
-                    <div>
-                        <h6 class="border-bottom pb-1 mb-2 text-danger">
-                            Tool IDs and Part Numbers
-                            <span class="hindi-text">टूल आईडी और पार्ट नंबर</span>
-                        </h6>
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle table-header-with-hindi">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th style="width: 30%">
-                                            Component
-                                            <span class="hindi-text">कंपोनेंट</span>
-                                        </th>
-                                        <th style="width: 70%">
-                                            Identification
-                                            <span class="hindi-text">पहचान</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            Top Tool ID
-                                            <span class="hindi-text">टॉप टूल</span>
-                                        </td>
-                                        <td>
-                                            {{ checklist.top_tool_id }}
-                                            <span class="badge {% if checklist.top_tool_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
-                                                {{ checklist.top_tool_id_status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Bottom Tool ID
-                                            <span class="hindi-text">बॉटम टूल</span>
-                                        </td>
-                                        <td>
-                                            {{ checklist.bottom_tool_id }}
-                                            <span class="badge {% if checklist.bottom_tool_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
-                                                {{ checklist.bottom_tool_id_status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            UV Assy Stage ID
-                                            <span class="hindi-text">यूवी असेंबली</span>
-                                        </td>
-                                        <td>
-                                            {{ checklist.uv_assy_stage_id }}
-                                            <span class="badge {% if checklist.uv_assy_stage_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
-                                                {{ checklist.uv_assy_stage_id_status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Retainer Part No
-                                            <span class="hindi-text">रिटेनर पार्ट</span>
-                                        </td>
-                                        <td>
-                                            {{ checklist.retainer_part_no }}
-                                            <span class="badge {% if checklist.retainer_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
-                                                {{ checklist.retainer_part_no_status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            UV Clip Part No
-                                            <span class="hindi-text">यूवी क्लिप</span>
-                                        </td>
-                                        <td>
-                                            {{ checklist.uv_clip_part_no }}
-                                            <span class="badge {% if checklist.uv_clip_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
-                                                {{ checklist.uv_clip_part_no_status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Umbrella Part No
-                                            <span class="hindi-text">अम्ब्रेला पार्ट</span>
-                                        </td>
-                                        <td>
-                                            {{ checklist.umbrella_part_no }}
-                                            <span class="badge {% if checklist.umbrella_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
-                                                {{ checklist.umbrella_part_no_status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>
-                                            Retainer ID Lubrication
-                                            <span class="hindi-text">रिटेनर लुब्रिकेशन</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if checklist.retainer_id_lubrication == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
-                                                {{ checklist.retainer_id_lubrication }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    {% comment %} <tr>
-                                        <td>
-                                            Error Proofing Verification
-                                            <span class="hindi-text">एरर प्रूफिंग</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge {% if checklist.error_proofing_verification == 'Yes' %}bg-success{% else %}bg-danger{% endif %} px-4">
-                                                {{ checklist.error_proofing_verification }}
-                                            </span>
-                                        </td>
-                                    </tr> {% endcomment %}
-                                </tbody>
-                            </table>
-                        </div>
+                <!-- Tool IDs and Part Numbers Section - WITH DYNAMIC VALUES -->
+                <div>
+                    <h6 class="border-bottom pb-1 mb-2 text-danger">
+                        Tool IDs and Part Numbers
+                        <span class="hindi-text">टूल आईडी और पार्ट नंबर</span>
+                    </h6>
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle table-header-with-hindi">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 30%">
+                                        Component
+                                        <span class="hindi-text">कंपोनेंट</span>
+                                    </th>
+                                    <th style="width: 70%">
+                                        Identification
+                                        <span class="hindi-text">पहचान</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        Top Tool ID
+                                        <span class="hindi-text">टॉप टूल</span>
+                                    </td>
+                                    <td>
+                                        {{ checklist.top_tool_id }}
+                                        <span class="badge {% if checklist.top_tool_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                            {{ checklist.top_tool_id_status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Bottom Tool ID
+                                        <span class="hindi-text">बॉटम टूल</span>
+                                    </td>
+                                    <td>
+                                        {{ checklist.bottom_tool_id }}
+                                        <span class="badge {% if checklist.bottom_tool_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                            {{ checklist.bottom_tool_id_status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        UV Assy Stage ID
+                                        <span class="hindi-text">यूवी असेंबली</span>
+                                    </td>
+                                    <td>
+                                        {{ checklist.uv_assy_stage_id }}
+                                        <span class="badge {% if checklist.uv_assy_stage_id_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                            {{ checklist.uv_assy_stage_id_status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Retainer Part No
+                                        <span class="hindi-text">रिटेनर पार्ट</span>
+                                    </td>
+                                    <td>
+                                        {{ checklist.retainer_part_no }}
+                                        <span class="badge {% if checklist.retainer_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                            {{ checklist.retainer_part_no_status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        UV Clip Part No
+                                        <span class="hindi-text">यूवी क्लिप</span>
+                                    </td>
+                                    <td>
+                                        {{ checklist.uv_clip_part_no }}
+                                        <span class="badge {% if checklist.uv_clip_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                            {{ checklist.uv_clip_part_no_status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Umbrella Part No
+                                        <span class="hindi-text">अम्ब्रेला पार्ट</span>
+                                    </td>
+                                    <td>
+                                        {{ checklist.umbrella_part_no }}
+                                        <span class="badge {% if checklist.umbrella_part_no_status == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4 mx-5">
+                                            {{ checklist.umbrella_part_no_status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        Retainer ID Lubrication
+                                        <span class="hindi-text">रिटेनर लुब्रिकेशन</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if checklist.retainer_id_lubrication == 'OK' %}bg-success{% else %}bg-danger{% endif %} px-4">
+                                            {{ checklist.retainer_id_lubrication }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Dynamic IDs and Part Numbers -->
+                                {% for dv in dynamic_values_grouped.ids_part_numbers %}
+                                <tr>
+                                    <td>
+                                        {{ dv.parameter.parameter_name }}
+                                        {% if dv.parameter.parameter_name_hindi %}
+                                            <span class="hindi-text">{{ dv.parameter.parameter_name_hindi }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge {% if dv.is_nok or dv.value == 'NOK' or dv.value == 'No' %}bg-danger{% else %}bg-success{% endif %} px-4">
+                                            {{ dv.value }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
     <!-- Subgroup Measurements -->
     <div class="row mb-reduced">
 
 
-<!-- ENHANCED: Parameter Entries Section with Verification -->
+
+
+        <!-- ENHANCED: Parameter Entries Section with Verification -->
 {% if parameter_entries or can_add_parameters %}
 <div class="row mb-reduced">
     <div class="col-12">
         <div class="card">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 section-title">
-                    <i class="fas fa-list-alt"></i> Parameter Entries with Verification
-                    <span class="section-title-hindi">पैरामीटर प्रविष्टियाँ और सत्यापन</span>
+                    <i class="fas fa-list-alt"></i> Subgroup Entries with Verification
                 </h5>
                 {% if can_add_parameters %}
                 <a href="{% url 'fill_parameter_group' checklist.id %}" class="btn btn-success">

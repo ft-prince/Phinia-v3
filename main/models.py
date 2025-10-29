@@ -1273,7 +1273,22 @@ def update_category_timing_on_reading(sender, instance, created, **kwargs):
 # Model for configurable checksheet content
 class ChecksheetContentConfig(models.Model):
     """Configurable content for different models"""
+    SECTION_CHOICES = [
+        ('initial_setup', 'Initial Setup'),
+        ('standard_measurements', 'Standard Measurements'),
+        ('status_checks', 'Status Checks'),
+        ('ids_part_numbers', 'IDs and Part Numbers'),
+        ('model_specific', 'Model-Specific Parameters'),
+    ]
+    
     model_name = models.CharField(max_length=10, choices=ChecklistBase.MODEL_CHOICES)
+    section = models.CharField(
+        max_length=30, 
+        choices=SECTION_CHOICES, 
+        default='model_specific',
+        verbose_name="Section",
+        null=True
+    )
     parameter_name = models.CharField(max_length=200, verbose_name="Parameter Name")
     parameter_name_hindi = models.CharField(max_length=200, verbose_name="Parameter Name (Hindi)", blank=True)
     measurement_type = models.CharField(
@@ -1287,12 +1302,12 @@ class ChecksheetContentConfig(models.Model):
     min_value = models.FloatField(null=True, blank=True, verbose_name="Minimum Value")
     max_value = models.FloatField(null=True, blank=True, verbose_name="Maximum Value")
     unit = models.CharField(max_length=20, blank=True, verbose_name="Unit (e.g., kPa, LPM)")
-    order = models.PositiveIntegerField(default=0, help_text="Display order")
+    order = models.PositiveIntegerField(default=0, help_text="Display order within section")
     is_active = models.BooleanField(default=True)
     requires_comment_if_nok = models.BooleanField(default=True, verbose_name="Require comment if NOK/No")
     
     class Meta:
-        ordering = ['model_name', 'order']
+        ordering = ['model_name', 'section', 'order']
         unique_together = ['model_name', 'parameter_name']
     
     def __str__(self):
