@@ -1994,6 +1994,21 @@ class ErrorPreventionMechanism(models.Model):
         help_text="Full description of the EP mechanism"
     )
     
+    # Verification method - NEW FIELD
+    verification_method = models.TextField(
+        verbose_name="Verification Method (English)",
+        default="Start the machine with master and judgement will given by machine",
+        help_text="English verification method description"
+    )
+    
+    # Verification method in Hindi - NEW FIELD
+    verification_method_hindi = models.TextField(
+        verbose_name="Verification Method (Hindi)",
+        default="मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा",
+        help_text="Hindi verification method description",
+        blank=True
+    )
+    
     # Applicable models
     applicable_models = models.CharField(
         max_length=100,
@@ -2041,6 +2056,7 @@ class ErrorPreventionMechanism(models.Model):
     def __str__(self):
         status = "✓" if self.is_currently_working else "✗"
         return f"{status} {self.mechanism_id} - {self.applicable_models}"
+
 
 
 class ErrorPreventionMechanismStatus(models.Model):
@@ -2197,8 +2213,8 @@ class ErrorPreventionCheckHistory(models.Model):
     
     def __str__(self):
         return f"{self.ep_check} - {self.action} by {self.changed_by.username}"
-
-
+  
+ 
 class ErrorPreventionMechanismHistory(models.Model):
     """Track changes made to individual mechanism statuses"""
     

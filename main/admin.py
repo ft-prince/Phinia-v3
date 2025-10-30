@@ -647,7 +647,8 @@ class ErrorPreventionMechanismAdmin(admin.ModelAdmin):
         'mechanism_id', 
         'description_short', 
         'applicable_models', 
-        'is_currently_working',  # Changed from working_status_display to make it editable
+        'verification_method_short',  # Changed to show shortened version
+        'is_currently_working',
         'default_alternative_method',
         'display_order',
         'is_active',
@@ -655,13 +656,17 @@ class ErrorPreventionMechanismAdmin(admin.ModelAdmin):
     )
     
     list_filter = ('is_currently_working', 'is_active', 'applicable_models')
-    search_fields = ('mechanism_id', 'description', 'applicable_models')
+    search_fields = ('mechanism_id', 'description', 'applicable_models', 'verification_method')
     ordering = ('display_order', 'mechanism_id')
     list_editable = ('is_currently_working', 'display_order', 'is_active')
     
     fieldsets = (
         ('Mechanism Identification', {
             'fields': ('mechanism_id', 'description', 'applicable_models')
+        }),
+        ('Verification Method', {  # NEW SECTION - Add this
+            'fields': ('verification_method', 'verification_method_hindi'),
+            'description': 'Define how this mechanism should be verified (English and Hindi)'
         }),
         ('Working Status (Admin Control)', {
             'fields': ('is_currently_working', 'default_alternative_method'),
@@ -682,6 +687,12 @@ class ErrorPreventionMechanismAdmin(admin.ModelAdmin):
     def description_short(self, obj):
         return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
     description_short.short_description = 'Description'
+    
+    def verification_method_short(self, obj):  # NEW METHOD
+        """Display shortened verification method"""
+        method = obj.verification_method[:40] + '...' if len(obj.verification_method) > 40 else obj.verification_method
+        return format_html('<span title="{}">{}</span>', obj.verification_method, method)
+    verification_method_short.short_description = 'Verification Method'
     
     def working_status_display(self, obj):
         if obj.is_currently_working:
@@ -714,8 +725,6 @@ class ErrorPreventionMechanismAdmin(admin.ModelAdmin):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'{updated} mechanism(s) deactivated')
     deactivate.short_description = 'Deactivate mechanisms'
-
-
 # ============ ERROR PREVENTION CHECK ADMIN ============
 
 class ErrorPreventionMechanismStatusInline(admin.TabularInline):

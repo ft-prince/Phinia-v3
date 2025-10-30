@@ -295,11 +295,12 @@
                                 {{ mechanism.description }}
                             </td>
                             
-                            <td>
-                                Start the machine with master and judgement will given by machine
-                                <div class="hindi-text">मास्टर के साथ मशीन शुरू करें और मशीन द्वारा निर्णय दिया जाएगा</div>
-                            </td>
-                            
+<td>
+    {{ mechanism.verification_method }}
+    {% if mechanism.verification_method_hindi %}
+    <div class="hindi-text">{{ mechanism.verification_method_hindi }}</div>
+    {% endif %}
+</td>                            
                             <td>{{ mechanism.mechanism_id }}</td>
                             
                             <td>
